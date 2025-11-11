@@ -10,7 +10,26 @@ def get_database_url_env():
 
 
 def get_app_data_directory_env():
-    return os.getenv("APP_DATA_DIRECTORY")
+    """
+    Return a valid app data directory path string.
+    Priority:
+    1) APP_DATA_DIRECTORY env var if set and non-empty
+    2) /app_data if it exists (Docker/default deployment)
+    3) <repo_root>/app_data when running locally
+    """
+    app_data_dir = os.getenv("APP_DATA_DIRECTORY")
+    if app_data_dir and app_data_dir.strip():
+        return app_data_dir
+
+    # Use Docker volume mount if present
+    if os.path.isdir("/app_data"):
+        return "/app_data"
+
+    # Fall back to repo-local app_data directory
+    repo_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..")
+    )
+    return os.path.join(repo_root, "app_data")
 
 
 def get_temp_directory_env():

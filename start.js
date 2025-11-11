@@ -72,12 +72,17 @@ const setupUserConfigFromEnv = () => {
     existingConfig = JSON.parse(readFileSync(userConfigPath, "utf8"));
   }
 
-  if (!["ollama", "openai", "google"].includes(existingConfig.LLM)) {
+  const allowedLlms = ["openai", "custom"];
+  if (!allowedLlms.includes(existingConfig.LLM)) {
     existingConfig.LLM = undefined;
   }
 
+  const envLlm = allowedLlms.includes(process.env.LLM)
+    ? process.env.LLM
+    : undefined;
+
   const userConfig = {
-    LLM: process.env.LLM || existingConfig.LLM,
+    LLM: envLlm || existingConfig.LLM || "openai",
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || existingConfig.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL || existingConfig.OPENAI_MODEL,
     GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || existingConfig.GOOGLE_API_KEY,

@@ -67,13 +67,7 @@ export const changeProvider = (
   const newConfig = { ...currentConfig, LLM: provider };
 
   // Auto Select appropriate image provider based on the text models
-  if (provider === "openai") {
-    newConfig.IMAGE_PROVIDER = "dall-e-3";
-  } else if (provider === "google") {
-    newConfig.IMAGE_PROVIDER = "gemini_flash";
-  } else {
-    newConfig.IMAGE_PROVIDER = "pexels"; // default for ollama and custom
-  }
+  newConfig.IMAGE_PROVIDER = provider === "openai" ? "dall-e-3" : "pexels";
 
   return newConfig;
 };

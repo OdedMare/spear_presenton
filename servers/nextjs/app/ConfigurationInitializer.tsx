@@ -5,7 +5,6 @@ import { setCanChangeKeys, setLLMConfig } from '@/store/slices/userConfig';
 import { hasValidLLMConfig } from '@/utils/storeHelpers';
 import { usePathname, useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
-import { checkIfSelectedOllamaModelIsPulled } from '@/utils/providerUtils';
 import { LLMConfig } from '@/types/llm_config';
 
 export function ConfigurationInitializer({ children }: { children: React.ReactNode }) {
@@ -38,21 +37,12 @@ export function ConfigurationInitializer({ children }: { children: React.ReactNo
     if (canChangeKeys) {
       const response = await fetch('/api/user-config');
       const llmConfig = await response.json();
-      if (!llmConfig.LLM) {
+      if (!llmConfig.LLM || !["openai", "custom"].includes(llmConfig.LLM)) {
         llmConfig.LLM = 'openai';
       }
       dispatch(setLLMConfig(llmConfig));
       const isValid = hasValidLLMConfig(llmConfig);
       if (isValid) {
-        // Check if the selected Ollama model is pulled
-        if (llmConfig.LLM === 'ollama') {
-          const isPulled = await checkIfSelectedOllamaModelIsPulled(llmConfig.OLLAMA_MODEL);
-          if (!isPulled) {
-            router.push('/');
-            setLoadingToFalseAfterNavigatingTo('/');
-            return;
-          }
-        }
         if (llmConfig.LLM === 'custom') {
           const isAvailable = await checkIfSelectedCustomModelIsAvailable(llmConfig);
           if (!isAvailable) {

@@ -39,7 +39,7 @@ RUN npm install
 
 
 # Copy Next.js app
-COPY servers/nextjs/ /app/servers/nextjs/
+    COPY servers/nextjs/ /app/servers/nextjs/
 
 # Build the Next.js app
 WORKDIR /app/servers/nextjs
