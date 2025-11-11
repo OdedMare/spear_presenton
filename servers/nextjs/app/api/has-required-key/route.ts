@@ -6,20 +6,20 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const userConfigPath = process.env.USER_CONFIG_PATH;
 
-  let keyFromFile = "";
+  let configFromFile: Record<string, string> = {};
   if (userConfigPath && fs.existsSync(userConfigPath)) {
     try {
       const raw = fs.readFileSync(userConfigPath, "utf-8");
-      const cfg = JSON.parse(raw || "{}");
-      keyFromFile = cfg?.OPENAI_API_KEY || "";
+      configFromFile = JSON.parse(raw || "{}");
     } catch {}
   }
 
-  console.log(keyFromFile);
+  const getValue = (key: string) =>
+    (configFromFile?.[key] || process.env[key] || "").trim();
 
-  const keyFromEnv = process.env.OPENAI_API_KEY || "";
-  console.log(keyFromEnv);
-  const hasKey = Boolean((keyFromFile || keyFromEnv).trim());
+  const customUrl = getValue("CUSTOM_LLM_URL");
+  const customModel = getValue("CUSTOM_MODEL");
+  const hasKey = Boolean(customUrl && customModel);
 
   return NextResponse.json({ hasKey });
-} 
+}

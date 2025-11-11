@@ -82,7 +82,7 @@ const setupUserConfigFromEnv = () => {
     : undefined;
 
   const userConfig = {
-    LLM: envLlm || existingConfig.LLM || "openai",
+    LLM: envLlm || existingConfig.LLM || "custom",
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || existingConfig.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL || existingConfig.OPENAI_MODEL,
     GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || existingConfig.GOOGLE_API_KEY,
@@ -111,6 +111,7 @@ const setupUserConfigFromEnv = () => {
   };
 
   writeFileSync(userConfigPath, JSON.stringify(userConfig));
+  process.env.LLM = userConfig.LLM;
 };
 
 const startServers = async () => {

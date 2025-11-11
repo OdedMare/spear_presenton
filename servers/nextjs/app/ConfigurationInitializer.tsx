@@ -38,7 +38,7 @@ export function ConfigurationInitializer({ children }: { children: React.ReactNo
       const response = await fetch('/api/user-config');
       const llmConfig = await response.json();
       if (!llmConfig.LLM || !["openai", "custom"].includes(llmConfig.LLM)) {
-        llmConfig.LLM = 'openai';
+        llmConfig.LLM = 'custom';
       }
       dispatch(setLLMConfig(llmConfig));
       const isValid = hasValidLLMConfig(llmConfig);

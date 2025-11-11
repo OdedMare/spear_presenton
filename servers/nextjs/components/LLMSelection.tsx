@@ -47,7 +47,7 @@ export default function LLMProviderSelection({
   const allowedProviders = ["openai", "custom"];
   const [llmConfig, setLlmConfig] = useState<LLMConfig>(() => {
     if (!initialLLMConfig.LLM || !allowedProviders.includes(initialLLMConfig.LLM)) {
-      return { ...initialLLMConfig, LLM: "openai" };
+      return { ...initialLLMConfig, LLM: "custom" };
     }
     return initialLLMConfig;
   });
@@ -89,7 +89,7 @@ export default function LLMProviderSelection({
 
   useEffect(() => {
     if (!llmConfig.LLM || !allowedProviders.includes(llmConfig.LLM)) {
-      setLlmConfig((prev) => ({ ...prev, LLM: "openai" }));
+      setLlmConfig((prev) => ({ ...prev, LLM: "custom" }));
     }
   }, [llmConfig.LLM]);
 
@@ -106,7 +106,7 @@ export default function LLMProviderSelection({
   const activeProvider =
     llmConfig.LLM && allowedProviders.includes(llmConfig.LLM)
       ? llmConfig.LLM
-      : "openai";
+      : "custom";
 
   return (
     <div className="h-full flex flex-col mt-10">
