@@ -19,7 +19,10 @@ export async function GET() {
 
   const customUrl = getValue("CUSTOM_LLM_URL");
   const customModel = getValue("CUSTOM_MODEL");
-  const hasKey = Boolean(customUrl && customModel);
+  const templateUrl = getValue("CUSTOM_TEMPLATE_LLM_URL") || customUrl;
+  const templateModel = getValue("CUSTOM_TEMPLATE_MODEL") || customModel;
+
+  const hasKey = Boolean(templateUrl && templateModel);
 
   return NextResponse.json({ hasKey });
 }

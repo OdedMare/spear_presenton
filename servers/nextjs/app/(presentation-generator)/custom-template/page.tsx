@@ -45,11 +45,10 @@ const CustomTemplatePage = () => {
     setSlides
   );
   const llmConfig = useSelector((state: RootState) => state.userConfig.llm_config);
-  const providerLabel = llmConfig?.LLM === "custom" ? "Custom" : "OpenAI";
-  const modelName =
-    llmConfig?.LLM === "custom"
-      ? llmConfig?.CUSTOM_MODEL
-      : llmConfig?.OPENAI_MODEL;
+  const templateUrl =
+    llmConfig?.CUSTOM_TEMPLATE_LLM_URL || llmConfig?.CUSTOM_LLM_URL;
+  const templateModel =
+    llmConfig?.CUSTOM_TEMPLATE_MODEL || llmConfig?.CUSTOM_MODEL;
 
   const handleSaveTemplate = async (layoutName: string, description: string): Promise<string | null> => {
     trackEvent(MixpanelEvent.CustomTemplate_Save_Templates_API_Call);
@@ -121,13 +120,13 @@ const CustomTemplatePage = () => {
           </div>
           <div className="flex justify-center mt-4">
             <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm">
-              <span className="text-slate-500">Model in use:</span>
+              <span className="text-slate-500">Template model:</span>
               <span className="font-semibold text-slate-900">
-                {providerLabel}
+                {templateModel || "Not configured"}
               </span>
               <span className="text-slate-400">•</span>
               <span className="font-medium text-slate-800">
-                {modelName || "Not configured"}
+                {templateUrl || "No URL set"}
               </span>
             </div>
           </div>
@@ -198,4 +197,3 @@ const CustomTemplatePage = () => {
 };
 
 export default CustomTemplatePage;
-

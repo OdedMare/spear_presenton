@@ -21,6 +21,9 @@ export interface LLMConfig {
   CUSTOM_LLM_URL?: string;
   CUSTOM_LLM_API_KEY?: string;
   CUSTOM_MODEL?: string;
+  CUSTOM_TEMPLATE_LLM_URL?: string;
+  CUSTOM_TEMPLATE_LLM_API_KEY?: string;
+  CUSTOM_TEMPLATE_MODEL?: string;
 
   // Image providers
   IMAGE_PROVIDER?: string;

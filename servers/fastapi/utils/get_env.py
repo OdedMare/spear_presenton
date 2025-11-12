@@ -87,6 +87,14 @@ def get_ollama_model_env():
 def get_custom_model_env():
     return os.getenv("CUSTOM_MODEL")
 
+def get_custom_template_llm_url_env():
+    return os.getenv("CUSTOM_TEMPLATE_LLM_URL")
+
+def get_custom_template_llm_api_key_env():
+    return os.getenv("CUSTOM_TEMPLATE_LLM_API_KEY")
+
+def get_custom_template_model_env():
+    return os.getenv("CUSTOM_TEMPLATE_MODEL")
 
 def get_pexels_api_key_env():
     return os.getenv("PEXELS_API_KEY")

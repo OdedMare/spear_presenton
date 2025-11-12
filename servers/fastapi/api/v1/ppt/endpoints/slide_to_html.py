@@ -22,13 +22,20 @@ from utils.get_env import (
     get_custom_llm_api_key_env,
     get_custom_llm_url_env,
     get_custom_model_env,
+    get_custom_template_llm_url_env,
+    get_custom_template_llm_api_key_env,
+    get_custom_template_model_env,
 )
 
 
 def _get_custom_ai_client():
-    base_url = get_custom_llm_url_env()
-    model = get_custom_model_env()
-    api_key = get_custom_llm_api_key_env() or "null"
+    base_url = get_custom_template_llm_url_env() or get_custom_llm_url_env()
+    model = get_custom_template_model_env() or get_custom_model_env()
+    api_key = (
+        get_custom_template_llm_api_key_env()
+        or get_custom_llm_api_key_env()
+        or "null"
+    )
 
     if not base_url:
         raise HTTPException(

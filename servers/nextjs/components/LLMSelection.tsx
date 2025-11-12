@@ -21,6 +21,7 @@ import {
 } from "@/utils/providerUtils";
 import { IMAGE_PROVIDERS } from "@/utils/providerConstants";
 import { LLMConfig } from "@/types/llm_config";
+import TemplateModelConfig from "./TemplateModelConfig";
 
 // Button state interface
 interface ButtonState {
@@ -125,11 +126,11 @@ export default function LLMProviderSelection({
       </div>
 
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-6 pt-0 custom_scrollbar">
-        <Tabs
-          value={activeProvider}
-          onValueChange={handleProviderChange}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 pt-0 custom_scrollbar">
+          <Tabs
+            value={activeProvider}
+            onValueChange={handleProviderChange}
           className="w-full"
         >
           {/* OpenAI Content */}
@@ -154,6 +155,27 @@ export default function LLMProviderSelection({
             />
           </TabsContent>
         </Tabs>
+
+        {/* Template Generator Model */}
+        <div className="mt-10 p-6 border border-gray-200 rounded-2xl bg-white shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Template Generator Model
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Configure the custom model used exclusively for template creation.
+            Leave blank to reuse the presentation model.
+          </p>
+          <div className="mt-6">
+            <TemplateModelConfig
+              templateLlmUrl={llmConfig.CUSTOM_TEMPLATE_LLM_URL || ""}
+              templateLlmApiKey={llmConfig.CUSTOM_TEMPLATE_LLM_API_KEY || ""}
+              templateModel={llmConfig.CUSTOM_TEMPLATE_MODEL || ""}
+              onInputChange={(value, field) =>
+                input_field_changed(value, field)
+              }
+            />
+          </div>
+        </div>
 
         {/* Image Provider Selection */}
         <div className="my-8">

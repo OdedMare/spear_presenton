@@ -47,6 +47,12 @@ export async function POST(request: Request) {
     CUSTOM_LLM_API_KEY:
       userConfig.CUSTOM_LLM_API_KEY || existingConfig.CUSTOM_LLM_API_KEY,
     CUSTOM_MODEL: userConfig.CUSTOM_MODEL || existingConfig.CUSTOM_MODEL,
+    CUSTOM_TEMPLATE_LLM_URL:
+      userConfig.CUSTOM_TEMPLATE_LLM_URL || existingConfig.CUSTOM_TEMPLATE_LLM_URL,
+    CUSTOM_TEMPLATE_LLM_API_KEY:
+      userConfig.CUSTOM_TEMPLATE_LLM_API_KEY || existingConfig.CUSTOM_TEMPLATE_LLM_API_KEY,
+    CUSTOM_TEMPLATE_MODEL:
+      userConfig.CUSTOM_TEMPLATE_MODEL || existingConfig.CUSTOM_TEMPLATE_MODEL,
     PIXABAY_API_KEY:
       userConfig.PIXABAY_API_KEY || existingConfig.PIXABAY_API_KEY,
     IMAGE_PROVIDER: userConfig.IMAGE_PROVIDER || existingConfig.IMAGE_PROVIDER,

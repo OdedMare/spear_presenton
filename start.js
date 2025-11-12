@@ -97,6 +97,12 @@ const setupUserConfigFromEnv = () => {
     CUSTOM_LLM_API_KEY:
       process.env.CUSTOM_LLM_API_KEY || existingConfig.CUSTOM_LLM_API_KEY,
     CUSTOM_MODEL: process.env.CUSTOM_MODEL || existingConfig.CUSTOM_MODEL,
+    CUSTOM_TEMPLATE_LLM_URL:
+      process.env.CUSTOM_TEMPLATE_LLM_URL || existingConfig.CUSTOM_TEMPLATE_LLM_URL,
+    CUSTOM_TEMPLATE_LLM_API_KEY:
+      process.env.CUSTOM_TEMPLATE_LLM_API_KEY || existingConfig.CUSTOM_TEMPLATE_LLM_API_KEY,
+    CUSTOM_TEMPLATE_MODEL:
+      process.env.CUSTOM_TEMPLATE_MODEL || existingConfig.CUSTOM_TEMPLATE_MODEL,
     PEXELS_API_KEY: process.env.PEXELS_API_KEY || existingConfig.PEXELS_API_KEY,
     PIXABAY_API_KEY:
       process.env.PIXABAY_API_KEY || existingConfig.PIXABAY_API_KEY,

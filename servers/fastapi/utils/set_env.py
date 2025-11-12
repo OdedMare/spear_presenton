@@ -56,6 +56,14 @@ def set_ollama_model_env(value):
 def set_custom_model_env(value):
     os.environ["CUSTOM_MODEL"] = value
 
+def set_custom_template_llm_url_env(value):
+    os.environ["CUSTOM_TEMPLATE_LLM_URL"] = value
+
+def set_custom_template_llm_api_key_env(value):
+    os.environ["CUSTOM_TEMPLATE_LLM_API_KEY"] = value
+
+def set_custom_template_model_env(value):
+    os.environ["CUSTOM_TEMPLATE_MODEL"] = value
 
 def set_pexels_api_key_env(value):
     os.environ["PEXELS_API_KEY"] = value
