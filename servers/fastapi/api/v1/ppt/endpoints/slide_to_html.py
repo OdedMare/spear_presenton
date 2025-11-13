@@ -154,6 +154,60 @@ class TemplateInfo(BaseModel):
     created_at: Optional[datetime] = None
 
 
+def _call_chat_completion_text(
+    client: OpenAI,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float = 0.0,
+    max_tokens: int = 4096,
+) -> str:
+    """
+    Helper to call the /v1/chat/completions endpoint and safely extract text output.
+    """
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_prompt})
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+
+    # Prefer standard completion choices.
+    choices = getattr(response, "choices", None)
+    if choices:
+        first_choice = choices[0]
+        message = getattr(first_choice, "message", None)
+        if message:
+            message_content = getattr(message, "content", None)
+            if isinstance(message_content, list):
+                combined = "".join(
+                    part.get("text", "")
+                    for part in message_content
+                    if isinstance(part, dict)
+                )
+                if combined:
+                    return combined.strip()
+            message_text = getattr(message, "text", None)
+            if message_text:
+                return message_text.strip()
+        text = getattr(first_choice, "text", None)
+        if text:
+            return text.strip()
+
+    # Fallbacks for providers that expose text/output_text.
+    for attr in ("output_text", "text"):
+        value = getattr(response, attr, None)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return ""
+
+
 async def generate_html_from_slide(
     base64_image: str,
     media_type: str,
@@ -181,38 +235,34 @@ async def generate_html_from_slide(
     """
     print("Generating HTML from slide image and XML using custom AI provider...")
     try:
-        # Compose input for Responses API. Include system prompt, image (separate), OXML and optional fonts text.
+        # Compose textual prompt for the chat completions API.
         data_url = f"data:{media_type};base64,{base64_image}"
         fonts_text = (
-            f"\nFONTS (Normalized root families used in this slide, use where it is required): {', '.join(fonts)}"
+            f"FONTS (normalized root families used in this slide, reference where needed): {', '.join(fonts)}"
             if fonts
             else ""
         )
-        user_text = f"OXML: \n\n{fonts_text}"
-        input_payload = [
-            {"role": "system", "content": GENERATE_HTML_SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "input_image", "image_url": data_url},
-                    {"type": "input_text", "text": user_text},
-                ],
-            },
+        user_sections = [
+            "You are given a slide screenshot encoded as a data URL. "
+            "Recreate the design in semantic HTML + Tailwind CSS using the OXML for structure.",
+            f"SLIDE_IMAGE_DATA_URL:\n{data_url}",
+            "POWERPOINT_OXML_CONTENT:",
+            xml_content,
         ]
+        if fonts_text:
+            user_sections.append(fonts_text)
 
-        print("Making Responses API request for HTML generation...")
-        response = client.responses.create(
+        user_prompt = "\n\n".join(section for section in user_sections if section)
+        system_prompt = GENERATE_HTML_SYSTEM_PROMPT.strip()
+
+        print("Making Chat Completions API request for HTML generation...")
+        html_content = _call_chat_completion_text(
+            client=client,
             model=model,
-            input=input_payload,
-            reasoning={"effort": "high"},
-            text={"verbosity": "low"},
-        )
-
-        # Extract the response text
-        html_content = (
-            getattr(response, "output_text", None)
-            or getattr(response, "text", None)
-            or ""
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=0.0,
+            max_tokens=4096,
         )
 
         print(f"Received HTML content length: {len(html_content)}")
@@ -274,30 +324,27 @@ async def generate_react_component_from_html(
         HTTPException: If API call fails or no content is generated
     """
     try:
-        print("Making Responses API request for React component generation...")
+        print("Making Chat Completions API request for React component generation...")
 
-        # Build payload with optional image
-        content_parts = [{"type": "input_text", "text": f"HTML INPUT:\n{html_content}"}]
-        if image_base64 and media_type:
-            data_url = f"data:{media_type};base64,{image_base64}"
-            content_parts.insert(0, {"type": "input_image", "image_url": data_url})
-
-        input_payload = [
-            {"role": "system", "content": HTML_TO_REACT_SYSTEM_PROMPT},
-            {"role": "user", "content": content_parts},
+        user_sections = [
+            "Convert the provided HTML into a reusable TSX React component. "
+            "Preserve structure, Tailwind classes, and responsiveness.",
         ]
 
-        response = client.responses.create(
-            model=model,
-            input=input_payload,
-            reasoning={"effort": "minimal"},
-            text={"verbosity": "low"},
-        )
+        if image_base64 and media_type:
+            data_url = f"data:{media_type};base64,{image_base64}"
+            user_sections.append(f"REFERENCE_SLIDE_IMAGE_DATA_URL:\n{data_url}")
 
-        react_content = (
-            getattr(response, "output_text", None)
-            or getattr(response, "text", None)
-            or ""
+        user_sections.extend(["HTML_INPUT:", html_content])
+        user_prompt = "\n\n".join(section for section in user_sections if section)
+
+        react_content = _call_chat_completion_text(
+            client=client,
+            model=model,
+            system_prompt=HTML_TO_REACT_SYSTEM_PROMPT.strip(),
+            user_prompt=user_prompt,
+            temperature=0.0,
+            max_tokens=4096,
         )
 
         print(f"Received React content length: {len(react_content)}")
@@ -385,42 +432,38 @@ async def edit_html_with_images(
         HTTPException: If API call fails or no content is generated
     """
     try:
-        print("Making Responses API request for HTML editing...")
+        print("Making Chat Completions API request for HTML editing...")
 
         current_data_url = f"data:{media_type};base64,{current_ui_base64}"
-        sketch_data_url = (
-            f"data:{media_type};base64,{sketch_base64}" if sketch_base64 else None
-        )
-
-        content_parts = [
-            {"type": "input_image", "image_url": current_data_url},
-            {
-                "type": "input_text",
-                "text": f"CURRENT HTML TO EDIT:\n{html_content}\n\nTEXT PROMPT FOR CHANGES:\n{prompt}",
-            },
+        user_sections = [
+            "Update the existing HTML according to the instructions. "
+            "Use the provided current UI screenshot (data URL) as context.",
+            f"CURRENT_UI_IMAGE_DATA_URL:\n{current_data_url}",
         ]
-        if sketch_data_url:
-            # Insert sketch image after current UI image for context
-            content_parts.insert(
-                1, {"type": "input_image", "image_url": sketch_data_url}
+
+        if sketch_base64:
+            sketch_data_url = f"data:{media_type};base64,{sketch_base64}"
+            user_sections.append(
+                f"OPTIONAL_REFERENCE_SKETCH_DATA_URL:\n{sketch_data_url}"
             )
 
-        input_payload = [
-            {"role": "system", "content": HTML_EDIT_SYSTEM_PROMPT},
-            {"role": "user", "content": content_parts},
-        ]
-
-        response = client.responses.create(
-            model=model,
-            input=input_payload,
-            reasoning={"effort": "low"},
-            text={"verbosity": "low"},
+        user_sections.extend(
+            [
+                "CURRENT_HTML:",
+                html_content,
+                "INSTRUCTIONS:",
+                prompt,
+            ]
         )
+        user_prompt = "\n\n".join(section for section in user_sections if section)
 
-        edited_html = (
-            getattr(response, "output_text", None)
-            or getattr(response, "text", None)
-            or ""
+        edited_html = _call_chat_completion_text(
+            client=client,
+            model=model,
+            system_prompt=HTML_EDIT_SYSTEM_PROMPT.strip(),
+            user_prompt=user_prompt,
+            temperature=0.0,
+            max_tokens=4096,
         )
 
         print(f"Received edited HTML content length: {len(edited_html)}")
