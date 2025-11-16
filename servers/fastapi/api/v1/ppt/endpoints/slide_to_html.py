@@ -170,42 +170,79 @@ def _call_chat_completion_text(
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": user_prompt})
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
+    last_error: Optional[Exception] = None
 
-    # Prefer standard completion choices.
-    choices = getattr(response, "choices", None)
-    if choices:
-        first_choice = choices[0]
-        message = getattr(first_choice, "message", None)
-        if message:
-            message_content = getattr(message, "content", None)
-            if isinstance(message_content, list):
-                combined = "".join(
-                    part.get("text", "")
-                    for part in message_content
-                    if isinstance(part, dict)
-                )
-                if combined:
-                    return combined.strip()
-            message_text = getattr(message, "text", None)
-            if message_text:
-                return message_text.strip()
-        text = getattr(first_choice, "text", None)
-        if text:
-            return text.strip()
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
 
-    # Fallbacks for providers that expose text/output_text.
-    for attr in ("output_text", "text"):
-        value = getattr(response, attr, None)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
+        # Prefer standard completion choices.
+        choices = getattr(response, "choices", None)
+        if choices:
+            first_choice = choices[0]
+            message = getattr(first_choice, "message", None)
+            if message:
+                message_content = getattr(message, "content", None)
+                if isinstance(message_content, list):
+                    combined = "".join(
+                        part.get("text", "")
+                        for part in message_content
+                        if isinstance(part, dict)
+                    )
+                    if combined:
+                        return combined.strip()
+                message_text = getattr(message, "text", None)
+                if message_text:
+                    return message_text.strip()
+            text = getattr(first_choice, "text", None)
+            if text:
+                return text.strip()
 
-    return ""
+        # Fallbacks for providers that expose text/output_text.
+        for attr in ("output_text", "text"):
+            value = getattr(response, attr, None)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+        return ""
+    except (APIError, Exception) as e:
+        last_error = e
+
+    # Chat completions failed; try legacy /v1/completions endpoint.
+    try:
+        prompt_sections = []
+        if system_prompt:
+            prompt_sections.append(f"System:\n{system_prompt}")
+        prompt_sections.append(f"User:\n{user_prompt}")
+        prompt = "\n\n".join(prompt_sections)
+
+        response = client.completions.create(
+            model=model,
+            prompt=prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        choices = getattr(response, "choices", None)
+        if choices:
+            first_choice = choices[0]
+            text = getattr(first_choice, "text", None)
+            if isinstance(text, str):
+                return text.strip()
+
+        for attr in ("output_text", "text"):
+            value = getattr(response, attr, None)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+        return ""
+    except Exception as fallback_error:
+        if last_error:
+            fallback_error.__cause__ = last_error  # type: ignore[attr-defined]
+        raise fallback_error
 
 
 async def generate_html_from_slide(
