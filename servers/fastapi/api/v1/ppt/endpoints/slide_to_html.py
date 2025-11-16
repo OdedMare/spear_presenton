@@ -1,12 +1,15 @@
 import os
 import base64
+import asyncio
 from datetime import datetime
-from typing import Optional, List, Dict
+from io import BytesIO
+from typing import Optional, List, Dict, Tuple
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Depends
 from pydantic import BaseModel
 from openai import OpenAI
 from openai import APIError
+from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 from utils.asset_directory_utils import get_images_directory
@@ -154,6 +157,50 @@ class TemplateInfo(BaseModel):
     created_at: Optional[datetime] = None
 
 
+def _minify_ooxml(xml_text: str, max_chars: int = 12000) -> str:
+    """
+    Remove excess whitespace/comments from OXML to save tokens before sending to the LLM.
+    """
+    if not xml_text:
+        return ""
+    cleaned = " ".join(xml_text.split())
+    if max_chars and len(cleaned) > max_chars:
+        return cleaned[:max_chars]
+    return cleaned
+
+
+def _encode_slide_image(path: str) -> Tuple[str, str]:
+    """
+    Resize/compress slide image before encoding to keep payloads well under provider limits.
+    """
+    max_edge_px = 1600
+    jpeg_quality = 82
+
+    with Image.open(path) as img:
+        format_hint = "PNG" if img.mode in ("RGBA", "LA") else "JPEG"
+        if max(img.size) > max_edge_px:
+            resample_mode = getattr(Image, "Resampling", Image).LANCZOS
+            img.thumbnail((max_edge_px, max_edge_px), resample_mode)
+
+        buffer = BytesIO()
+        save_kwargs = {"optimize": True}
+        if format_hint == "JPEG":
+            img = img.convert("RGB")
+            save_kwargs["quality"] = jpeg_quality
+        img.save(buffer, format=format_hint, **save_kwargs)
+
+    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    media_type = f"image/{format_hint.lower()}"
+    return encoded, media_type
+
+
+async def _encode_slide_image_async(path: str) -> Tuple[str, str]:
+    """
+    Run the heavy image encoding work in a thread so we do not block the event loop.
+    """
+    return await asyncio.to_thread(_encode_slide_image, path)
+
+
 def _call_chat_completion_text(
     client: OpenAI,
     model: str,
@@ -170,79 +217,42 @@ def _call_chat_completion_text(
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": user_prompt})
 
-    last_error: Optional[Exception] = None
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
 
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+    # Prefer standard completion choices.
+    choices = getattr(response, "choices", None)
+    if choices:
+        first_choice = choices[0]
+        message = getattr(first_choice, "message", None)
+        if message:
+            message_content = getattr(message, "content", None)
+            if isinstance(message_content, list):
+                combined = "".join(
+                    part.get("text", "")
+                    for part in message_content
+                    if isinstance(part, dict)
+                )
+                if combined:
+                    return combined.strip()
+            message_text = getattr(message, "text", None)
+            if message_text:
+                return message_text.strip()
+        text = getattr(first_choice, "text", None)
+        if text:
+            return text.strip()
 
-        # Prefer standard completion choices.
-        choices = getattr(response, "choices", None)
-        if choices:
-            first_choice = choices[0]
-            message = getattr(first_choice, "message", None)
-            if message:
-                message_content = getattr(message, "content", None)
-                if isinstance(message_content, list):
-                    combined = "".join(
-                        part.get("text", "")
-                        for part in message_content
-                        if isinstance(part, dict)
-                    )
-                    if combined:
-                        return combined.strip()
-                message_text = getattr(message, "text", None)
-                if message_text:
-                    return message_text.strip()
-            text = getattr(first_choice, "text", None)
-            if text:
-                return text.strip()
+    # Fallbacks for providers that expose text/output_text.
+    for attr in ("output_text", "text"):
+        value = getattr(response, attr, None)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
 
-        # Fallbacks for providers that expose text/output_text.
-        for attr in ("output_text", "text"):
-            value = getattr(response, attr, None)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-
-        return ""
-    except (APIError, Exception) as e:
-        last_error = e
-
-    # Chat completions failed; try legacy /v1/completions endpoint.
-    try:
-        prompt_sections = []
-        if system_prompt:
-            prompt_sections.append(f"System:\n{system_prompt}")
-        prompt_sections.append(f"User:\n{user_prompt}")
-        prompt = "\n\n".join(prompt_sections)
-
-        response = client.completions.create(
-            model=model,
-            prompt=prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-        choices = getattr(response, "choices", None)
-        if choices:
-            first_choice = choices[0]
-            text = getattr(first_choice, "text", None)
-            if isinstance(text, str):
-                return text.strip()
-
-        for attr in ("output_text", "text"):
-            value = getattr(response, attr, None)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-
-        return ""
-    except Exception as fallback_error:
-        if last_error:
-            fallback_error.__cause__ = last_error  # type: ignore[attr-defined]
-        raise fallback_error
+    return ""
 
 
 async def generate_html_from_slide(
@@ -580,27 +590,14 @@ async def convert_slide_to_html(request: SlideToHtmlRequest):
                 status_code=404, detail=f"Image file not found: {image_path}"
             )
 
-        # Read and encode image to base64
-        with open(actual_image_path, "rb") as image_file:
-            image_content = image_file.read()
-        base64_image = base64.b64encode(image_content).decode("utf-8")
-
-        # Determine media type from file extension
-        file_extension = os.path.splitext(actual_image_path)[1].lower()
-        media_type_map = {
-            ".png": "image/png",
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".gif": "image/gif",
-            ".webp": "image/webp",
-        }
-        media_type = media_type_map.get(file_extension, "image/png")
+        # Resize/compress and encode the image off the main thread to keep requests light.
+        base64_image, media_type = await _encode_slide_image_async(actual_image_path)
 
         # Generate HTML using the extracted function
         html_content = await generate_html_from_slide(
             base64_image=base64_image,
             media_type=media_type,
-            xml_content=request.xml,
+            xml_content=_minify_ooxml(request.xml),
             client=client,
             model=model,
             fonts=request.fonts,
@@ -658,16 +655,9 @@ async def convert_html_to_react(request: HtmlToReactRequest):
                     else os.path.join(get_images_directory(), image_path)
                 )
             if os.path.exists(actual_image_path):
-                with open(actual_image_path, "rb") as f:
-                    image_b64 = base64.b64encode(f.read()).decode("utf-8")
-                ext = os.path.splitext(actual_image_path)[1].lower()
-                media_type = {
-                    ".png": "image/png",
-                    ".jpg": "image/jpeg",
-                    ".jpeg": "image/jpeg",
-                    ".gif": "image/gif",
-                    ".webp": "image/webp",
-                }.get(ext, "image/png")
+                image_b64, media_type = await _encode_slide_image_async(
+                    actual_image_path
+                )
 
         # Convert HTML to React component
         react_component = await generate_react_component_from_html(
