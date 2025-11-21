@@ -81,7 +81,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, zoom 
             <Rect
               width={element.bbox.width}
               height={element.bbox.height}
-              fill={element.background?.value || element.background?.color || "transparent"}
+              fill={element.background?.value || "transparent"}
               stroke={element.border?.color}
               strokeWidth={element.border?.width}
             />
@@ -121,7 +121,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, zoom 
           <ShapeComponent
             ref={shapeRef}
             {...shapeProps}
-            fill={element.fill?.value || element.fill?.color || "#0078d4"}
+            fill={element.fill?.value || "#0078d4"}
             stroke={element.border?.color}
             strokeWidth={element.border?.width}
             rotation={element.rotation}

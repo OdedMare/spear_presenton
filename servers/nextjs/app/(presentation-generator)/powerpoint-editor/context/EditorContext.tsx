@@ -82,7 +82,7 @@ const createDefaultSlide = (): Slide => ({
   elements: [],
   background: { type: "solid", color: "#FFFFFF" },
   notes: "",
-  transition: null,
+  layout: "blank",
 });
 
 export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -92,7 +92,39 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     width: 1280,
     height: 720,
     slides: [createDefaultSlide()],
-    theme: "default",
+    theme: {
+      id: "default",
+      name: "Default",
+      colors: {
+        primary: "#0078d4",
+        secondary: "#2b88d8",
+        accent1: "#c43e1c",
+        accent2: "#e67c73",
+        accent3: "#f4b400",
+        accent4: "#0f9d58",
+        accent5: "#ab47bc",
+        accent6: "#00acc1",
+        background1: "#FFFFFF",
+        background2: "#F3F2F1",
+        text1: "#000000",
+        text2: "#323130",
+        hyperlink: "#0078d4",
+        followedHyperlink: "#004578",
+      },
+      fonts: {
+        heading: "Arial",
+        body: "Arial",
+      },
+    },
+    masters: [],
+    settings: {
+      autoAdvance: false,
+      loop: false,
+      showProgressBar: true,
+      showSlideNumbers: true,
+      showNotes: false,
+      aspectRatio: "16:9",
+    },
   });
 
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);

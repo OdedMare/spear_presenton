@@ -176,7 +176,7 @@ export const PropertiesPanel: React.FC = () => {
             <input
               type="color"
               className="pptx-property-input w-full"
-              value={selectedElement.fill?.value || selectedElement.fill?.color || "#0078d4"}
+              value={selectedElement.fill?.value || "#0078d4"}
               onChange={(e) =>
                 updateElement(selectedElement.id, {
                   fill: { type: "solid", value: e.target.value },
