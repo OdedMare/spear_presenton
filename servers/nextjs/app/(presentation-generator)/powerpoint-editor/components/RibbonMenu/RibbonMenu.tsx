@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { RibbonTab } from "../../types";
-import { HomeTab } from "./HomeTab";
+import { HomeTabEnhanced } from "./HomeTabEnhanced";
 import { InsertTab } from "./InsertTab";
 import { DesignTab } from "./DesignTab";
 import { TransitionsTab } from "./TransitionsTab";
@@ -37,7 +37,7 @@ export const RibbonMenu: React.FC = () => {
       </div>
 
       <div className="pptx-ribbon-content">
-        {activeTab === "home" && <HomeTab />}
+        {activeTab === "home" && <HomeTabEnhanced />}
         {activeTab === "insert" && <InsertTab />}
         {activeTab === "design" && <DesignTab />}
         {activeTab === "transitions" && <TransitionsTab />}
