@@ -56,6 +56,23 @@ interface EditorContextType {
   distributeHorizontally: () => void;
   distributeVertically: () => void;
 
+  // Text formatting operations
+  applyTextFormatting: (formatting: {
+    fontFamily?: string;
+    fontSize?: number;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    color?: string;
+  }) => void;
+  applyParagraphFormatting: (formatting: {
+    align?: "left" | "center" | "right" | "justify";
+    lineHeight?: number;
+    bulletStyle?: string;
+    numberStyle?: string;
+    indent?: number;
+  }) => void;
+
   // History operations
   undo: () => void;
   redo: () => void;
@@ -65,6 +82,8 @@ interface EditorContextType {
   // Presentation operations
   updatePresentationSettings: (settings: Partial<Presentation>) => void;
   savePresentation: () => Promise<void>;
+  setPresentation: (presentation: Presentation) => void;
+  loadPresentation: (presentation: Presentation) => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -596,6 +615,66 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     console.log("Saving presentation:", presentation);
   }, [presentation]);
 
+  const loadPresentation = useCallback((newPresentation: Presentation) => {
+    setPresentation(newPresentation);
+    setCurrentSlideIndex(0);
+    setSelectedElementIds([]);
+    setHistory([newPresentation]);
+    setHistoryIndex(0);
+  }, []);
+
+  // Text formatting operations
+  const applyTextFormatting = useCallback((formatting: {
+    fontFamily?: string;
+    fontSize?: number;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    color?: string;
+  }) => {
+    selectedElementIds.forEach((id) => {
+      const element = currentSlide.elements.find((el) => el.id === id);
+      if (element && element.type === "text") {
+        const textElement = element as TextElement;
+        const updatedContent = textElement.content.map((run) => ({
+          ...run,
+          style: {
+            ...run.style,
+            ...(formatting.fontFamily && { fontFamily: formatting.fontFamily }),
+            ...(formatting.fontSize && { fontSize: formatting.fontSize }),
+            ...(formatting.bold !== undefined && { fontWeight: formatting.bold ? 700 : 400 }),
+            ...(formatting.italic !== undefined && { fontStyle: (formatting.italic ? "italic" : "normal") as "normal" | "italic" }),
+            ...(formatting.underline !== undefined && { underline: formatting.underline }),
+            ...(formatting.color && { color: formatting.color }),
+          },
+        }));
+        updateElement(id, { content: updatedContent });
+      }
+    });
+  }, [selectedElementIds, currentSlide.elements, updateElement]);
+
+  const applyParagraphFormatting = useCallback((formatting: {
+    align?: "left" | "center" | "right" | "justify";
+    lineHeight?: number;
+    bulletStyle?: string;
+    numberStyle?: string;
+    indent?: number;
+  }) => {
+    selectedElementIds.forEach((id) => {
+      const element = currentSlide.elements.find((el) => el.id === id);
+      if (element && element.type === "text") {
+        const textElement = element as TextElement;
+        const updatedParagraphStyle = {
+          ...textElement.paragraphStyle,
+          ...(formatting.align && { align: formatting.align }),
+          ...(formatting.lineHeight && { lineHeight: formatting.lineHeight }),
+          ...(formatting.indent !== undefined && { indent: formatting.indent }),
+        };
+        updateElement(id, { paragraphStyle: updatedParagraphStyle });
+      }
+    });
+  }, [selectedElementIds, currentSlide.elements, updateElement]);
+
   const value: EditorContextType = {
     presentation,
     currentSlideIndex,
@@ -636,6 +715,9 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     distributeHorizontally,
     distributeVertically,
 
+    applyTextFormatting,
+    applyParagraphFormatting,
+
     undo,
     redo,
     canUndo,
@@ -643,6 +725,8 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     updatePresentationSettings,
     savePresentation,
+    setPresentation,
+    loadPresentation,
   };
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;

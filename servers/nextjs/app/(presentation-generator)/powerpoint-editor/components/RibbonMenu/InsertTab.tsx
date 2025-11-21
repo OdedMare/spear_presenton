@@ -1,11 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useEditor } from "../../context/EditorContext";
-import { Image, Table, BarChart3, Video, Music, Link as LinkIcon } from "lucide-react";
+import { Image, Table, BarChart3, Video, Music, Link as LinkIcon, Shapes } from "lucide-react";
+import { ShapeSelector } from "../Dialogs/ShapeSelector";
 
 export const InsertTab: React.FC = () => {
   const { addElement } = useEditor();
+  const [showShapeSelector, setShowShapeSelector] = useState(false);
 
   const handleImageUpload = () => {
     const input = document.createElement("input");
@@ -75,6 +77,17 @@ export const InsertTab: React.FC = () => {
 
   return (
     <>
+      <ShapeSelector open={showShapeSelector} onClose={() => setShowShapeSelector(false)} />
+
+      <div className="pptx-ribbon-group">
+        <div className="pptx-ribbon-group-content flex-col items-center">
+          <button className="pptx-btn pptx-btn-large" onClick={() => setShowShapeSelector(true)}>
+            <Shapes size={24} />
+            <span>Shapes</span>
+          </button>
+        </div>
+      </div>
+
       <div className="pptx-ribbon-group">
         <div className="pptx-ribbon-group-content flex-col items-center">
           <button className="pptx-btn pptx-btn-large" onClick={handleImageUpload}>

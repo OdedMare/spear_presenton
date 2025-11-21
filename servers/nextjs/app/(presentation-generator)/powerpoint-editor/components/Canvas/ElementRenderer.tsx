@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { Group, Rect, Circle, Text, Image as KonvaImage, Transformer } from "react-konva";
+import { Group, Rect, Circle, Text, Image as KonvaImage, Transformer, Path } from "react-konva";
 import { useEditor } from "../../context/EditorContext";
 import { SlideElement } from "../../types";
 import useImage from "use-image";
+import { getShapePath } from "../../utils/shapes";
 
 interface ElementRendererProps {
   element: SlideElement;
@@ -100,39 +101,52 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, zoom 
         );
 
       case "shape":
-        const ShapeComponent = element.shapeType === "ellipse" ? Circle : Rect;
-        const shapeProps =
-          element.shapeType === "ellipse"
-            ? {
-                x: element.bbox.x + element.bbox.width / 2,
-                y: element.bbox.y + element.bbox.height / 2,
-                radiusX: element.bbox.width / 2,
-                radiusY: element.bbox.height / 2,
-              }
-            : {
-                x: element.bbox.x,
-                y: element.bbox.y,
-                width: element.bbox.width,
-                height: element.bbox.height,
-                cornerRadius: element.cornerRadius || 0,
-              };
-
-        return (
-          <ShapeComponent
-            ref={shapeRef}
-            {...shapeProps}
-            fill={element.fill?.value || "#0078d4"}
-            stroke={element.border?.color}
-            strokeWidth={element.border?.width}
-            rotation={element.rotation}
-            opacity={element.opacity}
-            draggable
-            onClick={handleSelect}
-            onTap={handleSelect}
-            onDragEnd={handleDragEnd}
-            onTransformEnd={handleTransformEnd}
-          />
-        );
+        // For basic shapes, use Konva primitives
+        if (element.shapeType === "ellipse") {
+          return (
+            <Circle
+              ref={shapeRef}
+              x={element.bbox.x + element.bbox.width / 2}
+              y={element.bbox.y + element.bbox.height / 2}
+              radiusX={element.bbox.width / 2}
+              radiusY={element.bbox.height / 2}
+              fill={element.fill?.value || "#0078d4"}
+              stroke={element.border?.color}
+              strokeWidth={element.border?.width}
+              rotation={element.rotation}
+              opacity={element.opacity}
+              draggable
+              onClick={handleSelect}
+              onTap={handleSelect}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+            />
+          );
+        } else if (element.shapeType === "rectangle" || element.shapeType === "rounded-rectangle") {
+          return (
+            <Rect
+              ref={shapeRef}
+              x={element.bbox.x}
+              y={element.bbox.y}
+              width={element.bbox.width}
+              height={element.bbox.height}
+              cornerRadius={element.shapeType === "rounded-rectangle" ? element.cornerRadius || 10 : 0}
+              fill={element.fill?.value || "#0078d4"}
+              stroke={element.border?.color}
+              strokeWidth={element.border?.width}
+              rotation={element.rotation}
+              opacity={element.opacity}
+              draggable
+              onClick={handleSelect}
+              onTap={handleSelect}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+            />
+          );
+        } else {
+          // For all other shapes, use SVG path rendering
+          return <SVGShapeElement element={element} />;
+        }
 
       case "image":
         return <ImageElement element={element} />;
@@ -229,5 +243,97 @@ const ImageElement: React.FC<{ element: any }> = ({ element }) => {
         });
       }}
     />
+  );
+};
+
+// Component for rendering complex shapes using SVG paths
+const SVGShapeElement: React.FC<{ element: any }> = ({ element }) => {
+  const { selectElement, updateElement, selectedElementIds } = useEditor();
+  const shapeRef = useRef<any>(null);
+  const transformerRef = useRef<any>(null);
+  const isSelected = selectedElementIds.includes(element.id);
+
+  useEffect(() => {
+    if (isSelected && transformerRef.current && shapeRef.current) {
+      transformerRef.current.nodes([shapeRef.current]);
+      transformerRef.current.getLayer()?.batchDraw();
+    }
+  }, [isSelected]);
+
+  const handleSelect = (e: any) => {
+    e.cancelBubble = true;
+    selectElement(element.id, e.evt.shiftKey);
+  };
+
+  const handleDragEnd = (e: any) => {
+    updateElement(element.id, {
+      bbox: {
+        ...element.bbox,
+        x: e.target.x(),
+        y: e.target.y(),
+      },
+    });
+  };
+
+  const handleTransformEnd = (e: any) => {
+    const node = shapeRef.current;
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+
+    node.scaleX(1);
+    node.scaleY(1);
+
+    updateElement(element.id, {
+      bbox: {
+        x: node.x(),
+        y: node.y(),
+        width: Math.max(5, node.width() * scaleX),
+        height: Math.max(5, node.height() * scaleY),
+      },
+      rotation: node.rotation(),
+    });
+  };
+
+  const shapePath = getShapePath(element.shapeType);
+
+  // Scale the SVG path from 100x100 viewBox to element dimensions
+  const scaleX = element.bbox.width / 100;
+  const scaleY = element.bbox.height / 100;
+
+  return (
+    <>
+      <Path
+        ref={shapeRef}
+        x={element.bbox.x}
+        y={element.bbox.y}
+        data={shapePath}
+        scaleX={scaleX}
+        scaleY={scaleY}
+        fill={element.fill?.value || "#0078d4"}
+        stroke={element.border?.color}
+        strokeWidth={element.border?.width ? element.border.width / Math.min(scaleX, scaleY) : 0}
+        rotation={element.rotation}
+        opacity={element.opacity}
+        draggable
+        onClick={handleSelect}
+        onTap={handleSelect}
+        onDragEnd={handleDragEnd}
+        onTransformEnd={handleTransformEnd}
+      />
+      {isSelected && (
+        <Transformer
+          ref={transformerRef}
+          rotateEnabled={true}
+          resizeEnabled={true}
+          keepRatio={false}
+          borderStroke="#0078d4"
+          borderStrokeWidth={2}
+          anchorSize={8}
+          anchorStroke="#0078d4"
+          anchorFill="white"
+          anchorStrokeWidth={2}
+        />
+      )}
+    </>
   );
 };
