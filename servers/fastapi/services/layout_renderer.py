@@ -123,6 +123,12 @@ def _render_text(element: Dict[str, Any]) -> str:
         "overflow": "hidden",
     }
 
+    # Add fill (background) if the text element has one (from shape background)
+    style.update(_fill_styles(element.get("fill")))
+
+    # Add stroke (border) if the text element has one
+    style.update(_stroke_styles(element.get("stroke")))
+
     shadow_css = _shadow(element.get("shadow"))
     if shadow_css:
         style["text-shadow"] = shadow_css

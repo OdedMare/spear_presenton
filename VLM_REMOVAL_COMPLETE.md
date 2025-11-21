@@ -16,6 +16,8 @@
 - ✅ VLM-based HTML generation
 - ✅ VLM-based React conversion
 - ✅ API key requirements for template processing
+- ✅ CUSTOM_LLM_URL environment variable requirement
+- ✅ API key checking UI components (useAPIKeyCheck, APIKeyWarning, LoadingSpinner)
 - ✅ Rate limits and API costs
 - ✅ 10-minute processing times
 
@@ -94,6 +96,20 @@ React Components (reusable templates)
     - **Removed:** VLM model configuration display
     - **Updated:** UI messages to reflect deterministic processing
     - **Result:** NO API key needed, cleaner UI
+
+### Frontend (TypeScript) - Files Deleted
+
+11. **`hooks/useAPIKeyCheck.ts`** (DELETED)
+    - Was used to check for CUSTOM_LLM_URL environment variable
+    - **Reason:** Deterministic pipeline needs no API keys
+
+12. **`components/APIKeyWarning.tsx`** (DELETED)
+    - Warning component for missing API keys
+    - **Reason:** No longer needed
+
+13. **`components/LoadingSpinner.tsx`** (DELETED)
+    - Loading state while checking API keys
+    - **Reason:** No API key checks anymore
 
 ---
 

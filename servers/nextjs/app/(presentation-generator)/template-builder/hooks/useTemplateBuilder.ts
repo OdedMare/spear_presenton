@@ -151,10 +151,10 @@ export const useTemplateBuilder = () => {
   const updateElement = (elementId: string, updates: Partial<SlideElement>) => {
     const currentSlide = slides[currentSlideIndex];
     const updatedElements = currentSlide.elements.map((el) =>
-      el.id === elementId ? { ...el, ...updates } : el
+      el.id === elementId ? { ...el, ...updates } as SlideElement : el
     );
 
-    const updatedSlide = {
+    const updatedSlide: TemplateSlide = {
       ...currentSlide,
       elements: updatedElements,
     };
@@ -168,7 +168,7 @@ export const useTemplateBuilder = () => {
     const currentSlide = slides[currentSlideIndex];
     const updatedElements = currentSlide.elements.filter((el) => el.id !== elementId);
 
-    const updatedSlide = {
+    const updatedSlide: TemplateSlide = {
       ...currentSlide,
       elements: updatedElements,
     };

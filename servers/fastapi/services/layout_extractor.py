@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from pptx import Presentation
-from pptx.enum.dml import MSO_COLOR_TYPE
+from pptx.enum.dml import MSO_COLOR_TYPE, MSO_FILL
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
@@ -78,8 +78,8 @@ def _paragraph_runs(paragraph) -> List[Dict[str, Any]]:
                 "font": font,
                 "color": run_color,
                 "highlight": None,
-                "underline": bool(run.font.underline),
-                "strike": bool(run.font.strike),
+                "underline": bool(run.font.underline) if run.font.underline is not None else False,
+                "strike": bool(getattr(run.font, "strike", False)),
             }
         )
     return runs
@@ -107,8 +107,8 @@ def _text_element_from_shape(shape, z: int):
                     "font": font,
                     "color": _color_to_hex(paragraph.font.color) or font.get("color"),
                     "highlight": None,
-                    "underline": bool(paragraph.font.underline),
-                    "strike": bool(paragraph.font.strike),
+                    "underline": bool(paragraph.font.underline) if paragraph.font.underline is not None else False,
+                    "strike": bool(getattr(paragraph.font, "strike", False)),
                 }
             )
 
@@ -146,20 +146,119 @@ def _text_element_from_shape(shape, z: int):
 
 
 def _fill_from_shape(shape) -> Optional[Dict[str, Any]]:
+    """Extract fill information from a shape, handling all fill types safely."""
+
+    # FIRST: Try direct XML access (most reliable for shapes created in PowerPoint)
+    try:
+        sp_pr = shape._element.spPr
+        if sp_pr is not None:
+            # Look for solidFill in XML
+            solid_fill = sp_pr.find(qn('a:solidFill'))
+            if solid_fill is not None:
+                # Try sRGB color
+                srgb_clr = solid_fill.find(qn('a:srgbClr'))
+                if srgb_clr is not None and 'val' in srgb_clr.attrib:
+                    hex_color = '#' + srgb_clr.attrib['val'].upper()
+                    return {"type": "solid", "color": hex_color}
+
+                # Try scheme color (theme color) - resolve via python-pptx
+                scheme_clr = solid_fill.find(qn('a:schemeClr'))
+                if scheme_clr is not None and 'val' in scheme_clr.attrib:
+                    # Get the theme color name (e.g., "accent4")
+                    theme_color_name = scheme_clr.attrib['val']
+
+                    # Try to resolve via python-pptx API
+                    try:
+                        fill = shape.fill
+                        fill_type = fill.type
+                        if fill_type == MSO_FILL.SOLID:
+                            color = _color_to_hex(fill.fore_color)
+                            if color:
+                                return {"type": "solid", "color": color}
+                    except:
+                        pass
+    except:
+        pass
+
+    # SECOND: Try python-pptx high-level API
     try:
         fill = shape.fill
     except Exception:
         return None
-    fill_type = getattr(fill, "type", None)
-    if fill_type is None:
+
+    if fill is None:
         return None
-    color = _color_to_hex(getattr(fill, "foreground_color", None)) or _color_to_hex(
-        getattr(fill, "back_color", None)
-    )
-    if color:
-        return {"type": "solid", "color": color}
-    if getattr(fill, "type", None) and getattr(fill, "type").name == "PICTURE":
-        return None
+
+    try:
+        # Get fill type
+        fill_type = fill.type
+
+        if fill_type is None:
+            return None
+
+        # Solid fill
+        if fill_type == MSO_FILL.SOLID:
+            try:
+                color = _color_to_hex(fill.fore_color)
+                if color:
+                    return {"type": "solid", "color": color}
+            except (TypeError, AttributeError):
+                return None
+
+        # Gradient fill
+        elif fill_type == MSO_FILL.GRADIENT:
+            try:
+                color = _color_to_hex(fill.fore_color)
+                if color:
+                    return {"type": "solid", "color": color}
+            except (TypeError, AttributeError):
+                return None
+
+        # Pattern fill
+        elif fill_type == MSO_FILL.PATTERNED:
+            try:
+                color = _color_to_hex(fill.fore_color)
+                if color:
+                    return {"type": "solid", "color": color}
+            except (TypeError, AttributeError):
+                return None
+
+        # Background fill (inherits from theme/master)
+        elif fill_type == MSO_FILL.BACKGROUND:
+            # Try to get the effective color by accessing underlying XML
+            try:
+                # First try: use .solid() to convert to solid and get color
+                fill.solid()
+                color = _color_to_hex(fill.fore_color)
+                if color:
+                    return {"type": "solid", "color": color}
+            except:
+                pass
+
+            # Second try: access the shape's spPr (shape properties) XML directly
+            try:
+                sp_pr = shape._element.spPr
+                if sp_pr is not None:
+                    # Look for solidFill in XML
+                    solid_fill = sp_pr.find(qn('a:solidFill'))
+                    if solid_fill is not None:
+                        # Get color from XML
+                        srgb_clr = solid_fill.find(qn('a:srgbClr'))
+                        if srgb_clr is not None and 'val' in srgb_clr.attrib:
+                            hex_color = '#' + srgb_clr.attrib['val']
+                            return {"type": "solid", "color": hex_color}
+            except:
+                pass
+
+            return None
+
+        # Picture/texture fill
+        elif fill_type == MSO_FILL.PICTURE:
+            return None
+
+    except Exception:
+        pass
+
     return None
 
 
@@ -287,10 +386,23 @@ def parse_pptx_to_layouts(
         background_fill = getattr(slide, "background", None)
         bg_color = None
         if background_fill and getattr(background_fill, "fill", None):
-            bg_color = _color_to_hex(background_fill.fill.fore_color)
+            try:
+                bg_color = _color_to_hex(background_fill.fill.fore_color)
+            except (TypeError, AttributeError):
+                # Fill has no foreground color (NoFill, or other fill types)
+                bg_color = None
         background = {"type": "solid", "color": bg_color} if bg_color else None
 
         for z, shape in enumerate(slide.shapes):
+            # Debug logging
+            import logging
+            logger = logging.getLogger(__name__)
+
+            # Skip placeholder shapes with no content
+            is_placeholder = getattr(shape, "is_placeholder", False)
+
+            logger.info(f"Shape {z}: type={shape.shape_type}, has_text_frame={shape.has_text_frame if hasattr(shape, 'has_text_frame') else False}, is_placeholder={is_placeholder}")
+
             if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
                 elements.append(
                     _image_element(shape, asset_output_dir, asset_url_prefix, slide_index, z)
@@ -302,15 +414,52 @@ def parse_pptx_to_layouts(
                 continue
 
             if shape.has_text_frame:
+                # Shape with text - extract BOTH fill/stroke AND text content
                 text_el = _text_element_from_shape(shape, z)
-                for run in text_el.get("runs", []):
-                    family = run.get("font", {}).get("family")
-                    if family:
-                        fonts.append(family)
-                elements.append(text_el)
+
+                # Check if this shape has actual content (not just empty placeholder)
+                has_text = any(run.get("text", "").strip() for run in text_el.get("runs", []))
+
+                # Also extract shape fill and stroke
+                fill = _fill_from_shape(shape)
+                stroke = _stroke_from_shape(shape)
+
+                # Skip empty placeholders: placeholder with no text, no fill, no stroke
+                if is_placeholder and not has_text and not fill and not stroke:
+                    logger.info(f"  → Skipping empty placeholder shape {z}")
+                    continue
+
+                # Add fill and stroke to the text element
+                if fill:
+                    text_el["fill"] = fill
+                if stroke:
+                    text_el["stroke"] = stroke
+
+                # Only add if: has text content OR has fill/stroke (visible shape)
+                if has_text or fill or stroke:
+                    for run in text_el.get("runs", []):
+                        family = run.get("font", {}).get("family")
+                        if family:
+                            fonts.append(family)
+                    elements.append(text_el)
+                else:
+                    logger.info(f"  → Skipping shape {z} with no visible content")
                 continue
 
-            elements.append(_shape_element(shape, z))
+            # Pure shape (no text) - only add if it has fill or stroke
+            fill = _fill_from_shape(shape)
+            stroke = _stroke_from_shape(shape)
+
+            # Skip empty placeholders with no visual content
+            if is_placeholder and not fill and not stroke:
+                logger.info(f"  → Skipping empty placeholder shape {z} (no text frame)")
+                continue
+
+            if fill or stroke:
+                shape_el = _shape_element(shape, z)
+                elements.append(shape_el)
+            else:
+                logger.info(f"  → Skipping shape {z} with no fill or stroke")
 
         slides.append(
             ParsedSlide(

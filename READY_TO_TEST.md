@@ -63,6 +63,10 @@ Look for these log messages:
 - [ ] UI shows "✅ No screenshots • ✅ No VLM calls • ✅ 100% deterministic"
 - [ ] NO API key warnings displayed
 - [ ] NO VLM model configuration displayed
+- [ ] NO CUSTOM_LLM_URL environment variable required
+- [ ] useAPIKeyCheck hook deleted
+- [ ] APIKeyWarning component deleted
+- [ ] LoadingSpinner component deleted
 
 ### Processing Verification
 - [ ] Upload PPTX completes in <5 seconds (not minutes!)

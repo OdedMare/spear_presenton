@@ -18,6 +18,7 @@ from api.v1.ppt.endpoints.pptx_slides import PPTX_FONTS_ROUTER
 from api.v1.ppt.endpoints.layout_process import LAYOUT_PROCESS_ROUTER
 from api.v1.ppt.endpoints.layout_render import LAYOUT_RENDER_ROUTER
 from api.v1.ppt.endpoints.template_generation import TEMPLATE_GENERATION_ROUTER
+from api.v1.ppt.endpoints.template_save import TEMPLATE_SAVE_ROUTER
 
 
 API_V1_PPT_ROUTER = APIRouter(prefix="/api/v1/ppt")
@@ -35,6 +36,7 @@ API_V1_PPT_ROUTER.include_router(LAYOUT_MANAGEMENT_ROUTER)
 API_V1_PPT_ROUTER.include_router(LAYOUT_PROCESS_ROUTER)
 API_V1_PPT_ROUTER.include_router(LAYOUT_RENDER_ROUTER)
 API_V1_PPT_ROUTER.include_router(TEMPLATE_GENERATION_ROUTER)
+API_V1_PPT_ROUTER.include_router(TEMPLATE_SAVE_ROUTER)
 API_V1_PPT_ROUTER.include_router(IMAGES_ROUTER)
 API_V1_PPT_ROUTER.include_router(ICONS_ROUTER)
 API_V1_PPT_ROUTER.include_router(OLLAMA_ROUTER)
