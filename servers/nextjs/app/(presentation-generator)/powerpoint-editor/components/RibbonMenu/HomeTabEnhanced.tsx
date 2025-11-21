@@ -25,12 +25,27 @@ import {
   Minus,
   Plus,
   Paintbrush,
+  ChevronUp,
+  Eraser,
+  Sparkles,
+  Highlighter,
+  FlipHorizontal,
+  AlignVerticalJustifyStart,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  FilePlus,
+  Layout,
 } from "lucide-react";
 import { FONT_FAMILIES, FONT_SIZES, LINE_SPACING_OPTIONS } from "../../utils/constants";
+import { SlideLayoutPicker } from "../Dialogs/SlideLayoutPicker";
+import { useFormatPainter } from "../../hooks/useFormatPainter";
+import { SlideElement } from "../../types";
 
 export const HomeTabEnhanced: React.FC = () => {
   const {
     addElement,
+    updateElement,
+    addSlide,
     copy,
     cut,
     paste,
@@ -52,6 +67,23 @@ export const HomeTabEnhanced: React.FC = () => {
   const [isUnderline, setIsUnderline] = useState(false);
   const [textAlign, setTextAlign] = useState<"left" | "center" | "right" | "justify">("left");
   const [lineSpacing, setLineSpacing] = useState(1.0);
+  const [hasTextShadow, setHasTextShadow] = useState(false);
+  const [highlightColor, setHighlightColor] = useState("transparent");
+  const [hasBullets, setHasBullets] = useState(false);
+  const [hasNumbering, setHasNumbering] = useState(false);
+  const [textDirection, setTextDirection] = useState<"horizontal" | "vertical">("horizontal");
+  const [verticalAlign, setVerticalAlign] = useState<"top" | "middle" | "bottom">("top");
+  const [showLayoutPicker, setShowLayoutPicker] = useState(false);
+
+  // Format Painter hook
+  const {
+    isPainterActive,
+    isPersistent,
+    copyFormat,
+    applyFormat,
+    clearFormat: clearPainterFormat,
+    togglePersistent,
+  } = useFormatPainter();
 
   // Get currently selected text element to show active formatting
   const selectedTextElement = React.useMemo(() => {
@@ -81,6 +113,9 @@ export const HomeTabEnhanced: React.FC = () => {
         setTextAlign(selectedTextElement.paragraphStyle.align);
         setLineSpacing(selectedTextElement.paragraphStyle.lineHeight);
       }
+      // Set text direction and vertical alignment from selected element
+      setTextDirection(selectedTextElement.textDirection || "horizontal");
+      setVerticalAlign(selectedTextElement.verticalAlign || "top");
     }
   }, [selectedTextElement]);
 
@@ -182,8 +217,195 @@ export const HomeTabEnhanced: React.FC = () => {
     }
   };
 
+  const increaseFontSize = () => {
+    let currentIndex = -1;
+    for (let i = 0; i < FONT_SIZES.length; i++) {
+      if (FONT_SIZES[i] === fontSize) {
+        currentIndex = i;
+        break;
+      }
+    }
+    if (currentIndex >= 0 && currentIndex < FONT_SIZES.length - 1) {
+      const newSize = FONT_SIZES[currentIndex + 1];
+      setFontSize(newSize);
+      applyTextFormatting({ fontSize: newSize });
+    }
+  };
+
+  const decreaseFontSize = () => {
+    let currentIndex = -1;
+    for (let i = 0; i < FONT_SIZES.length; i++) {
+      if (FONT_SIZES[i] === fontSize) {
+        currentIndex = i;
+        break;
+      }
+    }
+    if (currentIndex > 0) {
+      const newSize = FONT_SIZES[currentIndex - 1];
+      setFontSize(newSize);
+      applyTextFormatting({ fontSize: newSize });
+    }
+  };
+
+  const toggleTextShadow = () => {
+    const newShadow = !hasTextShadow;
+    setHasTextShadow(newShadow);
+    // Apply text shadow through context - will need to update context to support this
+    // For now, we'll use a CSS class or inline style
+  };
+
+  const handleHighlightChange = (newColor: string) => {
+    setHighlightColor(newColor);
+    // Apply highlight color through context - will need to update context
+  };
+
+  const clearFormatting = () => {
+    // Reset all formatting to defaults
+    setFontFamily("Arial");
+    setFontSize(18);
+    setFontColor("#000000");
+    setIsBold(false);
+    setIsItalic(false);
+    setIsUnderline(false);
+    setTextAlign("left");
+    setLineSpacing(1.2);
+    setHasTextShadow(false);
+    setHighlightColor("transparent");
+
+    // Apply default formatting
+    applyTextFormatting({
+      fontFamily: "Arial",
+      fontSize: 18,
+      color: "#000000",
+      bold: false,
+      italic: false,
+      underline: false,
+    });
+    applyParagraphFormatting({
+      align: "left",
+      lineHeight: 1.2,
+      indent: 0,
+    });
+  };
+
+  const toggleBullets = () => {
+    const newBullets = !hasBullets;
+    setHasBullets(newBullets);
+    if (newBullets) {
+      setHasNumbering(false);
+      applyParagraphFormatting({ bulletStyle: "disc" });
+    } else {
+      applyParagraphFormatting({ bulletStyle: undefined });
+    }
+  };
+
+  const toggleNumbering = () => {
+    const newNumbering = !hasNumbering;
+    setHasNumbering(newNumbering);
+    if (newNumbering) {
+      setHasBullets(false);
+      applyParagraphFormatting({ numberStyle: "decimal" });
+    } else {
+      applyParagraphFormatting({ numberStyle: undefined });
+    }
+  };
+
+  const toggleTextDirection = () => {
+    const newDirection = textDirection === "horizontal" ? "vertical" : "horizontal";
+    setTextDirection(newDirection);
+    // Apply to selected text element
+    if (selectedElementIds.length === 1 && selectedTextElement) {
+      updateElement(selectedElementIds[0], { textDirection: newDirection });
+    }
+  };
+
+  const handleVerticalAlignChange = (align: "top" | "middle" | "bottom") => {
+    setVerticalAlign(align);
+    // Apply to selected text element
+    if (selectedElementIds.length === 1 && selectedTextElement) {
+      updateElement(selectedElementIds[0], { verticalAlign: align });
+    }
+  };
+
+  const handleLayoutSelect = (layoutId: string) => {
+    // TODO: Apply the selected layout to the current slide
+    // For now, we'll just add a new slide with that layout
+    console.log("Selected layout:", layoutId);
+    addSlide(currentSlideIndex + 1);
+  };
+
+  // Format Painter handlers
+  const handleFormatPainterClick = () => {
+    if (isPainterActive) {
+      // If painter is active, clicking again clears it
+      clearPainterFormat();
+    } else if (selectedElementIds.length === 1) {
+      // Copy format from selected element
+      const slide = presentation.slides[currentSlideIndex];
+      const element = slide.elements.find((el) => el.id === selectedElementIds[0]);
+      if (element) {
+        copyFormat(element as SlideElement);
+      }
+    }
+  };
+
+  const handleFormatPainterDoubleClick = () => {
+    // Double-click enables persistent mode
+    if (selectedElementIds.length === 1) {
+      const slide = presentation.slides[currentSlideIndex];
+      const element = slide.elements.find((el) => el.id === selectedElementIds[0]);
+      if (element) {
+        copyFormat(element as SlideElement);
+        togglePersistent();
+      }
+    }
+  };
+
+  const handleElementClick = (elementId: string) => {
+    // When format painter is active and user clicks an element, apply formatting
+    if (isPainterActive) {
+      const formatting = applyFormat();
+      if (formatting && elementId) {
+        const slide = presentation.slides[currentSlideIndex];
+        const targetElement = slide.elements.find((el) => el.id === elementId);
+
+        if (targetElement && formatting.type === targetElement.type) {
+          if (formatting.type === "text" && formatting.textStyle && formatting.paragraphStyle) {
+            // Apply text formatting
+            applyTextFormatting({
+              fontFamily: formatting.textStyle.fontFamily,
+              fontSize: formatting.textStyle.fontSize,
+              color: formatting.textStyle.color,
+              bold: formatting.textStyle.fontWeight === 700 || formatting.textStyle.fontWeight === "bold",
+              italic: formatting.textStyle.fontStyle === "italic",
+              underline: formatting.textStyle.underline,
+            });
+            applyParagraphFormatting({
+              align: formatting.paragraphStyle.align,
+              lineHeight: formatting.paragraphStyle.lineHeight,
+              indent: formatting.paragraphStyle.indent,
+            });
+          } else if (formatting.type === "shape" && formatting.shapeStyle) {
+            // Apply shape formatting
+            updateElement(elementId, {
+              fill: formatting.shapeStyle.fill,
+              border: formatting.shapeStyle.border,
+              shadow: formatting.shapeStyle.shadow,
+              opacity: formatting.shapeStyle.opacity,
+            });
+          }
+        }
+      }
+    }
+  };
+
   return (
     <>
+      <SlideLayoutPicker
+        open={showLayoutPicker}
+        onClose={() => setShowLayoutPicker(false)}
+        onSelectLayout={handleLayoutSelect}
+      />
       {/* Clipboard Group */}
       <div className="pptx-ribbon-group">
         <div className="pptx-ribbon-group-content flex-col items-center">
@@ -216,13 +438,25 @@ export const HomeTabEnhanced: React.FC = () => {
 
       {/* Slides Group */}
       <div className="pptx-ribbon-group">
-        <div className="pptx-ribbon-group-content flex-col gap-1">
-          <button className="pptx-btn pptx-btn-icon" onClick={addTextBox}>
-            <Type size={16} />
+        <div className="pptx-ribbon-group-content flex-col gap-2">
+          <button
+            className="pptx-btn flex items-center gap-2 w-full"
+            onClick={() => addSlide(currentSlideIndex + 1)}
+            title="New Slide"
+          >
+            <FilePlus size={16} />
+            <span className="text-sm">New Slide</span>
           </button>
-          <span className="text-xs">Text Box</span>
+          <button
+            className="pptx-btn flex items-center gap-2 w-full"
+            onClick={() => setShowLayoutPicker(!showLayoutPicker)}
+            title="Slide Layout"
+          >
+            <Layout size={16} />
+            <span className="text-sm">Layout</span>
+          </button>
         </div>
-        <div className="pptx-ribbon-group-label">Insert</div>
+        <div className="pptx-ribbon-group-label">Slides</div>
       </div>
 
       {/* Font Group */}
@@ -241,18 +475,38 @@ export const HomeTabEnhanced: React.FC = () => {
                 </option>
               ))}
             </select>
-            <select
-              className="pptx-property-input text-xs w-16"
-              value={fontSize}
-              onChange={(e) => handleFontSizeChange(Number(e.target.value))}
-              disabled={selectedElementIds.length === 0 || !selectedTextElement}
-            >
-              {FONT_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-0.5">
+              <select
+                className="pptx-property-input text-xs w-16"
+                value={fontSize}
+                onChange={(e) => handleFontSizeChange(Number(e.target.value))}
+                disabled={selectedElementIds.length === 0 || !selectedTextElement}
+              >
+                {FONT_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <div className="flex flex-col">
+                <button
+                  className="pptx-btn pptx-btn-icon p-0 h-3 w-5 flex items-center justify-center"
+                  onClick={increaseFontSize}
+                  disabled={selectedElementIds.length === 0 || !selectedTextElement}
+                  title="Increase Font Size (Ctrl+])"
+                >
+                  <ChevronUp size={10} />
+                </button>
+                <button
+                  className="pptx-btn pptx-btn-icon p-0 h-3 w-5 flex items-center justify-center"
+                  onClick={decreaseFontSize}
+                  disabled={selectedElementIds.length === 0 || !selectedTextElement}
+                  title="Decrease Font Size (Ctrl+[)"
+                >
+                  <ChevronDown size={10} />
+                </button>
+              </div>
+            </div>
           </div>
           <div className="flex gap-1">
             <button
@@ -279,6 +533,14 @@ export const HomeTabEnhanced: React.FC = () => {
             >
               <Underline size={16} />
             </button>
+            <button
+              className={`pptx-btn pptx-btn-icon ${hasTextShadow && selectedTextElement ? "bg-blue-100" : ""}`}
+              onClick={toggleTextShadow}
+              disabled={selectedElementIds.length === 0 || !selectedTextElement}
+              title="Text Shadow"
+            >
+              <Sparkles size={16} />
+            </button>
             <div className="relative">
               <input
                 type="color"
@@ -289,6 +551,24 @@ export const HomeTabEnhanced: React.FC = () => {
                 title="Font Color"
               />
             </div>
+            <div className="relative">
+              <input
+                type="color"
+                value={highlightColor}
+                onChange={(e) => handleHighlightChange(e.target.value)}
+                disabled={selectedElementIds.length === 0 || !selectedTextElement}
+                className="w-8 h-8 cursor-pointer border border-gray-300 rounded"
+                title="Text Highlight Color"
+              />
+            </div>
+            <button
+              className="pptx-btn pptx-btn-icon"
+              onClick={clearFormatting}
+              disabled={selectedElementIds.length === 0 || !selectedTextElement}
+              title="Clear All Formatting"
+            >
+              <Eraser size={16} />
+            </button>
           </div>
         </div>
         <div className="pptx-ribbon-group-label">Font</div>
@@ -299,14 +579,16 @@ export const HomeTabEnhanced: React.FC = () => {
         <div className="pptx-ribbon-group-content flex-col gap-2">
           <div className="flex gap-1">
             <button
-              className="pptx-btn pptx-btn-icon"
+              className={`pptx-btn pptx-btn-icon ${hasBullets && selectedTextElement ? "bg-blue-100" : ""}`}
+              onClick={toggleBullets}
               title="Bullets"
               disabled={selectedElementIds.length === 0 || !selectedTextElement}
             >
               <List size={16} />
             </button>
             <button
-              className="pptx-btn pptx-btn-icon"
+              className={`pptx-btn pptx-btn-icon ${hasNumbering && selectedTextElement ? "bg-blue-100" : ""}`}
+              onClick={toggleNumbering}
               title="Numbering"
               disabled={selectedElementIds.length === 0 || !selectedTextElement}
             >
@@ -388,6 +670,40 @@ export const HomeTabEnhanced: React.FC = () => {
               <Plus size={16} />
             </button>
           </div>
+          <div className="flex gap-1">
+            <button
+              className={`pptx-btn pptx-btn-icon ${textDirection === "vertical" ? "bg-blue-100" : ""}`}
+              onClick={toggleTextDirection}
+              disabled={selectedElementIds.length === 0 || !selectedTextElement}
+              title="Text Direction"
+            >
+              <FlipHorizontal size={16} />
+            </button>
+            <button
+              className={`pptx-btn pptx-btn-icon ${verticalAlign === "top" ? "bg-blue-100" : ""}`}
+              onClick={() => handleVerticalAlignChange("top")}
+              disabled={selectedElementIds.length === 0 || !selectedTextElement}
+              title="Align Top"
+            >
+              <AlignVerticalJustifyStart size={16} />
+            </button>
+            <button
+              className={`pptx-btn pptx-btn-icon ${verticalAlign === "middle" ? "bg-blue-100" : ""}`}
+              onClick={() => handleVerticalAlignChange("middle")}
+              disabled={selectedElementIds.length === 0 || !selectedTextElement}
+              title="Align Middle"
+            >
+              <AlignVerticalJustifyCenter size={16} />
+            </button>
+            <button
+              className={`pptx-btn pptx-btn-icon ${verticalAlign === "bottom" ? "bg-blue-100" : ""}`}
+              onClick={() => handleVerticalAlignChange("bottom")}
+              disabled={selectedElementIds.length === 0 || !selectedTextElement}
+              title="Align Bottom"
+            >
+              <AlignVerticalJustifyEnd size={16} />
+            </button>
+          </div>
         </div>
         <div className="pptx-ribbon-group-label">Paragraph</div>
       </div>
@@ -443,9 +759,11 @@ export const HomeTabEnhanced: React.FC = () => {
       <div className="pptx-ribbon-group">
         <div className="pptx-ribbon-group-content flex-col items-center">
           <button
-            className="pptx-btn pptx-btn-icon"
+            className={`pptx-btn pptx-btn-icon ${isPainterActive ? "bg-blue-100" : ""} ${isPersistent ? "ring-2 ring-blue-500" : ""}`}
+            onClick={handleFormatPainterClick}
+            onDoubleClick={handleFormatPainterDoubleClick}
             disabled={selectedElementIds.length === 0}
-            title="Format Painter"
+            title={isPainterActive ? "Format Painter (Active - Click to Cancel)" : "Format Painter (Click to copy format, Double-click for persistent)"}
           >
             <Paintbrush size={20} />
           </button>
