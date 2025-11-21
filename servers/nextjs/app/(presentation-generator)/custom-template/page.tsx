@@ -9,29 +9,22 @@ import { useFontManagement } from "./hooks/useFontManagement";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useSlideProcessing } from "./hooks/useSlideProcessing";
 import { useLayoutSaving } from "./hooks/useLayoutSaving";
-import { useAPIKeyCheck } from "./hooks/useAPIKeyCheck";
-import { useRouter, usePathname } from "next/navigation";
-import { LoadingSpinner } from "./components/LoadingSpinner";
+import { useRouter } from "next/navigation";
 import { FileUploadSection } from "./components/FileUploadSection";
 import { SaveLayoutButton } from "./components/SaveLayoutButton";
 import { SaveLayoutModal } from "./components/SaveLayoutModal";
 import EachSlide from "./components/EachSlide/NewEachSlide";
-import { APIKeyWarning } from "./components/APIKeyWarning";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store/store";
 
 const CustomTemplatePage = () => {
   const router = useRouter();
-  const pathname = usePathname();
   const { refetch } = useLayout();
-  
+
   // Custom hooks for different concerns
-  const { hasRequiredKey, isRequiredKeyLoading } = useAPIKeyCheck();
   const { selectedFile, handleFileSelect, removeFile } = useFileUpload();
   const { slides, setSlides, completedSlides } = useCustomLayout();
   const { fontsData, UploadedFonts, uploadFont, removeFont, getAllUnsupportedFonts, setFontsData } = useFontManagement();
-  const { isProcessingPptx, processFile, retrySlide,processSlideToHtml } = useSlideProcessing(
+  const { isProcessingPptx, processFile, retrySlide, processSlideToHtml } = useSlideProcessing(
     selectedFile,
     slides,
     setSlides,
@@ -44,11 +37,6 @@ const CustomTemplatePage = () => {
     refetch,
     setSlides
   );
-  const llmConfig = useSelector((state: RootState) => state.userConfig.llm_config);
-  const templateUrl =
-    llmConfig?.CUSTOM_TEMPLATE_LLM_URL || llmConfig?.CUSTOM_LLM_URL;
-  const templateModel =
-    llmConfig?.CUSTOM_TEMPLATE_MODEL || llmConfig?.CUSTOM_MODEL;
 
   const handleSaveTemplate = async (layoutName: string, description: string): Promise<string | null> => {
     trackEvent(MixpanelEvent.CustomTemplate_Save_Templates_API_Call);
@@ -89,17 +77,8 @@ const CustomTemplatePage = () => {
     }
   }, []);
 
-  // Loading state
-  if (isRequiredKeyLoading) {
-    return <LoadingSpinner message="Checking API Key..." />;
-  }
+  // NO MORE API KEY CHECKS - Deterministic pipeline doesn't need VLM!
 
-  // Anthropic key warning
-  if (!hasRequiredKey) {
-    return <APIKeyWarning />;
- 
-
-  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <Header />
@@ -107,27 +86,24 @@ const CustomTemplatePage = () => {
         {/* Header */}
         <div className="text-center space-y-2 my-6">
           <h1 className="text-4xl font-bold text-gray-900">
-            Custom Template Processor
+            Custom Template Processor ⚡
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Upload your PDF or PPTX file to extract slides and convert them to
+            Upload your PPTX file to extract slides and convert them to
             a template which you can use to generate AI presentations.
           </p>
           <div className="max-w-2xl mx-auto mt-2">
-            <div className="inline-block rounded border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700">
-              AI template generation can take around 5 minutes per slide.
+            <div className="inline-block rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+              🚀 Deterministic pipeline: ~2 seconds per slide (no AI needed!)
             </div>
           </div>
           <div className="flex justify-center mt-4">
-            <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm">
-              <span className="text-slate-500">Template model:</span>
-              <span className="font-semibold text-slate-900">
-                {templateModel || "Not configured"}
-              </span>
-              <span className="text-slate-400">•</span>
-              <span className="font-medium text-slate-800">
-                {templateUrl || "No URL set"}
-              </span>
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700 shadow-sm">
+              <span>✅ No screenshots</span>
+              <span className="text-green-400">•</span>
+              <span>✅ No VLM calls</span>
+              <span className="text-green-400">•</span>
+              <span>✅ 100% deterministic</span>
             </div>
           </div>
         </div>

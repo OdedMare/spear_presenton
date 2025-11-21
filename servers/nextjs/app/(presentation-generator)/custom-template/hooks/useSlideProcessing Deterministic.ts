@@ -3,7 +3,10 @@ import { toast } from "sonner";
 import { ApiResponseHandler } from "@/app/(presentation-generator)/services/api/api-error-handler";
 import { ProcessedSlide, FontData } from "../types";
 
-export const useSlideProcessing = (
+// Feature flag to enable deterministic pipeline
+const USE_DETERMINISTIC_PIPELINE = process.env.NEXT_PUBLIC_USE_DETERMINISTIC_PIPELINE === 'true';
+
+export const useSlideProcessingDeterministic = (
   selectedFile: File | null,
   slides: ProcessedSlide[],
   setSlides: React.Dispatch<React.SetStateAction<ProcessedSlide[]>>,
@@ -11,11 +14,11 @@ export const useSlideProcessing = (
 ) => {
   const [isProcessingPptx, setIsProcessingPptx] = useState(false);
 
-  // Process individual slide to HTML using DETERMINISTIC renderer (no VLM, no screenshots)
+  // Process individual slide to HTML using deterministic renderer
   const processSlideToHtml = useCallback(
     async (slide: any, index: number) => {
       console.log(
-        `Starting DETERMINISTIC processing for slide ${slide.slide_number} at index ${index}`
+        `Starting to process slide ${slide.slide_number} at index ${index} (deterministic)`
       );
 
       // Update slide to processing state
@@ -42,7 +45,7 @@ export const useSlideProcessing = (
           `Failed to render slide ${slide.slide_number} to HTML`
         );
 
-        console.log(`✅ Successfully processed slide ${slide.slide_number} deterministically`);
+        console.log(`Successfully processed slide ${slide.slide_number}`);
 
         // Update slide with success
         setSlides((prev) => {
@@ -70,7 +73,7 @@ export const useSlideProcessing = (
             setTimeout(() => {
               const nextSlide = newSlides[nextIndex];
               processSlideToHtml(nextSlide, nextIndex);
-            }, 100); // Fast processing - no VLM delay needed!
+            }, 100); // Faster - no VLM delay needed
           }
 
           return newSlides;
@@ -114,7 +117,7 @@ export const useSlideProcessing = (
     []
   );
 
-  // Process PPTX file to extract layout JSON (NO SCREENSHOTS, NO OCR, NO VLM)
+  // Process PPTX file to extract layout JSON
   const processFile = useCallback(async () => {
     if (!selectedFile) {
       toast.error("Please select a PPTX file first");
@@ -129,10 +132,10 @@ export const useSlideProcessing = (
       const isPptx = fileName.endsWith(".pptx");
 
       if (!isPptx) {
-        throw new Error("Only PPTX files are supported in deterministic mode");
+        throw new Error("Deterministic pipeline currently only supports PPTX files");
       }
 
-      // NEW: Use layout/process endpoint for deterministic extraction (NO SCREENSHOTS!)
+      // NEW: Use layout/process endpoint for deterministic extraction
       formData.append("pptx_file", selectedFile);
       const layoutResponse = await fetch("/api/v1/ppt/layout/process", {
         method: "POST",
@@ -153,13 +156,13 @@ export const useSlideProcessing = (
         setFontsData(slidesResponseData.fonts);
       }
 
-      // Initialize slides with layout JSON (NO screenshots, NO xml - it's all in layout_json!)
+      // Initialize slides with layout JSON (no screenshots needed!)
       const initialSlides: ProcessedSlide[] = slidesResponseData.slides.map(
         (slide: any) => ({
           slide_number: slide.index,
-          layout_json: slide, // NEW: Store full layout JSON with positions, colors, etc.
-          screenshot_url: null, // NOT NEEDED - deterministic rendering!
-          xml_content: null, // NOT NEEDED - already in layout JSON!
+          layout_json: slide, // NEW: Store full layout JSON
+          screenshot_url: null, // Not needed anymore
+          xml_content: null, // Already in layout JSON
           normalized_fonts: slide.fonts ?? [],
           processing: false,
           processed: false,
@@ -173,11 +176,11 @@ export const useSlideProcessing = (
         slidesResponseData.fonts.not_supported_fonts.length > 0;
 
       toast.success(
-        `🚀 Deterministic Layout Extraction Complete!`,
+        `Layout Extraction Complete`,
         {
           description: hasUnsupported
-            ? `Please upload unsupported fonts, then click Extract Template`
-            : `All fonts supported! Starting HTML generation (no VLM needed)...`
+            ? `Please upload the unsupported fonts, then click Extract Template`
+            : `All fonts supported! Starting HTML generation...`
         }
       );
 
@@ -215,4 +218,4 @@ export const useSlideProcessing = (
     processSlideToHtml,
     retrySlide,
   };
-}; 
+};

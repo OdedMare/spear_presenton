@@ -28,21 +28,24 @@ export const useLayoutSaving = (
     const maxRetries = 3;
     let retryCount = 0;
 
-    console.log("Slide to convert to react", {
-      html: slide.html,
-      image: slide.screenshot_url,
+    console.log("Converting slide to React (DETERMINISTIC - no VLM)", {
+      slideNumber: slide.slide_number,
+      hasHtml: !!slide.html,
+      fonts: FontUrls,
     })
 
     while (retryCount < maxRetries) {
       try {
-        const response = await fetch("/api/v1/ppt/html-to-react/", {
+        // ALWAYS use deterministic HTML-to-React converter (no VLM, no screenshots)
+        const response = await fetch("/api/v1/ppt/template/html-to-react", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             html: slide.html,
-            image: slide.screenshot_url,
+            fonts: FontUrls,
+            component_name: `Slide${slide.slide_number}Layout`,
           }),
         });
 
@@ -50,6 +53,8 @@ export const useLayoutSaving = (
           response,
           `Failed to convert slide ${slide.slide_number} to React`
         );
+
+        console.log(`✅ Successfully converted slide ${slide.slide_number} to React (deterministic)`);
 
         return {
           presentation: presentationId,
@@ -61,15 +66,15 @@ export const useLayoutSaving = (
       } catch (error) {
         retryCount++;
         console.error(`Error converting slide ${slide.slide_number} (attempt ${retryCount}):`, error);
-        
+
         if (retryCount < maxRetries) {
-          toast.error(`Failed to convert slide ${slide.slide_number}. Retrying in 2 minutes...`, {
+          const waitTime = 5 * 1000; // 5 seconds between retries (fast - no VLM delays!)
+          toast.error(`Failed to convert slide ${slide.slide_number}. Retrying...`, {
             description: `Attempt ${retryCount}/${maxRetries}. Error: ${error instanceof Error ? error.message : "An unexpected error occurred"}`,
           });
-          
-          // Wait for 2 minutes before retrying
-          await delay(2 * 60 * 1000);
-          
+
+          await delay(waitTime);
+
           toast.info(`Retrying conversion for slide ${slide.slide_number}...`);
         } else {
           throw new Error(`Failed to convert slide ${slide.slide_number} after ${maxRetries} attempts: ${error instanceof Error ? error.message : "An unexpected error occurred"}`);
