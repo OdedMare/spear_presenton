@@ -35,11 +35,16 @@ import {
   AlignVerticalJustifyEnd,
   FilePlus,
   Layout,
+  Search,
+  MousePointer2,
 } from "lucide-react";
 import { FONT_FAMILIES, FONT_SIZES, LINE_SPACING_OPTIONS } from "../../utils/constants";
 import { SlideLayoutPicker } from "../Dialogs/SlideLayoutPicker";
+import { FindReplaceDialog } from "../Dialogs/FindReplaceDialog";
+import { ShapeLibrary } from "../Dialogs/ShapeLibrary";
 import { useFormatPainter } from "../../hooks/useFormatPainter";
 import { SlideElement } from "../../types";
+import { getShapeById } from "../../configs/shapes";
 
 export const HomeTabEnhanced: React.FC = () => {
   const {
@@ -74,6 +79,9 @@ export const HomeTabEnhanced: React.FC = () => {
   const [textDirection, setTextDirection] = useState<"horizontal" | "vertical">("horizontal");
   const [verticalAlign, setVerticalAlign] = useState<"top" | "middle" | "bottom">("top");
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
+  const [showFindDialog, setShowFindDialog] = useState(false);
+  const [findReplaceMode, setFindReplaceMode] = useState<"find" | "replace">("find");
+  const [showShapeLibrary, setShowShapeLibrary] = useState(false);
 
   // Format Painter hook
   const {
@@ -334,6 +342,27 @@ export const HomeTabEnhanced: React.FC = () => {
     addSlide(currentSlideIndex + 1);
   };
 
+  const handleShapeSelect = (shapeId: string) => {
+    const shapeConfig = getShapeById(shapeId);
+    if (!shapeConfig) return;
+
+    // Create a custom shape element using SVG path
+    addElement({
+      id: crypto.randomUUID(),
+      type: "shape",
+      shapeType: "custom",
+      bbox: { x: 200, y: 200, width: 200, height: 200 },
+      z: 0,
+      rotation: 0,
+      opacity: 1,
+      fill: { type: "solid", value: "#0078d4" },
+      border: { width: 2, color: "#003f7f", style: "solid" },
+      // Store SVG path data in a custom property
+      svgPath: shapeConfig.path,
+      viewBox: shapeConfig.viewBox || "0 0 100 100",
+    } as any);
+  };
+
   // Format Painter handlers
   const handleFormatPainterClick = () => {
     if (isPainterActive) {
@@ -405,6 +434,16 @@ export const HomeTabEnhanced: React.FC = () => {
         open={showLayoutPicker}
         onClose={() => setShowLayoutPicker(false)}
         onSelectLayout={handleLayoutSelect}
+      />
+      <FindReplaceDialog
+        open={showFindDialog}
+        onClose={() => setShowFindDialog(false)}
+        mode={findReplaceMode}
+      />
+      <ShapeLibrary
+        open={showShapeLibrary}
+        onClose={() => setShowShapeLibrary(false)}
+        onSelectShape={handleShapeSelect}
       />
       {/* Clipboard Group */}
       <div className="pptx-ribbon-group">
@@ -710,23 +749,33 @@ export const HomeTabEnhanced: React.FC = () => {
 
       {/* Drawing Group */}
       <div className="pptx-ribbon-group">
-        <div className="pptx-ribbon-group-content gap-1">
-          <button className="pptx-btn pptx-btn-icon" onClick={addTextBox} title="Text Box">
-            <Type size={16} />
-          </button>
+        <div className="pptx-ribbon-group-content flex-col gap-2">
+          <div className="flex gap-1">
+            <button className="pptx-btn pptx-btn-icon" onClick={addTextBox} title="Text Box">
+              <Type size={16} />
+            </button>
+            <button
+              className="pptx-btn pptx-btn-icon"
+              onClick={() => addShape("rectangle")}
+              title="Rectangle"
+            >
+              <Square size={16} />
+            </button>
+            <button
+              className="pptx-btn pptx-btn-icon"
+              onClick={() => addShape("ellipse")}
+              title="Circle"
+            >
+              <Circle size={16} />
+            </button>
+          </div>
           <button
-            className="pptx-btn pptx-btn-icon"
-            onClick={() => addShape("rectangle")}
-            title="Rectangle"
+            className="pptx-btn flex items-center gap-2 w-full"
+            onClick={() => setShowShapeLibrary(true)}
+            title="More Shapes"
           >
             <Square size={16} />
-          </button>
-          <button
-            className="pptx-btn pptx-btn-icon"
-            onClick={() => addShape("ellipse")}
-            title="Circle"
-          >
-            <Circle size={16} />
+            <span className="text-sm">Shapes</span>
           </button>
         </div>
         <div className="pptx-ribbon-group-label">Drawing</div>
@@ -769,6 +818,71 @@ export const HomeTabEnhanced: React.FC = () => {
           </button>
           <span className="text-xs">Format Painter</span>
         </div>
+      </div>
+
+      {/* Editing Group */}
+      <div className="pptx-ribbon-group">
+        <div className="pptx-ribbon-group-content flex-col gap-2">
+          <button
+            className="pptx-btn flex items-center gap-2 w-full"
+            onClick={() => {
+              setFindReplaceMode("find");
+              setShowFindDialog(true);
+            }}
+            title="Find (Ctrl+F)"
+          >
+            <Search size={16} />
+            <span className="text-sm">Find</span>
+          </button>
+          <button
+            className="pptx-btn flex items-center gap-2 w-full"
+            onClick={() => {
+              setFindReplaceMode("replace");
+              setShowFindDialog(true);
+            }}
+            title="Replace (Ctrl+H)"
+          >
+            <Search size={16} />
+            <span className="text-sm">Replace</span>
+          </button>
+          <div className="relative group">
+            <button
+              className="pptx-btn flex items-center gap-2 w-full"
+              title="Select"
+            >
+              <MousePointer2 size={16} />
+              <span className="text-sm">Select</span>
+              <ChevronDown size={12} />
+            </button>
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg hidden group-hover:block z-10 min-w-[160px]">
+              <button
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                onClick={() => {
+                  // Select all elements on current slide
+                  const slide = presentation.slides[currentSlideIndex];
+                  slide.elements.forEach((el) => {
+                    if (!selectedElementIds.includes(el.id)) {
+                      // TODO: Add multi-select support in EditorContext
+                      console.log("Select all:", el.id);
+                    }
+                  });
+                }}
+              >
+                Select All (Ctrl+A)
+              </button>
+              <button
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                onClick={() => {
+                  // TODO: Implement select objects mode
+                  console.log("Select Objects");
+                }}
+              >
+                Select Objects
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="pptx-ribbon-group-label">Editing</div>
       </div>
     </>
   );
