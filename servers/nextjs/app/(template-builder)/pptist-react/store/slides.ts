@@ -1,8 +1,10 @@
 import { create } from "zustand";
+import { omit } from "lodash";
 import type {
   Slide,
   SlideTemplate,
   SlideTheme,
+  PPTElement,
 } from "../../../../pptist/types/slides";
 
 export interface SlidesState {
@@ -20,12 +22,17 @@ export interface SlidesActions {
   setTheme: (theme: Partial<SlideTheme>) => void;
   setSlides: (slides: Slide[]) => void;
   addSlide: (slide: Slide | Slide[]) => void;
+  removeSlideProps: (data: { id: string; propName: string | string[] }) => void;
   updateSlide: (props: Partial<Slide>, slideId?: string) => void;
   deleteSlide: (slideId: string | string[]) => void;
   updateSlideIndex: (index: number) => void;
   setViewportSize: (size: number) => void;
   setViewportRatio: (ratio: number) => void;
   setTemplates: (templates: SlideTemplate[]) => void;
+  addElement: (element: PPTElement | PPTElement[]) => void;
+  deleteElement: (elementId: string | string[]) => void;
+  updateElement: (data: { id: string | string[]; props: Partial<PPTElement>; slideId?: string }) => void;
+  removeElementProps: (data: { id: string; propName: string | string[] }) => void;
 }
 
 const initialState: SlidesState = {
@@ -157,5 +164,61 @@ export const useSlidesStore = create<SlidesState & SlidesActions>((set, get) => 
   setViewportSize: (size) => set(() => ({ viewportSize: size })),
   setViewportRatio: (ratio) => set(() => ({ viewportRatio: ratio })),
   setTemplates: (templates) => set(() => ({ templates })),
+  removeSlideProps: (data) =>
+    set((state) => {
+      const { id, propName } = data;
+      const propNames = Array.isArray(propName) ? propName : [propName];
+      const slides = state.slides.map((slide) =>
+        slide.id === id ? (omit(slide, propNames) as Slide) : slide
+      );
+      return { slides };
+    }),
+  addElement: (element) =>
+    set((state) => {
+      const elements = Array.isArray(element) ? element : [element];
+      const slides = [...state.slides];
+      const current = slides[state.slideIndex];
+      const newEls = [...(current?.elements || []), ...elements];
+      slides[state.slideIndex] = { ...current, elements: newEls } as Slide;
+      return { slides };
+    }),
+  deleteElement: (elementId) =>
+    set((state) => {
+      const elementIdList = Array.isArray(elementId) ? elementId : [elementId];
+      const slides = [...state.slides];
+      const current = slides[state.slideIndex];
+      const newEls = (current?.elements || []).filter(
+        (el) => !elementIdList.includes(el.id)
+      );
+      slides[state.slideIndex] = { ...current, elements: newEls } as Slide;
+      return { slides };
+    }),
+  updateElement: (data) =>
+    set((state) => {
+      const { id, props, slideId } = data;
+      const elIdList = typeof id === "string" ? [id] : id;
+      const slides = [...state.slides];
+      const slideIndex = slideId
+        ? slides.findIndex((s) => s.id === slideId)
+        : state.slideIndex;
+      if (slideIndex < 0) return state;
+      const slide = slides[slideIndex];
+      const elements = (slide?.elements || []).map((el) =>
+        elIdList.includes(el.id) ? ({ ...el, ...props } as PPTElement) : el
+      );
+      slides[slideIndex] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  removeElementProps: (data) =>
+    set((state) => {
+      const { id, propName } = data;
+      const propNames = Array.isArray(propName) ? propName : [propName];
+      const slides = [...state.slides];
+      const slide = slides[state.slideIndex];
+      const elements = (slide?.elements || []).map((el) =>
+        el.id === id ? (omit(el, propNames) as PPTElement) : el
+      );
+      slides[state.slideIndex] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
 }));
-
