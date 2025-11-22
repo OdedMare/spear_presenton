@@ -63,7 +63,8 @@
     "tailwindcss-animate": "^1.0.7",
     "tiptap-markdown": "^0.8.10",
     "uuid": "^11.1.0",
-    "zod": "^4.0.5"
+    "zod": "^4.0.5",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@types/babel__standalone": "^7.1.9",

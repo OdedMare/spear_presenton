@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --pptist-bg: #f7f7f7;
+  --pptist-border: #e5e5e5;
+  --pptist-text: #333333;
+}
+
+body {
+  background: var(--pptist-bg);
+  color: var(--pptist-text);
+}
+
+.pptist-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.pptist-scrollbar::-webkit-scrollbar-thumb {
+  background: #cfcfcf;
+  border-radius: 4px;
+}
+.pptist-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
