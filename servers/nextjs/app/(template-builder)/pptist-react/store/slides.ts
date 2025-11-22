@@ -7,6 +7,12 @@ import type {
   PPTElement,
 } from "../types/pptist";
 import { v4 as uuidv4 } from "uuid";
+import {
+  alignElementsBy,
+  distributeElementsBy,
+  mirrorElementsBy,
+  rotateElementsBy,
+} from "../utils/alignment";
 
 export interface SlidesState {
   title: string;
@@ -36,6 +42,22 @@ export interface SlidesActions {
   deleteElement: (elementId: string | string[]) => void;
   updateElement: (data: { id: string | string[]; props: Partial<PPTElement>; slideId?: string }) => void;
   removeElementProps: (data: { id: string; propName: string | string[] }) => void;
+  bringToFront: (id: string, slideId?: string) => void;
+  sendToBack: (id: string, slideId?: string) => void;
+  bringForward: (id: string, slideId?: string) => void;
+  sendBackward: (id: string, slideId?: string) => void;
+  alignElements: (
+    direction: "left" | "center" | "right" | "top" | "middle" | "bottom",
+    ids: string[],
+    slideId?: string
+  ) => void;
+  distributeElements: (
+    direction: "horizontal" | "vertical",
+    ids: string[],
+    slideId?: string
+  ) => void;
+  rotateElements: (direction: "left" | "right", ids: string[], slideId?: string) => void;
+  mirrorElements: (direction: "horizontal" | "vertical", ids: string[], slideId?: string) => void;
 }
 
 const initialState: SlidesState = {
@@ -248,6 +270,102 @@ export const useSlidesStore = create<SlidesState & SlidesActions>((set, get) => 
         el.id === id ? (omit(el, propNames) as PPTElement) : el
       );
       slides[state.slideIndex] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  bringToFront: (id, slideId) =>
+    set((state) => {
+      const slides = [...state.slides];
+      const idx = slideId ? slides.findIndex((s) => s.id === slideId) : state.slideIndex;
+      if (idx < 0) return state;
+      const slide = slides[idx];
+      const elements = [...(slide?.elements || [])];
+      const foundIdx = elements.findIndex((el) => el.id === id);
+      if (foundIdx < 0) return state;
+      const [el] = elements.splice(foundIdx, 1);
+      elements.push(el);
+      slides[idx] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  sendToBack: (id, slideId) =>
+    set((state) => {
+      const slides = [...state.slides];
+      const idx = slideId ? slides.findIndex((s) => s.id === slideId) : state.slideIndex;
+      if (idx < 0) return state;
+      const slide = slides[idx];
+      const elements = [...(slide?.elements || [])];
+      const foundIdx = elements.findIndex((el) => el.id === id);
+      if (foundIdx < 0) return state;
+      const [el] = elements.splice(foundIdx, 1);
+      elements.unshift(el);
+      slides[idx] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  bringForward: (id, slideId) =>
+    set((state) => {
+      const slides = [...state.slides];
+      const idx = slideId ? slides.findIndex((s) => s.id === slideId) : state.slideIndex;
+      if (idx < 0) return state;
+      const slide = slides[idx];
+      const elements = [...(slide?.elements || [])];
+      const foundIdx = elements.findIndex((el) => el.id === id);
+      if (foundIdx < 0 || foundIdx === elements.length - 1) return state;
+      const [el] = elements.splice(foundIdx, 1);
+      elements.splice(foundIdx + 1, 0, el);
+      slides[idx] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  sendBackward: (id, slideId) =>
+    set((state) => {
+      const slides = [...state.slides];
+      const idx = slideId ? slides.findIndex((s) => s.id === slideId) : state.slideIndex;
+      if (idx < 0) return state;
+      const slide = slides[idx];
+      const elements = [...(slide?.elements || [])];
+      const foundIdx = elements.findIndex((el) => el.id === id);
+      if (foundIdx <= 0) return state;
+      const [el] = elements.splice(foundIdx, 1);
+      elements.splice(foundIdx - 1, 0, el);
+      slides[idx] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  alignElements: (direction, ids, slideId) =>
+    set((state) => {
+      const slides = [...state.slides];
+      const idx = slideId ? slides.findIndex((s) => s.id === slideId) : state.slideIndex;
+      if (idx < 0) return state;
+      const slide = slides[idx];
+      const elements = alignElementsBy(slide?.elements || [], ids, direction);
+      slides[idx] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  distributeElements: (direction, ids, slideId) =>
+    set((state) => {
+      const slides = [...state.slides];
+      const idx = slideId ? slides.findIndex((s) => s.id === slideId) : state.slideIndex;
+      if (idx < 0) return state;
+      const slide = slides[idx];
+      const elements = distributeElementsBy(slide?.elements || [], ids, direction);
+      slides[idx] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  rotateElements: (direction, ids, slideId) =>
+    set((state) => {
+      const slides = [...state.slides];
+      const idx = slideId ? slides.findIndex((s) => s.id === slideId) : state.slideIndex;
+      if (idx < 0) return state;
+      const slide = slides[idx];
+      const elements = rotateElementsBy(slide?.elements || [], ids, direction);
+      slides[idx] = { ...slide, elements } as Slide;
+      return { slides };
+    }),
+  mirrorElements: (direction, ids, slideId) =>
+    set((state) => {
+      const slides = [...state.slides];
+      const idx = slideId ? slides.findIndex((s) => s.id === slideId) : state.slideIndex;
+      if (idx < 0) return state;
+      const slide = slides[idx];
+      const elements = mirrorElementsBy(slide?.elements || [], ids, direction);
+      slides[idx] = { ...slide, elements } as Slide;
       return { slides };
     }),
 }));

@@ -11,9 +11,11 @@ interface AlignmentLine {
 export function AlignmentLines({
   lines,
   scale,
+  color = "#3b82f6",
 }: {
   lines: AlignmentLine[];
   scale: number;
+  color?: string;
 }) {
   return (
     <>
@@ -26,7 +28,8 @@ export function AlignmentLines({
                 top: 0,
                 width: 1,
                 height: "100%",
-                background: "#3b82f6",
+                background: color,
+                pointerEvents: "none",
               }
             : {
                 position: "absolute",
@@ -34,11 +37,11 @@ export function AlignmentLines({
                 left: 0,
                 height: 1,
                 width: "100%",
-                background: "#3b82f6",
+                background: color,
+                pointerEvents: "none",
               };
         return <div key={idx} style={style} />;
       })}
     </>
   );
 }
-

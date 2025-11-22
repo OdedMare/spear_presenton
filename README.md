@@ -119,6 +119,71 @@ You can disable anonymous telemetry using the following environment variable:
 docker run -it --name presenton -p 5000:80 -e LLM="openai" -e OPENAI_API_KEY="******" -e IMAGE_PROVIDER="dall-e-3" -e CAN_CHANGE_KEYS="false" -v "./app_data:/app_data" ghcr.io/presenton/presenton:latest
 ```
 
+---
+
+## Presenton Native PPTX Creator (React + Tailwind + Zustand)
+
+Native PPTX editing experience (no iframe) lives at `/template-builder` → tab “PPTX Creator”, replacing the Vue-based PPTist UI. This section is the engineering handoff and parity roadmap.
+
+### ✅ Current status (fully implemented)
+- Navigation & integration: template-builder tab for Native PPTX Creator plus legacy iframe; wired into Presenton nav/permissions.
+- Core state (Zustand): slides CRUD; element CRUD (text/image/shape); multi-selection; drag/resize/rotate; z-order; global commands/selection; basic history; hotkeys scaffold; canvas zoom/pan.
+- Canvas: shapes/text/images; boundaries and handles; snapping to slide center/edges; RTL detection; shadows/opacity/borders/gradients; multi-select bounding box; performance/context menu scaffold.
+- Slides panel: add/duplicate/delete; drag reorder.
+- Toolbar: add text/shape; fill/outline pickers; layer ordering; basic formatting actions.
+- Inspector: background color; fill/outline/shadow controls; opacity; image object-fit; text color/size/basic alignment.
+- Presenton export: PPTist JSON → deterministic layout → `/api/v1/ppt/html-to-react` → save template preview.
+- Build fixes: removed blocking dependencies/unreachable Google fonts; dynamic route flags set.
+
+### 🔥 Missing features (PowerPoint parity roadmap)
+1. Advanced text & typography
+   - Nested text runs; bullets/numbering; indentation; line-height; letter-spacing; text direction/vertical text; auto-fit/autoshrink; highlight color; sub/superscript; tabs/ruler; text columns; hyperlinks in runs; paste formatting.
+2. Shape engine
+   - Full preset shapes (stars/arrows/callouts/flowcharts); shape combine (union/intersect/subtract); adjustable handles; per-corner radius; multi-stop gradients (linear/radial/path); pattern fills; 3D effects; group/ungroup; rotation center offset; line caps/joins/dash styles matching PowerPoint.
+3. Media & images
+   - Crop; replace; masks (circle/rounded/custom); flip H/V; soft edges; color adjustments (brightness/contrast/saturation); blur; background removal (future AI).
+4. Slide master & themes
+   - Theme palettes (12-color); theme fonts (head/body); effects; slide master editing UI; layout presets (title, two-column, section header, comparison, blank, title+content); global theme/background; apply theme to existing slides; save custom themes.
+5. Alignment, distribution, guides
+   - Snap to grids/guides/smart guides; manual guides; align left/right/center/top/middle/bottom; distribute H/V; rotate 90°; mirror H/V.
+6. Animations & transitions
+   - Animations in/out/emphasis; timelines/sequencing; per-slide transitions; easing.
+7. Slide metadata
+   - Notes; slide numbers; footer/header fields; date/time placeholders.
+8. UI panels & tools
+   - Full format panel; insert icons/symbols/tables/charts/SmartArt-lite/equation; review (spell-check, comments); view modes (Normal/Slide Sorter/Notes Page).
+9. Clipboard & history
+   - Full undo/redo across actions; copy/paste across slides; duplicate with formatting; format painter; Alt-drag duplicate.
+10. Import/Export
+    - Import PPTX → PPTist JSON; export PPTX (python-pptx); JSON import/export UI; snapshot thumbnail generator.
+11. Accessibility
+    - Alt text on images; reading order panel; contrast checker; full keyboard navigation.
+
+### 📌 Next steps (recommended phases)
+- Phase 1 – Foundations: shape engine; text engine; alignment/guide engine.
+- Phase 2 – UI panels: inspector redesign (PowerPoint-style); insert menu components; slide master UI.
+- Phase 3 – Rich features: animations; transitions; minimal SmartArt; image tools.
+- Phase 4 – Export/Import: PPTX export; PPTX import (OOXML → PPTist JSON).
+
+### Key file pointers
+- Canvas: `servers/nextjs/app/(template-builder)/pptist-react/Canvas/*`
+- Toolbar: `servers/nextjs/app/(template-builder)/pptist-react/Toolbar/CanvasToolbar.tsx`
+- Inspector: `servers/nextjs/app/(template-builder)/pptist-react/Inspector/InspectorPanel.tsx`
+- Slides list: `servers/nextjs/app/(template-builder)/pptist-react/Slides/ThumbnailStrip.tsx`
+- Stores: `servers/nextjs/app/(template-builder)/pptist-react/store/{slides.ts,main.ts,history.ts,keyboard.ts,screen.ts}`
+- Hooks: `servers/nextjs/app/(template-builder)/pptist-react/hooks/*` (viewport, active slide, context menu, hotkeys)
+- Export: `servers/nextjs/app/(template-builder)/pptist-react/hooks/usePresentonExport.ts`
+- Color picker: `servers/nextjs/app/(template-builder)/pptist-react/components/ColorPicker.tsx`
+- Template-builder page: `servers/nextjs/app/(presentation-generator)/template-builder/*`
+- Dynamic API flag: `servers/nextjs/app/api/presentation_to_pptx_model/route.ts`
+
+### Quick start (dev)
+```bash
+cd servers/nextjs
+npm run dev
+# open http://localhost:3000/template-builder, choose PPTX Creator tab
+```
+
 ### Using Google
 ```bash
 docker run -it --name presenton -p 5000:80 -e LLM="google" -e GOOGLE_API_KEY="******" -e IMAGE_PROVIDER="gemini_flash" -e CAN_CHANGE_KEYS="false" -v "./app_data:/app_data" ghcr.io/presenton/presenton:latest

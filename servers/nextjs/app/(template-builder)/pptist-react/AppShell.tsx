@@ -5,11 +5,13 @@ import HeaderBar from "./Toolbar/HeaderBar";
 import CanvasStage from "./Canvas/CanvasStage";
 import ThumbnailStrip from "./Slides/ThumbnailStrip";
 import InspectorPanel from "./Inspector/InspectorPanel";
-import LayersPanel from "./Layers/LayersPanel";
+import CanvasToolbar from "./Toolbar/CanvasToolbar";
 import "./styles/tailwind-overrides.css";
 import { useSlidesStore } from "./store/slides";
 import { useMainStore } from "./store/main";
 import { useGlobalHotkey } from "./hooks/useGlobalHotkey";
+import { useAlignmentHotkeys } from "./hooks/useAlignmentHotkeys";
+import { useEditingFlowHotkeys } from "./hooks/useEditingFlowHotkeys";
 
 export default function AppShell() {
   const setSlides = useSlidesStore((s) => s.setSlides);
@@ -21,6 +23,8 @@ export default function AppShell() {
   }));
 
   useGlobalHotkey();
+  useAlignmentHotkeys();
+  useEditingFlowHotkeys();
 
   // Temporary bootstrap: mimic pptist onMounted fetching mock data
   useEffect(() => {
@@ -40,8 +44,8 @@ export default function AppShell() {
           <ThumbnailStrip />
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="h-[40px] flex-shrink-0 border-b border-slate-200 bg-white">
-            <LayersPanel />
+          <div className="h-[56px] flex-shrink-0 border-b border-slate-200 bg-white">
+            <CanvasToolbar />
           </div>
           <div className="flex min-h-0 flex-1 bg-[#f7f7f7]">
             <div className="flex min-w-0 flex-1">

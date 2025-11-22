@@ -24,6 +24,8 @@ export interface MainState {
   editorAreaFocus: boolean;
   disableHotkeys: boolean;
   gridLineSize: number;
+  snapToGrid: boolean;
+  guides: { vertical: number[]; horizontal: number[] };
   showRuler: boolean;
   creatingElement: CreatingElement | null;
   creatingCustomShape: boolean;
@@ -31,6 +33,7 @@ export interface MainState {
   clipingImageElementId: string;
   isScaling: boolean;
   richTextAttrs: TextAttrs;
+  editingElementId: string | null;
   selectedTableCells: string[];
   selectedSlidesIndex: number[];
   dialogForExport: DialogForExportTypes | "presenton";
@@ -63,12 +66,16 @@ type MainActions = {
   setEditorareaFocus: (focus: boolean) => void;
   setDisableHotkeysState: (disable: boolean) => void;
   setGridLineSize: (size: number) => void;
+  setSnapToGrid: (snap: boolean) => void;
+  addGuide: (orientation: "vertical" | "horizontal", value: number) => void;
+  clearGuides: () => void;
   setRulerState: (show: boolean) => void;
   setCreatingElement: (el: CreatingElement | null) => void;
   setCreatingCustomShapeState: (state: boolean) => void;
   setToolbarState: (state: ToolbarStates) => void;
   setClipingImageElementId: (id: string) => void;
   setRichtextAttrs: (attrs: TextAttrs) => void;
+  setEditingElementId: (id: string | null) => void;
   setSelectedTableCells: (cells: string[]) => void;
   setScalingState: (scaling: boolean) => void;
   updateSelectedSlidesIndex: (indexes: number[]) => void;
@@ -98,6 +105,8 @@ export const useMainStore = create<MainState & MainActions>((set) => ({
   editorAreaFocus: false,
   disableHotkeys: false,
   gridLineSize: 0,
+  snapToGrid: false,
+  guides: { vertical: [], horizontal: [] },
   showRuler: false,
   creatingElement: null,
   creatingCustomShape: false,
@@ -105,6 +114,7 @@ export const useMainStore = create<MainState & MainActions>((set) => ({
   clipingImageElementId: "",
   isScaling: false,
   richTextAttrs: defaultRichTextAttrs,
+  editingElementId: null,
   selectedTableCells: [],
   selectedSlidesIndex: [],
   dialogForExport: "",
@@ -136,12 +146,23 @@ export const useMainStore = create<MainState & MainActions>((set) => ({
   setEditorareaFocus: (focus) => set({ editorAreaFocus: focus }),
   setDisableHotkeysState: (disable) => set({ disableHotkeys: disable }),
   setGridLineSize: (size) => set({ gridLineSize: size }),
+  setSnapToGrid: (snap) => set({ snapToGrid: snap }),
+  addGuide: (orientation, value) =>
+    set((state) => {
+      const guides = { ...state.guides };
+      const list = new Set(guides[orientation]);
+      list.add(Math.max(0, Math.round(value)));
+      guides[orientation] = Array.from(list).sort((a, b) => a - b);
+      return { guides };
+    }),
+  clearGuides: () => set({ guides: { vertical: [], horizontal: [] } }),
   setRulerState: (show) => set({ showRuler: show }),
   setCreatingElement: (el) => set({ creatingElement: el }),
   setCreatingCustomShapeState: (state) => set({ creatingCustomShape: state }),
   setToolbarState: (state) => set({ toolbarState: state }),
   setClipingImageElementId: (id) => set({ clipingImageElementId: id }),
   setRichtextAttrs: (attrs) => set({ richTextAttrs: attrs }),
+  setEditingElementId: (id) => set({ editingElementId: id }),
   setSelectedTableCells: (cells) => set({ selectedTableCells: cells }),
   setScalingState: (scaling) => set({ isScaling: scaling }),
   updateSelectedSlidesIndex: (indexes) => set({ selectedSlidesIndex: indexes }),
