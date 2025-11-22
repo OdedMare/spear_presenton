@@ -14,6 +14,8 @@ import { useGlobalHotkey } from "./hooks/useGlobalHotkey";
 export default function AppShell() {
   const setSlides = useSlidesStore((s) => s.setSlides);
   const setTitle = useSlidesStore((s) => s.setTitle);
+  const addBlankSlideAfter = useSlidesStore((s) => s.addBlankSlideAfter);
+  const slides = useSlidesStore((s) => s.slides);
   const { setShowRuler } = useMainStore((s) => ({
     setShowRuler: s.setRulerState,
   }));
@@ -23,9 +25,12 @@ export default function AppShell() {
   // Temporary bootstrap: mimic pptist onMounted fetching mock data
   useEffect(() => {
     setTitle("Untitled Presentation");
-    setSlides([]);
+    if (!slides.length) {
+      setSlides([]);
+      addBlankSlideAfter(-1);
+    }
     setShowRuler(false);
-  }, [setSlides, setTitle, setShowRuler]);
+  }, [setSlides, setTitle, setShowRuler, addBlankSlideAfter, slides.length]);
 
   return (
     <div className="flex h-full w-full flex-col bg-[#f5f5f5]">

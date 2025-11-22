@@ -2,6 +2,7 @@
 
 import { useSlidesStore } from "../store/slides";
 import { Plus, Copy, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
 
 export default function ThumbnailStrip() {
   const slides = useSlidesStore((s) => s.slides);
@@ -10,6 +11,21 @@ export default function ThumbnailStrip() {
   const addBlankSlideAfter = useSlidesStore((s) => s.addBlankSlideAfter);
   const duplicateSlide = useSlidesStore((s) => s.duplicateSlide);
   const deleteSlide = useSlidesStore((s) => s.deleteSlide);
+  const setSlides = useSlidesStore((s) => s.setSlides);
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+
+  const handleDrop = useCallback(
+    (toIdx: number) => {
+      if (draggingIdx === null || draggingIdx === toIdx) return;
+      const next = [...slides];
+      const [moved] = next.splice(draggingIdx, 1);
+      next.splice(toIdx, 0, moved);
+      setSlides(next);
+      setSlideIndex(toIdx);
+      setDraggingIdx(null);
+    },
+    [draggingIdx, slides, setSlides, setSlideIndex]
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -47,6 +63,10 @@ export default function ThumbnailStrip() {
         {slides.map((slide, idx) => (
           <div
             key={slide.id || idx}
+            draggable
+            onDragStart={() => setDraggingIdx(idx)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop(idx)}
             className={`mb-2 cursor-pointer rounded border p-2 text-xs ${
               idx === slideIndex
                 ? "border-blue-500 bg-blue-50"

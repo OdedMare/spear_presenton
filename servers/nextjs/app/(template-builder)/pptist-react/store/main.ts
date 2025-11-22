@@ -17,6 +17,9 @@ export interface MainState {
   canvasPercentage: number;
   canvasScale: number;
   canvasDragged: boolean;
+  isDraggingElement: boolean;
+  dragStart?: { x: number; y: number };
+  alignmentLines: { type: "vertical" | "horizontal"; x?: number; y?: number }[];
   thumbnailsFocus: boolean;
   editorAreaFocus: boolean;
   disableHotkeys: boolean;
@@ -51,6 +54,11 @@ type MainActions = {
   setCanvasPercentage: (percentage: number) => void;
   setCanvasScale: (scale: number) => void;
   setCanvasDragged: (dragged: boolean) => void;
+  setIsDraggingElement: (dragging: boolean) => void;
+  setDragStart: (pos: { x: number; y: number } | undefined) => void;
+  setAlignmentLines: (
+    lines: { type: "vertical" | "horizontal"; x?: number; y?: number }[]
+  ) => void;
   setThumbnailsFocus: (focus: boolean) => void;
   setEditorareaFocus: (focus: boolean) => void;
   setDisableHotkeysState: (disable: boolean) => void;
@@ -84,6 +92,8 @@ export const useMainStore = create<MainState & MainActions>((set) => ({
   canvasPercentage: 90,
   canvasScale: 1,
   canvasDragged: false,
+  isDraggingElement: false,
+  alignmentLines: [],
   thumbnailsFocus: false,
   editorAreaFocus: false,
   disableHotkeys: false,
@@ -119,6 +129,9 @@ export const useMainStore = create<MainState & MainActions>((set) => ({
   setCanvasPercentage: (percentage) => set({ canvasPercentage: percentage }),
   setCanvasScale: (scale) => set({ canvasScale: scale }),
   setCanvasDragged: (dragged) => set({ canvasDragged: dragged }),
+  setIsDraggingElement: (dragging) => set({ isDraggingElement: dragging }),
+  setDragStart: (pos) => set({ dragStart: pos }),
+  setAlignmentLines: (lines) => set({ alignmentLines: lines }),
   setThumbnailsFocus: (focus) => set({ thumbnailsFocus: focus }),
   setEditorareaFocus: (focus) => set({ editorAreaFocus: focus }),
   setDisableHotkeysState: (disable) => set({ disableHotkeys: disable }),
