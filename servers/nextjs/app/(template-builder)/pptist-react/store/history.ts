@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Slide } from "../../../../pptist/types/slides";
+import type { Slide } from "../types/pptist";
 
 interface Snapshot {
   index: number;
@@ -50,4 +50,3 @@ export const useHistoryStore = create<HistoryState & HistoryActions>((set, get) 
     return snapshots[nextCursor] || null;
   },
 }));
-

@@ -19,7 +19,7 @@ export default function AppShell() {
 
   // Temporary bootstrap: mimic pptist onMounted fetching mock data
   useEffect(() => {
-    setTitle("未命名演示文稿");
+    setTitle("Untitled Presentation");
     setSlides([]);
     setShowRuler(false);
   }, [setSlides, setTitle, setShowRuler]);
@@ -48,4 +48,3 @@ export default function AppShell() {
     </div>
   );
 }
-

@@ -1,13 +1,13 @@
 import { create } from "zustand";
-import { ToolbarStates } from "../../../../pptist/types/toolbar";
-import type { DialogForExportTypes } from "../../../../pptist/types/export";
+import { ToolbarStates } from "../types/pptist";
 import type {
+  DialogForExportTypes,
+  TextAttrs,
   CreatingElement,
   ShapeFormatPainter,
   TextFormatPainter,
-} from "../../../../pptist/types/edit";
-import type { TextAttrs } from "../../../../pptist/utils/prosemirror/utils";
-import { defaultRichTextAttrs } from "../../../../pptist/utils/prosemirror/utils";
+} from "../types/pptist";
+import { defaultRichTextAttrs } from "../types/pptist";
 
 export interface MainState {
   activeElementIdList: string[];

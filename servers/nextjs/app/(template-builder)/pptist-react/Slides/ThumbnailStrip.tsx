@@ -11,7 +11,7 @@ export default function ThumbnailStrip() {
     <div className="h-full overflow-y-auto p-2">
       {slides.length === 0 && (
         <div className="rounded border border-dashed border-slate-200 p-3 text-center text-xs text-slate-500">
-          暂无幻灯片
+          No slides yet
         </div>
       )}
       {slides.map((slide, idx) => (
@@ -32,4 +32,3 @@ export default function ThumbnailStrip() {
     </div>
   );
 }
-

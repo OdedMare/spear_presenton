@@ -3,16 +3,18 @@
 import { useState } from "react";
 import { useSlidesStore } from "../store/slides";
 import { useMainStore } from "../store/main";
+import { usePresentonExport } from "../hooks/usePresentonExport";
 
 export default function HeaderBar() {
   const title = useSlidesStore((s) => s.title);
   const setTitle = useSlidesStore((s) => s.setTitle);
   const openExport = useMainStore((s) => s.setDialogForExport);
+  const { exportToPresenton, isExporting } = usePresentonExport();
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState(title);
 
   const handleBlur = () => {
-    setTitle(input.trim() || "未命名演示文稿");
+    setTitle(input.trim() || "Untitled Presentation");
     setEditing(false);
   };
 
@@ -48,16 +50,16 @@ export default function HeaderBar() {
           className="rounded px-3 py-1 text-slate-700 hover:bg-slate-100"
           onClick={() => openExport("pptx")}
         >
-          导出
+          Export
         </button>
         <button
           className="rounded bg-slate-900 px-3 py-1 text-white hover:bg-slate-800"
-          onClick={() => openExport("presenton")}
+          disabled={isExporting}
+          onClick={() => exportToPresenton().catch(() => {})}
         >
-          导出到 Presenton
+          {isExporting ? "Exporting..." : "Export to Presenton"}
         </button>
       </div>
     </div>
   );
 }
-

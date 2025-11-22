@@ -5,7 +5,7 @@ import type {
   SlideTemplate,
   SlideTheme,
   PPTElement,
-} from "../../../../pptist/types/slides";
+} from "../types/pptist";
 
 export interface SlidesState {
   title: string;
@@ -36,7 +36,7 @@ export interface SlidesActions {
 }
 
 const initialState: SlidesState = {
-  title: "未命名演示文稿",
+  title: "Untitled Presentation",
   theme: {
     themeColors: [
       "#5b9bd5",
@@ -67,52 +67,52 @@ const initialState: SlidesState = {
   viewportRatio: 0.5625,
   templates: [
     {
-      name: "山河映红",
+      name: "Crimson Mountains",
       id: "template_1",
       cover: "./imgs/template_1.webp",
-      origin: "官方制作",
+      origin: "Official",
     },
     {
-      name: "都市蓝调",
+      name: "Urban Blue",
       id: "template_2",
       cover: "./imgs/template_2.webp",
-      origin: "官方制作",
+      origin: "Official",
     },
     {
-      name: "智感几何",
+      name: "Geometric Sense",
       id: "template_3",
       cover: "./imgs/template_3.webp",
-      origin: "官方制作",
+      origin: "Official",
     },
     {
-      name: "柔光莫兰迪",
+      name: "Soft Morandi",
       id: "template_4",
       cover: "./imgs/template_4.webp",
-      origin: "官方制作",
+      origin: "Official",
     },
     {
-      name: "简约绿意",
+      name: "Minimal Green",
       id: "template_5",
       cover: "./imgs/template_5.webp",
-      origin: "社区贡献+官方深度完善优化",
+      origin: "Community + Official Enhanced",
     },
     {
-      name: "暖色复古",
+      name: "Warm Retro",
       id: "template_6",
       cover: "./imgs/template_6.webp",
-      origin: "社区贡献+官方深度完善优化",
+      origin: "Community + Official Enhanced",
     },
     {
-      name: "深邃沉稳",
+      name: "Deep Steady",
       id: "template_7",
       cover: "./imgs/template_7.webp",
-      origin: "社区贡献+官方深度完善优化",
+      origin: "Community + Official Enhanced",
     },
     {
-      name: "浅蓝小清新",
+      name: "Light Blue Fresh",
       id: "template_8",
       cover: "./imgs/template_8.webp",
-      origin: "社区贡献+官方深度完善优化",
+      origin: "Community + Official Enhanced",
     },
   ],
 };
@@ -121,7 +121,7 @@ export const useSlidesStore = create<SlidesState & SlidesActions>((set, get) => 
   ...initialState,
   setTitle: (title) =>
     set(() => ({
-      title: title || "未命名演示文稿",
+      title: title || "Untitled Presentation",
     })),
   setTheme: (theme) =>
     set((state) => ({
