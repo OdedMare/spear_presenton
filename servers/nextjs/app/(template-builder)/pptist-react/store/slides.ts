@@ -6,6 +6,7 @@ import type {
   SlideTheme,
   PPTElement,
 } from "../types/pptist";
+import { v4 as uuidv4 } from "uuid";
 
 export interface SlidesState {
   title: string;
@@ -22,6 +23,8 @@ export interface SlidesActions {
   setTheme: (theme: Partial<SlideTheme>) => void;
   setSlides: (slides: Slide[]) => void;
   addSlide: (slide: Slide | Slide[]) => void;
+  addBlankSlideAfter: (index?: number) => Slide;
+  duplicateSlide: (index: number) => void;
   removeSlideProps: (data: { id: string; propName: string | string[] }) => void;
   updateSlide: (props: Partial<Slide>, slideId?: string) => void;
   deleteSlide: (slideId: string | string[]) => void;
@@ -119,6 +122,32 @@ const initialState: SlidesState = {
 
 export const useSlidesStore = create<SlidesState & SlidesActions>((set, get) => ({
   ...initialState,
+  addBlankSlideAfter: (index) => {
+    const slide: Slide = {
+      id: uuidv4(),
+      elements: [],
+      background: { type: "solid", color: "#ffffff" },
+    };
+    set((state) => {
+      const insertIndex =
+        typeof index === "number" ? index + 1 : state.slideIndex + 1;
+      const slides = [...state.slides];
+      slides.splice(insertIndex, 0, slide);
+      return { slides, slideIndex: insertIndex };
+    });
+    return slide;
+  },
+  duplicateSlide: (index) =>
+    set((state) => {
+      const srcIndex = Math.min(Math.max(index, 0), state.slides.length - 1);
+      const original = state.slides[srcIndex];
+      if (!original) return state;
+      const clone: Slide = JSON.parse(JSON.stringify(original));
+      clone.id = uuidv4();
+      const slides = [...state.slides];
+      slides.splice(srcIndex + 1, 0, clone);
+      return { slides, slideIndex: srcIndex + 1 };
+    }),
   setTitle: (title) =>
     set(() => ({
       title: title || "Untitled Presentation",

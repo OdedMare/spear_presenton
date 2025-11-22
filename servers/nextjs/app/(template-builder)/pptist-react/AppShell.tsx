@@ -9,6 +9,7 @@ import LayersPanel from "./Layers/LayersPanel";
 import "./styles/tailwind-overrides.css";
 import { useSlidesStore } from "./store/slides";
 import { useMainStore } from "./store/main";
+import { useGlobalHotkey } from "./hooks/useGlobalHotkey";
 
 export default function AppShell() {
   const setSlides = useSlidesStore((s) => s.setSlides);
@@ -16,6 +17,8 @@ export default function AppShell() {
   const { setShowRuler } = useMainStore((s) => ({
     setShowRuler: s.setRulerState,
   }));
+
+  useGlobalHotkey();
 
   // Temporary bootstrap: mimic pptist onMounted fetching mock data
   useEffect(() => {
