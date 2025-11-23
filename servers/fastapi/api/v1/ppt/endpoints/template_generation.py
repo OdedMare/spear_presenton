@@ -12,7 +12,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from constants.documents import POWERPOINT_TYPES
-from services.layout_extractor import parse_pptx_to_layouts, ParsedSlide
+from services.layout_extractor import parse_pptx_to_layouts
 from services.layout_renderer import render_slide
 from services.html_to_react_converter import convert_html_to_react
 from services.html_text_editor import (
@@ -213,13 +213,13 @@ async def generate_template_from_pptx(
             for slide in slides:
                 # Convert slide to dict for JSON serialization
                 slide_dict = {
-                    "width_px": slide.width_px,
-                    "height_px": slide.height_px,
-                    "background": slide.background,
-                    "fonts": slide.fonts,
-                    "elements": slide.elements,
-                    "index": slide.index,
-                    "id": slide.id,
+                    "width": slide["width"],
+                    "height": slide["height"],
+                    "background": slide.get("background"),
+                    "fonts": slide.get("fonts", []),
+                    "elements": slide.get("elements", []),
+                    "index": slide["index"],
+                    "id": slide["id"],
                 }
 
                 # Render to HTML
@@ -231,7 +231,7 @@ async def generate_template_from_pptx(
                     try:
                         # Get font URLs for this slide
                         font_urls = []
-                        for font_name in slide.fonts:
+                        for font_name in slide.get("fonts", []):
                             # Find matching font in analysis
                             for supported_font in font_analysis.internally_supported_fonts:
                                 if supported_font["name"] == font_name:
@@ -241,19 +241,19 @@ async def generate_template_from_pptx(
                         react_component = convert_html_to_react(
                             html_content,
                             fonts=font_urls,
-                            component_name=f"Slide{slide.index}Layout",
+                            component_name=f"Slide{slide['index']}Layout",
                         )
                     except Exception as e:
-                        print(f"Warning: Failed to convert slide {slide.index} to React: {e}")
+                        print(f"Warning: Failed to convert slide {slide['index']} to React: {e}")
                         # Continue without React component
 
                 slides_data.append(
                     SlideLayoutData(
-                        slide_number=slide.index,
+                        slide_number=slide["index"],
                         layout_json=slide_dict,
                         html=html_content,
                         react_component=react_component,
-                        fonts=slide.fonts,
+                        fonts=slide.get("fonts", []),
                     )
                 )
 

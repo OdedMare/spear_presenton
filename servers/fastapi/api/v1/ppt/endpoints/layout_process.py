@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import uuid
@@ -13,13 +14,14 @@ from api.v1.ppt.endpoints.pptx_slides import FontAnalysisResult
 from utils.asset_directory_utils import get_images_directory
 
 LAYOUT_PROCESS_ROUTER = APIRouter(prefix="/layout", tags=["Layout"])
+logger = logging.getLogger(__name__)
 
 
 class LayoutSlide(BaseModel):
     id: str
     index: int
-    width_px: int
-    height_px: int
+    width: int
+    height: int
     background: Optional[dict] = None
     fonts: List[str]
     elements: List[dict]
@@ -62,6 +64,7 @@ async def process_pptx_to_layout(
         asset_url_prefix = f"/app_data/images/{presentation_id}"
 
         slides = parse_pptx_to_layouts(pptx_path, presentation_images_dir, asset_url_prefix)
+        logger.info("layout/process extracted %s slides from %s", len(slides), pptx_file.filename)
 
         slide_xmls = pptx_slides_module._extract_slide_xmls(pptx_path, temp_dir)
         font_analysis = await pptx_slides_module.analyze_fonts_in_all_slides(slide_xmls)
@@ -70,13 +73,13 @@ async def process_pptx_to_layout(
             success=True,
             slides=[
                 LayoutSlide(
-                    id=slide.id,
-                    index=slide.index,
-                    width_px=slide.width_px,
-                    height_px=slide.height_px,
-                    background=slide.background,
-                    fonts=slide.fonts,
-                    elements=slide.elements,
+                    id=slide["id"],
+                    index=slide["index"],
+                    width=slide["width"],
+                    height=slide["height"],
+                    background=slide.get("background"),
+                    fonts=slide.get("fonts", []),
+                    elements=slide.get("elements", []),
                 )
                 for slide in slides
             ],

@@ -120,7 +120,7 @@ export const useSlideProcessingDeterministic = (
   // Process PPTX file to extract layout JSON
   const processFile = useCallback(async () => {
     if (!selectedFile) {
-      toast.error("Please select a PPTX file first");
+      toast.error("Please select a PPTX or POTX file first");
       return;
     }
 
@@ -129,10 +129,10 @@ export const useSlideProcessingDeterministic = (
 
       const formData = new FormData();
       const fileName = selectedFile.name.toLowerCase();
-      const isPptx = fileName.endsWith(".pptx");
+      const isPowerpoint = fileName.endsWith(".pptx") || fileName.endsWith(".potx");
 
-      if (!isPptx) {
-        throw new Error("Deterministic pipeline currently only supports PPTX files");
+      if (!isPowerpoint) {
+        throw new Error("Deterministic pipeline currently only supports PPTX/POTX files");
       }
 
       // NEW: Use layout/process endpoint for deterministic extraction

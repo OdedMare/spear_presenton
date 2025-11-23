@@ -1,7 +1,8 @@
 PDF_MIME_TYPES = ["application/pdf"]
 TEXT_MIME_TYPES = ["text/plain"]
 POWERPOINT_TYPES = [
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.presentationml.template",
 ]
 WORD_TYPES = [
     "application/msword",

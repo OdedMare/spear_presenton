@@ -117,7 +117,7 @@ export const useSlideProcessing = (
   // Process PPTX file to extract layout JSON (NO SCREENSHOTS, NO OCR, NO VLM)
   const processFile = useCallback(async () => {
     if (!selectedFile) {
-      toast.error("Please select a PPTX file first");
+      toast.error("Please select a PPTX or POTX file first");
       return;
     }
 
@@ -126,10 +126,10 @@ export const useSlideProcessing = (
 
       const formData = new FormData();
       const fileName = selectedFile.name.toLowerCase();
-      const isPptx = fileName.endsWith(".pptx");
+      const isPowerpoint = fileName.endsWith(".pptx") || fileName.endsWith(".potx");
 
-      if (!isPptx) {
-        throw new Error("Only PPTX files are supported in deterministic mode");
+      if (!isPowerpoint) {
+        throw new Error("Only PPTX/POTX files are supported in deterministic mode");
       }
 
       // NEW: Use layout/process endpoint for deterministic extraction (NO SCREENSHOTS!)
