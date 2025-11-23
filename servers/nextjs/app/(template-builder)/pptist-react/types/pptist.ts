@@ -77,6 +77,7 @@ export type SlideBackground = {
   color?: string;
   image?: { src: string; size: "cover" | "contain" | "repeat" };
   gradient?: any;
+  themeColors?: string[];
 };
 
 export type SlideTheme = {

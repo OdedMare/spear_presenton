@@ -167,7 +167,11 @@ export default function InspectorPanel() {
       <div>
         <Label>Slide background</Label>
         <div className="mt-2">
-          <ColorPicker value={localBg} onChange={handleBackgroundChange} />
+          <ColorPicker
+            value={localBg}
+            onChange={handleBackgroundChange}
+            themeColors={currentSlide?.background?.themeColors || (currentSlide as any)?.themeColors}
+          />
         </div>
       </div>
 
@@ -256,6 +260,7 @@ export default function InspectorPanel() {
                   label="Text"
                   value={(activeElement as any).defaultColor || "#000000"}
                   onChange={(val) => updateColor("defaultColor", val)}
+                  themeColors={(currentSlide as any)?.themeColors}
                 />
               )}
               <ColorPicker
@@ -266,6 +271,7 @@ export default function InspectorPanel() {
                     : "#e5e7eb"
                 }
                 onChange={(val) => updateColor("fill", val)}
+                themeColors={(currentSlide as any)?.themeColors}
               />
               <div className="space-y-1">
                 <Label>Outline</Label>
@@ -279,6 +285,7 @@ export default function InspectorPanel() {
                         (activeElement as any).outline?.style
                       )
                     }
+                    themeColors={(currentSlide as any)?.themeColors}
                   />
                   <input
                     type="number"

@@ -26,6 +26,7 @@ export interface MainState {
   gridLineSize: number;
   snapToGrid: boolean;
   guides: { vertical: number[]; horizontal: number[] };
+  recentColors: string[];
   showRuler: boolean;
   creatingElement: CreatingElement | null;
   creatingCustomShape: boolean;
@@ -69,6 +70,7 @@ type MainActions = {
   setSnapToGrid: (snap: boolean) => void;
   addGuide: (orientation: "vertical" | "horizontal", value: number) => void;
   clearGuides: () => void;
+  addRecentColor: (color: string) => void;
   setRulerState: (show: boolean) => void;
   setCreatingElement: (el: CreatingElement | null) => void;
   setCreatingCustomShapeState: (state: boolean) => void;
@@ -107,6 +109,7 @@ export const useMainStore = create<MainState & MainActions>((set) => ({
   gridLineSize: 0,
   snapToGrid: false,
   guides: { vertical: [], horizontal: [] },
+  recentColors: ["#000000", "#ffffff", "#1f2937", "#3b82f6", "#ef4444"],
   showRuler: false,
   creatingElement: null,
   creatingCustomShape: false,
@@ -156,6 +159,17 @@ export const useMainStore = create<MainState & MainActions>((set) => ({
       return { guides };
     }),
   clearGuides: () => set({ guides: { vertical: [], horizontal: [] } }),
+  addRecentColor: (color) =>
+    set((state) => {
+      if (!color || typeof color !== "string") return state;
+      const normalized = color.trim();
+      if (!normalized) return state;
+      const existing = state.recentColors.filter(
+        (c) => c.toLowerCase() !== normalized.toLowerCase()
+      );
+      const next = [normalized, ...existing].slice(0, 12);
+      return { recentColors: next };
+    }),
   setRulerState: (show) => set({ showRuler: show }),
   setCreatingElement: (el) => set({ creatingElement: el }),
   setCreatingCustomShapeState: (state) => set({ creatingCustomShape: state }),

@@ -37,6 +37,7 @@ export const buildHtmlFromPlainText = (text: string, opts: PlainTextOptions) => 
     textHighlight,
     bulletList,
     orderedList,
+    textLink,
   } = opts;
 
   const styleParts = [

@@ -169,8 +169,18 @@ export default function CanvasToolbar() {
 
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <ColorPicker label="Fill" value="#3b82f6" onChange={setFill} />
-          <ColorPicker label="Outline" value="#2563eb" onChange={setOutline} />
+          <ColorPicker
+            label="Fill"
+            value="#3b82f6"
+            onChange={setFill}
+            themeColors={(currentSlide as any)?.themeColors}
+          />
+          <ColorPicker
+            label="Outline"
+            value="#2563eb"
+            onChange={setOutline}
+            themeColors={(currentSlide as any)?.themeColors}
+          />
         </div>
 
         <div className="flex items-center gap-2">
