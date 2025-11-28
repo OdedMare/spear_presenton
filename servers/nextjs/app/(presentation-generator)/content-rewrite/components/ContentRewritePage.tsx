@@ -39,9 +39,15 @@ interface RewrittenContent {
   }>
 }
 
+type RewriteMode = 'strict' | 'flexible'
+type Language = 'english' | 'hebrew'
+
 export default function ContentRewritePage() {
   const [file, setFile] = useState<File | null>(null)
   const [userPrompt, setUserPrompt] = useState('')
+  const [rewriteMode, setRewriteMode] = useState<RewriteMode>('strict')
+  const [language, setLanguage] = useState<Language>('english')
+  const [targetSlideCount, setTargetSlideCount] = useState<number>(0)
   const [placeholderStructure, setPlaceholderStructure] = useState<PlaceholderStructure | null>(null)
   const [rewrittenContent, setRewrittenContent] = useState<RewrittenContent | null>(null)
   const [loading, setLoading] = useState(false)
@@ -103,14 +109,26 @@ export default function ContentRewritePage() {
     setError(null)
 
     try {
+      // Build enhanced prompt with language and slide count instructions
+      const languageInstruction = language === 'hebrew'
+        ? '\n\nIMPORTANT: Generate all content in HEBREW language with RIGHT-TO-LEFT text direction.'
+        : '\n\nIMPORTANT: Generate all content in ENGLISH language.';
+
+      const slideCountInstruction = rewriteMode === 'flexible' && targetSlideCount > 0
+        ? `\n\nTarget slide count: Generate exactly ${targetSlideCount} slides.`
+        : '';
+
+      const enhancedPrompt = userPrompt + languageInstruction + slideCountInstruction;
+
       const response = await fetch(`${API_BASE_URL}/api/v1/ppt/rewrite/generate-rewritten-content`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_prompt: userPrompt,
+          user_prompt: enhancedPrompt,
           placeholder_structure: placeholderStructure,
+          mode: rewriteMode,
         }),
       })
 
@@ -211,6 +229,9 @@ export default function ContentRewritePage() {
   const handleReset = () => {
     setFile(null)
     setUserPrompt('')
+    setRewriteMode('strict')
+    setLanguage('english')
+    setTargetSlideCount(0)
     setPlaceholderStructure(null)
     setRewrittenContent(null)
     setError(null)
@@ -387,6 +408,131 @@ export default function ContentRewritePage() {
               <p className="text-gray-600 mb-6">
                 Tell the AI what presentation content you want to generate
               </p>
+
+              {/* Mode Selector */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Rewrite Mode</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setRewriteMode('strict')}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      rewriteMode === 'strict'
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        rewriteMode === 'strict' ? 'border-[#5146E5]' : 'border-gray-300'
+                      }`}>
+                        {rewriteMode === 'strict' && (
+                          <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
+                        )}
+                      </div>
+                      <span className="font-semibold text-gray-900">Strict Mode</span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Maintains exact structure - only rewrites text within existing elements. Perfect for preserving precise layouts.
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => setRewriteMode('flexible')}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      rewriteMode === 'flexible'
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        rewriteMode === 'flexible' ? 'border-[#5146E5]' : 'border-gray-300'
+                      }`}>
+                        {rewriteMode === 'flexible' && (
+                          <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
+                        )}
+                      </div>
+                      <span className="font-semibold text-gray-900">Flexible Mode</span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Adapts structure as needed - can suggest new slides, tables, SmartArt, and charts. Adjusts bullet points and content flow while keeping overall design.
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Note: New structural elements will appear as text suggestions in the output.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Language Selector */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Output Language</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setLanguage('english')}
+                    className={`p-3 rounded-lg border-2 transition-all text-left ${
+                      language === 'english'
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+                        language === 'english' ? 'border-[#5146E5]' : 'border-gray-300'
+                      }`}>
+                        {language === 'english' && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#5146E5]"></div>
+                        )}
+                      </div>
+                      <span className="font-medium text-gray-900">English</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 ml-5">Left-to-right text</p>
+                  </button>
+
+                  <button
+                    onClick={() => setLanguage('hebrew')}
+                    className={`p-3 rounded-lg border-2 transition-all text-left ${
+                      language === 'hebrew'
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+                        language === 'hebrew' ? 'border-[#5146E5]' : 'border-gray-300'
+                      }`}>
+                        {language === 'hebrew' && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#5146E5]"></div>
+                        )}
+                      </div>
+                      <span className="font-medium text-gray-900">עברית (Hebrew)</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 ml-5">Right-to-left text</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Slide Count for Flexible Mode */}
+              {rewriteMode === 'flexible' && (
+                <div className="mb-6">
+                  <label htmlFor="slideCount" className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Slide Count (Optional)
+                  </label>
+                  <input
+                    id="slideCount"
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={targetSlideCount || ''}
+                    onChange={(e) => setTargetSlideCount(parseInt(e.target.value) || 0)}
+                    placeholder={`Leave empty for automatic (currently ${placeholderStructure?.slides.length || 0} slides)`}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-[#5146E5] focus:ring-1 focus:ring-[#5146E5]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Specify how many slides you want in the final presentation (leave as 0 for automatic)
+                  </p>
+                </div>
+              )}
 
               <Textarea
                 value={userPrompt}

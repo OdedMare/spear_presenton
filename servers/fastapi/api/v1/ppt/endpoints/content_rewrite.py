@@ -34,19 +34,30 @@ from services.placeholder_injector import inject_content_into_pptx
 from services.llm_client import LLMClient
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from utils.llm_provider import get_model
-from api.v1.ppt.endpoints.prompts import CONTENT_REWRITE_SYSTEM_PROMPT
+from api.v1.ppt.endpoints.prompts import CONTENT_REWRITE_SYSTEM_PROMPT, CONTENT_REWRITE_FLEXIBLE_SYSTEM_PROMPT
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-def sanitize_rewritten_content(original_structure: Dict[str, Any], rewritten_content: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Sanitize rewritten content to ensure it respects maxLength and maxLines constraints.
+class RewriteMode(str, Enum):
+    """Rewrite mode options"""
+    STRICT = "strict"  # Exact structure matching - only rewrite text
+    FLEXIBLE = "flexible"  # Allow structure changes - can add/remove elements
 
-    This is a safety mechanism to automatically truncate text that exceeds constraints,
-    preventing validation errors when the LLM generates slightly too much text.
+
+def sanitize_rewritten_content(
+    original_structure: Dict[str, Any],
+    rewritten_content: Dict[str, Any],
+    mode: RewriteMode = RewriteMode.STRICT
+) -> Dict[str, Any]:
+    """
+    Sanitize rewritten content based on the rewrite mode.
+
+    STRICT mode: Ensures exact structure match and respects all constraints
+    FLEXIBLE mode: Allows structure changes, more lenient with length constraints
 
     Returns sanitized copy of rewritten_content.
     """
@@ -55,6 +66,17 @@ def sanitize_rewritten_content(original_structure: Dict[str, Any], rewritten_con
     original_slides = original_structure.get("slides", [])
     rewritten_slides = rewritten_content.get("slides", [])
 
+    if mode == RewriteMode.FLEXIBLE:
+        # Flexible mode: Just copy elements, no strict validation
+        # We'll validate slide count and basic structure only
+        for rewritten_slide in rewritten_slides:
+            sanitized["slides"].append({
+                "slideNumber": rewritten_slide.get("slideNumber"),
+                "elements": rewritten_slide.get("elements", [])
+            })
+        return sanitized
+
+    # STRICT mode: Apply original constraints
     for orig_slide, rewritten_slide in zip(original_slides, rewritten_slides):
         orig_elements = orig_slide.get("elements", [])
         rewritten_elements = rewritten_slide.get("elements", [])
@@ -105,6 +127,7 @@ class RewriteRequest(BaseModel):
     """Request model for content rewriting"""
     user_prompt: str
     placeholder_structure: Dict[str, Any]
+    mode: RewriteMode = RewriteMode.STRICT  # Default to strict mode
 
 
 class RewriteResponse(BaseModel):
@@ -180,22 +203,36 @@ async def generate_rewritten_content(request: RewriteRequest):
     try:
         user_prompt = request.user_prompt
         placeholder_structure = request.placeholder_structure
+        mode = request.mode
 
         # Remove metadata fields before sending to LLM
         clean_structure = {
             "slides": placeholder_structure.get("slides", [])
         }
 
+        # Select system prompt based on mode
+        system_prompt = (
+            CONTENT_REWRITE_FLEXIBLE_SYSTEM_PROMPT
+            if mode == RewriteMode.FLEXIBLE
+            else CONTENT_REWRITE_SYSTEM_PROMPT
+        )
+
         # Format the user message for the LLM
+        mode_instruction = (
+            "You can adapt the structure as needed for better content flow."
+            if mode == RewriteMode.FLEXIBLE
+            else "you must fill these exact placeholders"
+        )
+
         user_message = f"""User's Content Request:
 {user_prompt}
 
-Placeholder Structure (you must fill these exact placeholders):
+Placeholder Structure ({mode_instruction}):
 {json.dumps(clean_structure, indent=2)}
 
-Generate rewritten content that matches this structure exactly."""
+Generate rewritten content in {mode.value} mode."""
 
-        logger.info(f"Sending content rewrite request to LLM for {len(clean_structure['slides'])} slides")
+        logger.info(f"Sending content rewrite request ({mode.value} mode) to LLM for {len(clean_structure['slides'])} slides")
 
         # Call LLM to generate rewritten content
         llm_client = LLMClient()
@@ -203,7 +240,7 @@ Generate rewritten content that matches this structure exactly."""
 
         # Prepare messages
         messages = [
-            LLMSystemMessage(content=CONTENT_REWRITE_SYSTEM_PROMPT),
+            LLMSystemMessage(content=system_prompt),
             LLMUserMessage(content=user_message)
         ]
 
@@ -223,12 +260,44 @@ Generate rewritten content that matches this structure exactly."""
                 detail=f"LLM returned invalid JSON format: {str(e)}"
             )
 
-        # Sanitize content to ensure it fits within constraints
-        rewritten_content = sanitize_rewritten_content(clean_structure, rewritten_content)
+        # Sanitize content based on mode
+        rewritten_content = sanitize_rewritten_content(clean_structure, rewritten_content, mode)
 
         # Validate that rewritten content matches original structure
+        # In flexible mode, we allow variable slide counts and new elements
         try:
-            validate_rewritten_content(clean_structure, rewritten_content)
+            if mode == RewriteMode.STRICT:
+                validate_rewritten_content(clean_structure, rewritten_content)
+            else:
+                # Flexible mode: Very lenient validation - just ensure slides exist and have basic structure
+                rewritten_slides = rewritten_content.get("slides", [])
+                if not rewritten_slides:
+                    raise ValueError("Flexible mode: No slides found in rewritten content")
+
+                # Validate each slide has basic structure
+                for i, slide in enumerate(rewritten_slides, start=1):
+                    if "slideNumber" not in slide:
+                        raise ValueError(f"Flexible mode: Slide {i} missing slideNumber field")
+                    if "elements" not in slide:
+                        raise ValueError(f"Flexible mode: Slide {i} missing elements field")
+
+                    # Ensure elements are valid
+                    for j, element in enumerate(slide.get("elements", [])):
+                        if "id" not in element:
+                            raise ValueError(f"Flexible mode: Slide {i}, element {j} missing id field")
+                        if "text" not in element:
+                            raise ValueError(f"Flexible mode: Slide {i}, element {j} missing text field")
+                        if "type" not in element:
+                            raise ValueError(f"Flexible mode: Slide {i}, element {j} missing type field")
+
+                logger.info(f"Flexible mode validation passed: {len(rewritten_slides)} slides generated")
+
+                # Warn if slide count changed significantly
+                original_slide_count = len(clean_structure.get("slides", []))
+                if len(rewritten_slides) > original_slide_count * 2:
+                    logger.warning(
+                        f"Flexible mode: Generated {len(rewritten_slides)} slides from {original_slide_count} original slides (>2x increase)"
+                    )
         except ValueError as e:
             logger.error(f"Rewritten content validation failed: {e}")
             raise HTTPException(

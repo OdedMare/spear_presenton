@@ -299,18 +299,72 @@ def extract_smartart_text(diagram_rel_id: str, slide_path: str, zipf: zipfile.Zi
     """
     Extract text from SmartArt diagram nodes.
 
+    SmartArt stores text in diagram data XML files. We extract text from all nodes.
     Returns list of element dicts for each text node in the diagram.
     """
     elements = []
 
-    # SmartArt diagrams are complex - for now, extract text from diagram data
-    # This is a simplified implementation
     try:
-        # Similar to chart extraction, we'd need to follow relationships
-        # and parse diagram data XML. For brevity, logging a warning.
-        logger.info(f"SmartArt extraction for slide {slide_num} - advanced feature, requires diagram data parsing")
+        # Load slide relationships to find diagram data file
+        slide_dir = "/".join(slide_path.split("/")[:-1])
+        rels_path = f"{slide_dir}/_rels/{slide_path.split('/')[-1]}.rels"
+
+        rels_tree = _read_xml(zipf, rels_path)
+        if rels_tree is None:
+            return elements
+
+        # Find diagram data target
+        diagram_target = None
+        for rel in rels_tree.findall(".//{*}Relationship"):
+            if rel.get("Id") == diagram_rel_id:
+                diagram_target = rel.get("Target")
+                break
+
+        if not diagram_target:
+            logger.warning(f"SmartArt diagram relationship not found: {diagram_rel_id}")
+            return elements
+
+        # Resolve diagram data path (handle relative paths like ../diagrams/data1.xml)
+        if diagram_target.startswith("../"):
+            # Relative path - go up one directory from slide_dir
+            diagram_path = f"ppt/{diagram_target[3:]}"  # Remove ../ and prepend ppt/
+        else:
+            # Absolute path from slide directory
+            diagram_path = f"{slide_dir}/{diagram_target}"
+
+        diagram_tree = _read_xml(zipf, diagram_path)
+        if diagram_tree is None:
+            logger.warning(f"Could not read SmartArt diagram data: {diagram_path}")
+            return elements
+
+        # SmartArt text is stored in diagram data points
+        # Each <dgm:pt> (point) contains text in <dgm:t> elements
+        node_index = 0
+        for pt in diagram_tree.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}pt"):
+            # Find text element
+            t_elem = pt.find(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}t")
+            if t_elem is not None and t_elem.text:
+                text = t_elem.text.strip()
+                if text:
+                    element_id = f"slide{slide_num}_smartart{element_index}_node{node_index}"
+                    constraints = calculate_text_constraints(text, None, None)
+
+                    elements.append({
+                        "id": element_id,
+                        "type": "smartart",
+                        "text": text,
+                        "originalLength": len(text),
+                        **constraints
+                    })
+                    node_index += 1
+
+        if elements:
+            logger.info(f"Extracted {len(elements)} text nodes from SmartArt on slide {slide_num}")
+        else:
+            logger.warning(f"No text found in SmartArt diagram on slide {slide_num}")
+
     except Exception as e:
-        logger.warning(f"Error extracting SmartArt text: {e}")
+        logger.error(f"Error extracting SmartArt text on slide {slide_num}: {e}", exc_info=True)
 
     return elements
 

@@ -9,8 +9,8 @@ Supports injection into:
 - Textboxes
 - Grouped shapes
 - Table cells
-- Chart text elements
-- SmartArt diagram nodes
+- Chart text elements (titles, axis labels)
+- SmartArt diagram nodes (FULLY IMPLEMENTED)
 - Speaker notes
 
 Purpose: Take LLM-generated content and inject it precisely into the original PPTX file
@@ -305,6 +305,112 @@ def inject_chart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str, n
     return False
 
 
+def inject_smartart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str, new_text: str, temp_dir: str) -> bool:
+    """
+    Inject text into SmartArt diagram nodes.
+
+    Element ID format: slide{N}_smartart{S}_node{NODE}
+
+    Returns True if text was injected successfully.
+    """
+    parts = element_id.split("_")
+    if len(parts) != 3:
+        logger.error(f"Invalid SmartArt element ID: {element_id}")
+        return False
+
+    smartart_num = int(parts[1].replace("smartart", ""))
+    node_num = int(parts[2].replace("node", ""))
+
+    # Load slide to find SmartArt graphic frame and get its relationship ID
+    slide_tree = _read_xml(zipf, slide_path)
+    if slide_tree is None:
+        return False
+
+    sp_tree = slide_tree.find("p:cSld/p:spTree", NS)
+    if sp_tree is None:
+        return False
+
+    # Find the SmartArt graphic frame and get its relationship ID
+    current_smartart = 0
+    diagram_rel_id = None
+
+    for child in sp_tree:
+        tag_name = etree.QName(child.tag).localname
+        if tag_name == "graphicFrame":
+            graphic_data = child.find(".//a:graphicData", NS)
+            if graphic_data is not None:
+                uri = graphic_data.get("uri", "")
+                if "diagram" in uri:
+                    if current_smartart == smartart_num:
+                        diagram_el = graphic_data.find(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}relIds", NS)
+                        if diagram_el is not None:
+                            # Get the data relationship ID
+                            diagram_rel_id = diagram_el.get(f"{{{NS['r']}}}dm")
+                            break
+                    current_smartart += 1
+
+    if not diagram_rel_id:
+        logger.warning(f"Could not find SmartArt for element: {element_id}")
+        return False
+
+    # Load slide relationships to find diagram data file
+    slide_dir = "/".join(slide_path.split("/")[:-1])
+    rels_path = f"{slide_dir}/_rels/{slide_path.split('/')[-1]}.rels"
+
+    try:
+        rels_tree = _read_xml(zipf, rels_path)
+        if rels_tree is None:
+            return False
+
+        # Find diagram data target
+        diagram_target = None
+        for rel in rels_tree.findall(".//{*}Relationship"):
+            if rel.get("Id") == diagram_rel_id:
+                diagram_target = rel.get("Target")
+                break
+
+        if not diagram_target:
+            return False
+
+        # Resolve diagram data path (handle relative paths like ../diagrams/data1.xml)
+        if diagram_target.startswith("../"):
+            # Relative path - go up one directory from slide_dir
+            diagram_path = f"ppt/{diagram_target[3:]}"  # Remove ../ and prepend ppt/
+        else:
+            # Absolute path from slide directory
+            diagram_path = f"{slide_dir}/{diagram_target}"
+
+        diagram_tree = _read_xml(zipf, diagram_path)
+        if diagram_tree is None:
+            return False
+
+        # Find the specific node by index
+        current_node = 0
+        for pt in diagram_tree.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}pt"):
+            t_elem = pt.find(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}t")
+            if t_elem is not None and t_elem.text is not None:
+                if current_node == node_num:
+                    # Found the target node - update its text
+                    t_elem.text = new_text
+
+                    # Write modified diagram data back to temp directory
+                    output_diagram_path = os.path.join(temp_dir, diagram_path)
+                    os.makedirs(os.path.dirname(output_diagram_path), exist_ok=True)
+                    with open(output_diagram_path, 'wb') as f:
+                        f.write(etree.tostring(diagram_tree, xml_declaration=True, encoding='UTF-8'))
+
+                    logger.info(f"Injected text into SmartArt node {node_num} on {slide_path}")
+                    return True
+                current_node += 1
+
+        logger.warning(f"Could not find SmartArt node {node_num} for element: {element_id}")
+        return False
+
+    except Exception as e:
+        logger.error(f"Error injecting SmartArt text: {e}", exc_info=True)
+        return False
+
+
 def inject_speaker_notes(slide_path: str, zipf: zipfile.ZipFile, new_text: str, temp_dir: str) -> bool:
     """
     Inject text into speaker notes.
@@ -373,14 +479,23 @@ def inject_elements_into_slide(
 
     # Process each element
     injected_count = 0
+    skipped_new_count = 0
     notes_element = None
 
     for element in elements:
         element_id = element.get("id")
         new_text = element.get("text", "")
+        is_new = element.get("isNew", False)
 
         if not element_id:
             logger.warning("Element missing ID, skipping")
+            continue
+
+        # Skip new elements that don't exist in the original PPTX
+        # New elements are indicated by "isNew": true or "_new_" in the ID
+        if is_new or "_new_" in element_id:
+            logger.info(f"Skipping new element (not in original PPTX): {element_id}")
+            skipped_new_count += 1
             continue
 
         # Determine element type from ID
@@ -402,6 +517,11 @@ def inject_elements_into_slide(
         elif "_chart" in element_id:
             # Chart text
             if inject_chart_text(slide_path, zipf, element_id, new_text, temp_dir):
+                injected_count += 1
+
+        elif "_smartart" in element_id:
+            # SmartArt node text
+            if inject_smartart_text(slide_path, zipf, element_id, new_text, temp_dir):
                 injected_count += 1
 
         elif "_shape" in element_id:
@@ -427,7 +547,10 @@ def inject_elements_into_slide(
     if notes_element:
         inject_speaker_notes(slide_path, zipf, notes_element.get("text", ""), temp_dir)
 
-    logger.info(f"Injected text into {injected_count}/{len(elements)} elements on {slide_path}")
+    if skipped_new_count > 0:
+        logger.info(f"Injected text into {injected_count}/{len(elements)} elements on {slide_path} (skipped {skipped_new_count} new elements)")
+    else:
+        logger.info(f"Injected text into {injected_count}/{len(elements)} elements on {slide_path}")
 
     return slide_tree
 
@@ -479,15 +602,27 @@ def inject_content_into_pptx(
 
         rewritten_slides = rewritten_content.get("slides", [])
 
-        if len(slide_files) != len(rewritten_slides):
-            raise ValueError(
-                f"Slide count mismatch: PPTX has {len(slide_files)} slides, "
-                f"rewritten content has {len(rewritten_slides)} slides"
-            )
+        # Handle flexible mode with variable slide counts
+        # Match rewritten slides to original slides by slideNumber
+        # If there are more rewritten slides than original slides, skip the extras
+        # If there are fewer rewritten slides, only process the matched ones
 
-        # Inject content into each slide
         with zipfile.ZipFile(original_pptx_path, 'r') as zipf:
-            for slide_file, rewritten_slide in zip(slide_files, rewritten_slides):
+            processed_count = 0
+            skipped_new_slides = 0
+
+            for rewritten_slide in rewritten_slides:
+                slide_number = rewritten_slide.get("slideNumber")
+                is_new_slide = rewritten_slide.get("isNew", False)
+
+                # Skip new slides that don't exist in original PPTX
+                if is_new_slide or slide_number > len(slide_files):
+                    logger.info(f"Skipping new slide {slide_number} (not in original PPTX)")
+                    skipped_new_slides += 1
+                    continue
+
+                # Find corresponding slide file
+                slide_file = slide_files[slide_number - 1]  # slideNumber is 1-indexed
                 slide_path = f"ppt/slides/{slide_file}"
                 elements = rewritten_slide.get("elements", [])
 
@@ -499,7 +634,14 @@ def inject_content_into_pptx(
                 with open(output_slide_path, 'wb') as f:
                     f.write(etree.tostring(modified_tree, xml_declaration=True, encoding='UTF-8'))
 
+                processed_count += 1
                 logger.info(f"Injected content into slide {slide_file}")
+
+            if skipped_new_slides > 0:
+                logger.warning(
+                    f"Flexible mode: Processed {processed_count}/{len(rewritten_slides)} slides "
+                    f"(skipped {skipped_new_slides} new slides not in original PPTX)"
+                )
 
         # Repackage as PPTX
         with zipfile.ZipFile(output_pptx_path, 'w', zipfile.ZIP_DEFLATED) as output_zip:
