@@ -103,7 +103,7 @@ def replace_text_in_element(element_el: etree._Element, new_text: str, namespace
 
         # Copy existing run properties if available
         if existing_rpr is not None:
-            run.append(etree.fromstring(etree.tostring(existing_rpr)))
+            run.append(etree.fromstring(etree.tostring(existing_rpr, encoding='UTF-8')))
 
         # Add text element
         text_el = etree.SubElement(run, f"{{{NS['a']}}}t")
@@ -313,6 +313,8 @@ def inject_smartart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str
 
     Returns True if text was injected successfully.
     """
+    logger.info(f"Starting SmartArt injection for element: {element_id}, new_text: '{new_text[:50]}...'")
+    
     parts = element_id.split("_")
     if len(parts) != 3:
         logger.error(f"Invalid SmartArt element ID: {element_id}")
@@ -320,14 +322,17 @@ def inject_smartart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str
 
     smartart_num = int(parts[1].replace("smartart", ""))
     node_num = int(parts[2].replace("node", ""))
+    logger.info(f"Parsed element ID: smartart_num={smartart_num}, node_num={node_num}")
 
     # Load slide to find SmartArt graphic frame and get its relationship ID
     slide_tree = _read_xml(zipf, slide_path)
     if slide_tree is None:
+        logger.error(f"Failed to read slide: {slide_path}")
         return False
 
     sp_tree = slide_tree.find("p:cSld/p:spTree", NS)
     if sp_tree is None:
+        logger.error(f"No shape tree found in slide: {slide_path}")
         return False
 
     # Find the SmartArt graphic frame and get its relationship ID
@@ -341,25 +346,29 @@ def inject_smartart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str
             if graphic_data is not None:
                 uri = graphic_data.get("uri", "")
                 if "diagram" in uri:
+                    logger.info(f"Found SmartArt diagram #{current_smartart}")
                     if current_smartart == smartart_num:
                         diagram_el = graphic_data.find(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}relIds", NS)
                         if diagram_el is not None:
                             # Get the data relationship ID
                             diagram_rel_id = diagram_el.get(f"{{{NS['r']}}}dm")
+                            logger.info(f"Found target SmartArt with rel ID: {diagram_rel_id}")
                             break
                     current_smartart += 1
 
     if not diagram_rel_id:
-        logger.warning(f"Could not find SmartArt for element: {element_id}")
+        logger.warning(f"Could not find SmartArt #{smartart_num} for element: {element_id}")
         return False
 
     # Load slide relationships to find diagram data file
     slide_dir = "/".join(slide_path.split("/")[:-1])
     rels_path = f"{slide_dir}/_rels/{slide_path.split('/')[-1]}.rels"
+    logger.info(f"Loading relationships from: {rels_path}")
 
     try:
         rels_tree = _read_xml(zipf, rels_path)
         if rels_tree is None:
+            logger.error(f"Failed to read relationships: {rels_path}")
             return False
 
         # Find diagram data target
@@ -367,9 +376,11 @@ def inject_smartart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str
         for rel in rels_tree.findall(".//{*}Relationship"):
             if rel.get("Id") == diagram_rel_id:
                 diagram_target = rel.get("Target")
+                logger.info(f"Found diagram target: {diagram_target}")
                 break
 
         if not diagram_target:
+            logger.error(f"Could not find relationship target for ID: {diagram_rel_id}")
             return False
 
         # Resolve diagram data path (handle relative paths like ../diagrams/data1.xml)
@@ -379,31 +390,59 @@ def inject_smartart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str
         else:
             # Absolute path from slide directory
             diagram_path = f"{slide_dir}/{diagram_target}"
+        
+        logger.info(f"Resolved diagram path: {diagram_path}")
 
         diagram_tree = _read_xml(zipf, diagram_path)
         if diagram_tree is None:
+            logger.error(f"Failed to read diagram data: {diagram_path}")
             return False
 
         # Find the specific node by index
         current_node = 0
+        total_nodes = 0
         for pt in diagram_tree.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}pt"):
             t_elem = pt.find(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}t")
-            if t_elem is not None and t_elem.text is not None:
-                if current_node == node_num:
-                    # Found the target node - update its text
-                    t_elem.text = new_text
+            total_nodes += 1
+            if t_elem is not None:
+                # Extract text from all <a:t> elements to check if this node has text
+                text_parts = []
+                a_t_elements = t_elem.findall(".//a:t", NS)
+                for a_t in a_t_elements:
+                    if a_t.text:
+                        text_parts.append(a_t.text)
+                
+                if text_parts:
+                    text = " ".join(text_parts).strip()
+                    if text:
+                        logger.info(f"Found valid text node #{current_node}: '{text[:30]}...'")
+                        if current_node == node_num:
+                            # Found the target node - update its text
+                            logger.info(f"Updating node #{node_num} from '{text}' to '{new_text}'")
+                            
+                            # Replace text in the first <a:t> element and remove others
+                            if a_t_elements:
+                                a_t_elements[0].text = new_text
+                                # Remove additional <a:t> elements if there were multiple
+                                for a_t in a_t_elements[1:]:
+                                    parent = a_t.getparent()
+                                    if parent is not None:
+                                        parent.remove(a_t)
 
-                    # Write modified diagram data back to temp directory
-                    output_diagram_path = os.path.join(temp_dir, diagram_path)
-                    os.makedirs(os.path.dirname(output_diagram_path), exist_ok=True)
-                    with open(output_diagram_path, 'wb') as f:
-                        f.write(etree.tostring(diagram_tree, xml_declaration=True, encoding='UTF-8'))
+                            # Write modified diagram data back to temp directory
+                            output_diagram_path = os.path.join(temp_dir, diagram_path)
+                            os.makedirs(os.path.dirname(output_diagram_path), exist_ok=True)
+                            with open(output_diagram_path, 'wb') as f:
+                                f.write(etree.tostring(diagram_tree, xml_declaration=True, encoding='UTF-8'))
 
-                    logger.info(f"Injected text into SmartArt node {node_num} on {slide_path}")
-                    return True
-                current_node += 1
+                            logger.info(f"Successfully injected text into SmartArt node {node_num} on {slide_path}")
+                            logger.info(f"Wrote modified diagram to: {output_diagram_path}")
+                            return True
+                        current_node += 1
+                    else:
+                        logger.debug(f"Skipping whitespace-only node")
 
-        logger.warning(f"Could not find SmartArt node {node_num} for element: {element_id}")
+        logger.warning(f"Could not find SmartArt node {node_num} (found {current_node} valid nodes out of {total_nodes} total nodes) for element: {element_id}")
         return False
 
     except Exception as e:

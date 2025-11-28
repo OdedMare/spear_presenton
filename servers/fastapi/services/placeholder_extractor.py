@@ -339,24 +339,32 @@ def extract_smartart_text(diagram_rel_id: str, slide_path: str, zipf: zipfile.Zi
 
         # SmartArt text is stored in diagram data points
         # Each <dgm:pt> (point) contains text in <dgm:t> elements
+        # The actual text is in nested <a:t> elements inside paragraphs
         node_index = 0
         for pt in diagram_tree.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}pt"):
             # Find text element
             t_elem = pt.find(".//{http://schemas.openxmlformats.org/drawingml/2006/diagram}t")
-            if t_elem is not None and t_elem.text:
-                text = t_elem.text.strip()
-                if text:
-                    element_id = f"slide{slide_num}_smartart{element_index}_node{node_index}"
-                    constraints = calculate_text_constraints(text, None, None)
+            if t_elem is not None:
+                # Extract text from all <a:t> elements within this <dgm:t>
+                text_parts = []
+                for a_t in t_elem.findall(".//a:t", NS):
+                    if a_t.text:
+                        text_parts.append(a_t.text)
+                
+                if text_parts:
+                    text = " ".join(text_parts).strip()
+                    if text:
+                        element_id = f"slide{slide_num}_smartart{element_index}_node{node_index}"
+                        constraints = calculate_text_constraints(text, None, None)
 
-                    elements.append({
-                        "id": element_id,
-                        "type": "smartart",
-                        "text": text,
-                        "originalLength": len(text),
-                        **constraints
-                    })
-                    node_index += 1
+                        elements.append({
+                            "id": element_id,
+                            "type": "smartart",
+                            "text": text,
+                            "originalLength": len(text),
+                            **constraints
+                        })
+                        node_index += 1
 
         if elements:
             logger.info(f"Extracted {len(elements)} text nodes from SmartArt on slide {slide_num}")

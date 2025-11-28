@@ -108,6 +108,10 @@ class TestContentRewriteStrict(unittest.TestCase):
                         {
                             "id": "slide1_shape_WRONG",
                             "text": "New Title"
+                        },
+                        {
+                            "id": "slide1_shape1",
+                            "text": "New Body Content"
                         }
                     ]
                 }
