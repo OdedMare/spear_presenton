@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 EMU_PER_PX = 9525
 DEFAULT_DPI = 96
 
+# Debug flag for detailed inheritance logging
+DEBUG_LAYOUT = os.environ.get("DEBUG_LAYOUT", "false").lower() in ("true", "1", "yes")
+
 NS = {
     "p": "http://schemas.openxmlformats.org/presentationml/2006/main",
     "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
@@ -134,13 +137,24 @@ def _resolve_scheme_color(val: Optional[str], theme_colors: Dict[str, str]) -> O
     Returns None only if val is None or not found in theme.
     """
     if not val:
+        logger.debug("_resolve_scheme_color: val is None or empty")
         return None
+
     # Direct lookup
     if val in theme_colors:
         result = theme_colors[val]
         # Ensure it's uppercase hex
         if result and len(result) == 6:
+            logger.debug("_resolve_scheme_color: Resolved %s → %s", val, result.upper())
             return result.upper()
+        else:
+            logger.warning("_resolve_scheme_color: Found %s in theme but result invalid: %s", val, result)
+    else:
+        logger.warning(
+            "_resolve_scheme_color: Color '%s' NOT found in theme! Available keys: %s",
+            val,
+            list(theme_colors.keys())[:20]  # Log first 20 keys
+        )
     return None
 
 
@@ -311,6 +325,374 @@ def _parse_color(color_el: Optional[etree._Element], theme_colors: Dict[str, str
             return _parse_color(child, theme_colors)
 
     return None, None
+
+
+# ---------------------------------------------------------------------------
+# Inheritance Resolution Functions
+# ---------------------------------------------------------------------------
+
+
+def resolve_fill_from_xml(
+    sp_el: etree._Element,
+    rels: Dict[str, Dict[str, str]],
+    zipf: Optional[zipfile.ZipFile],
+    part_path: str,
+    asset_output_dir: str,
+    asset_url_prefix: str,
+    slide_index: int,
+    z_index: int,
+    theme_colors: Dict[str, str],
+    source_label: str = "shape"
+) -> Optional[Dict[str, Any]]:
+    """
+    Resolve fill from a shape XML element by checking:
+    1. <p:spPr> direct fill (solidFill, gradFill, blipFill, etc.)
+    2. <p:style><a:fillRef> theme style reference
+
+    Returns fill dict or None if not found.
+    """
+    if DEBUG_LAYOUT:
+        logger.debug("[%s] Resolving fill from %s (slide %s, z=%s)", source_label, etree.QName(sp_el.tag).localname, slide_index, z_index)
+
+    # First check for direct fill in spPr
+    sp_pr = sp_el.find("p:spPr", NS)
+    if sp_pr is not None:
+        fill = extract_fill(sp_pr, rels, zipf, part_path, asset_output_dir, asset_url_prefix, slide_index, z_index, theme_colors)
+        if fill is not None:
+            if DEBUG_LAYOUT:
+                logger.debug("[%s] Found direct fill in spPr: %s", source_label, fill.get("color") or fill.get("type"))
+            return fill
+
+    # Check for style reference
+    style_el = sp_el.find("p:style", NS)
+    if style_el is not None:
+        fill_ref = style_el.find("a:fillRef", NS)
+        if fill_ref is not None:
+            if DEBUG_LAYOUT:
+                logger.debug("[%s] Found fillRef, idx=%s", source_label, fill_ref.get("idx"))
+
+            # Extract color from fillRef
+            for child in fill_ref:
+                tag_name = etree.QName(child.tag).localname
+                if tag_name in ("srgbClr", "schemeClr", "scrgbClr", "sysClr", "prstClr"):
+                    color, opacity = _parse_color(child, theme_colors)
+                    if color:
+                        fill = {"type": "solid", "color": f"#{color}", "opacity": opacity if opacity is not None else 1}
+                        if DEBUG_LAYOUT:
+                            logger.debug("[%s] Resolved fillRef to color: %s", source_label, color)
+                        return fill
+                    else:
+                        if DEBUG_LAYOUT:
+                            logger.warning("[%s] fillRef has %s but _parse_color returned None", source_label, tag_name)
+                    break
+
+    if DEBUG_LAYOUT:
+        logger.debug("[%s] No fill found", source_label)
+    return None
+
+
+def resolve_border_from_xml(
+    sp_el: etree._Element,
+    theme_colors: Dict[str, str],
+    source_label: str = "shape"
+) -> Optional[Dict[str, Any]]:
+    """
+    Resolve border from a shape XML element by checking:
+    1. <p:spPr><a:ln> direct line definition
+    2. <p:style><a:lnRef> theme style reference
+
+    Returns border dict or None if not found.
+    """
+    if DEBUG_LAYOUT:
+        logger.debug("[%s] Resolving border", source_label)
+
+    # First check for direct border in spPr
+    sp_pr = sp_el.find("p:spPr", NS)
+    if sp_pr is not None:
+        border = extract_border(sp_pr, theme_colors)
+        if border is not None:
+            if DEBUG_LAYOUT:
+                logger.debug("[%s] Found direct border in spPr: width=%s, color=%s", source_label, border.get("width"), border.get("color"))
+            return border
+
+    # Check for style reference
+    style_el = sp_el.find("p:style", NS)
+    if style_el is not None:
+        ln_ref = style_el.find("a:lnRef", NS)
+        if ln_ref is not None:
+            if DEBUG_LAYOUT:
+                logger.debug("[%s] Found lnRef, idx=%s", source_label, ln_ref.get("idx"))
+
+            # Get line width from idx attribute (0=none, 1=hairline, 2=thin, 3=medium, 4=thick)
+            ln_idx = ln_ref.get("idx")
+            width_map = {"0": 0, "1": 1, "2": 1, "3": 2, "4": 3}
+            width = width_map.get(ln_idx, 1) if ln_idx else 1
+
+            # Extract color from lnRef
+            for child in ln_ref:
+                tag_name = etree.QName(child.tag).localname
+                if tag_name in ("srgbClr", "schemeClr", "scrgbClr", "sysClr", "prstClr"):
+                    color, opacity = _parse_color(child, theme_colors)
+                    if color:
+                        border = {"width": width, "color": f"#{color}", "opacity": opacity if opacity is not None else 1}
+                        if DEBUG_LAYOUT:
+                            logger.debug("[%s] Resolved lnRef to color: %s", source_label, color)
+                        return border
+                    break
+
+    if DEBUG_LAYOUT:
+        logger.debug("[%s] No border found", source_label)
+    return None
+
+
+def resolve_fill_inheritance(
+    slide_el: Optional[etree._Element],
+    layout_el: Optional[etree._Element],
+    master_el: Optional[etree._Element],
+    slide_rels: Dict[str, Dict[str, str]],
+    layout_rels: Dict[str, Dict[str, str]],
+    master_rels: Dict[str, Dict[str, str]],
+    zipf: Optional[zipfile.ZipFile],
+    slide_path: str,
+    layout_path: Optional[str],
+    master_path: Optional[str],
+    asset_output_dir: str,
+    asset_url_prefix: str,
+    slide_index: int,
+    z_index: int,
+    theme_colors: Dict[str, str],
+    placeholder: str = "none"
+) -> Optional[Dict[str, Any]]:
+    """
+    Resolve fill using PowerPoint's inheritance chain:
+    Slide → Layout → Master → Theme
+
+    Returns the first fill found in the chain, or None if none exist.
+    """
+    if DEBUG_LAYOUT:
+        logger.debug("=== FILL INHERITANCE RESOLUTION START (slide=%s, z=%s, ph=%s) ===", slide_index, z_index, placeholder)
+
+    # STEP 1: Check slide-level shape
+    if slide_el is not None:
+        fill = resolve_fill_from_xml(
+            slide_el, slide_rels, zipf, slide_path,
+            asset_output_dir, asset_url_prefix, slide_index, z_index,
+            theme_colors, source_label="SLIDE"
+        )
+        if fill is not None:
+            logger.info("Slide %s shape %s: Resolved fill from SLIDE level: %s", slide_index, z_index, fill.get("color") or fill.get("type"))
+            return fill
+
+    # STEP 2: Check layout placeholder
+    if layout_el is not None:
+        fill = resolve_fill_from_xml(
+            layout_el, layout_rels, zipf, layout_path or slide_path,
+            asset_output_dir, asset_url_prefix, slide_index, z_index,
+            theme_colors, source_label="LAYOUT"
+        )
+        if fill is not None:
+            logger.info("Slide %s shape %s: Resolved fill from LAYOUT level: %s", slide_index, z_index, fill.get("color") or fill.get("type"))
+            return fill
+
+    # STEP 3: Check master placeholder
+    if master_el is not None:
+        fill = resolve_fill_from_xml(
+            master_el, master_rels, zipf, master_path or slide_path,
+            asset_output_dir, asset_url_prefix, slide_index, z_index,
+            theme_colors, source_label="MASTER"
+        )
+        if fill is not None:
+            logger.info("Slide %s shape %s: Resolved fill from MASTER level: %s", slide_index, z_index, fill.get("color") or fill.get("type"))
+            return fill
+
+    # No fill found in entire chain
+    if DEBUG_LAYOUT:
+        logger.warning("Slide %s shape %s: NO FILL found after complete inheritance chain (ph=%s)", slide_index, z_index, placeholder)
+        # Log XML snippets for debugging
+        if slide_el is not None:
+            logger.debug("  Slide XML: %s", etree.tostring(slide_el, encoding='unicode')[:300])
+        if layout_el is not None:
+            logger.debug("  Layout XML: %s", etree.tostring(layout_el, encoding='unicode')[:300])
+        if master_el is not None:
+            logger.debug("  Master XML: %s", etree.tostring(master_el, encoding='unicode')[:300])
+
+    return None
+
+
+def resolve_border_inheritance(
+    slide_el: Optional[etree._Element],
+    layout_el: Optional[etree._Element],
+    master_el: Optional[etree._Element],
+    theme_colors: Dict[str, str],
+    slide_index: int,
+    z_index: int,
+    placeholder: str = "none"
+) -> Optional[Dict[str, Any]]:
+    """
+    Resolve border using PowerPoint's inheritance chain:
+    Slide → Layout → Master → Theme
+
+    Returns the first border found in the chain, or None if none exist.
+    """
+    if DEBUG_LAYOUT:
+        logger.debug("=== BORDER INHERITANCE RESOLUTION START (slide=%s, z=%s, ph=%s) ===", slide_index, z_index, placeholder)
+
+    # STEP 1: Check slide-level shape
+    if slide_el is not None:
+        border = resolve_border_from_xml(slide_el, theme_colors, source_label="SLIDE")
+        if border is not None:
+            logger.info("Slide %s shape %s: Resolved border from SLIDE level: %s", slide_index, z_index, border.get("color"))
+            return border
+
+    # STEP 2: Check layout placeholder
+    if layout_el is not None:
+        border = resolve_border_from_xml(layout_el, theme_colors, source_label="LAYOUT")
+        if border is not None:
+            logger.info("Slide %s shape %s: Resolved border from LAYOUT level: %s", slide_index, z_index, border.get("color"))
+            return border
+
+    # STEP 3: Check master placeholder
+    if master_el is not None:
+        border = resolve_border_from_xml(master_el, theme_colors, source_label="MASTER")
+        if border is not None:
+            logger.info("Slide %s shape %s: Resolved border from MASTER level: %s", slide_index, z_index, border.get("color"))
+            return border
+
+    # No border found in entire chain
+    if DEBUG_LAYOUT:
+        logger.debug("Slide %s shape %s: No border found after complete inheritance chain (ph=%s)", slide_index, z_index, placeholder)
+
+    return None
+
+
+def resolve_inherited_style(
+    slide_el: Optional[etree._Element],
+    layout_el: Optional[etree._Element],
+    master_el: Optional[etree._Element],
+    master_txStyles: Dict[str, Dict[str, Any]],
+    placeholder_type: str,
+    slide_rels: Dict[str, Dict[str, str]],
+    layout_rels: Dict[str, Dict[str, str]],
+    master_rels: Dict[str, Dict[str, str]],
+    zipf: Optional[zipfile.ZipFile],
+    slide_path: str,
+    layout_path: Optional[str],
+    master_path: Optional[str],
+    asset_output_dir: str,
+    asset_url_prefix: str,
+    slide_index: int,
+    z_index: int,
+    theme_colors: Dict[str, str],
+) -> Dict[str, Any]:
+    """
+    Resolve complete style inheritance for a placeholder shape.
+
+    Checks in order:
+    1. Slide shape fill/border (from spPr or style refs)
+    2. Layout placeholder fill/border
+    3. Master placeholder fill/border
+    4. Master txStyles (where dt/ftr/sldNum colors actually live!)
+    5. Theme default text color (tx1) as final fallback
+
+    Args:
+        slide_el: Slide shape XML element
+        layout_el: Layout placeholder XML element
+        master_el: Master placeholder XML element
+        master_txStyles: Parsed master text styles (from parse_master_text_styles)
+        placeholder_type: Type of placeholder (title, body, dt, ftr, sldNum, etc.)
+        ... (other args for path/rels/zipf/theme_colors)
+
+    Returns:
+        Dict with resolved fill, border, and text style
+    """
+    result = {
+        "fill": None,
+        "border": None,
+        "textColor": None,
+        "textOpacity": 1
+    }
+
+    if DEBUG_LAYOUT:
+        logger.debug("=== RESOLVE INHERITED STYLE START (slide=%s, z=%s, ph=%s) ===",
+                     slide_index, z_index, placeholder_type)
+
+    # STEP 1: Try shape-based inheritance (Slide → Layout → Master → Theme)
+    fill = resolve_fill_inheritance(
+        slide_el, layout_el, master_el,
+        slide_rels, layout_rels, master_rels,
+        zipf, slide_path, layout_path, master_path,
+        asset_output_dir, asset_url_prefix,
+        slide_index, z_index, theme_colors, placeholder_type
+    )
+
+    border = resolve_border_inheritance(
+        slide_el, layout_el, master_el,
+        theme_colors,
+        slide_index, z_index, placeholder_type
+    )
+
+    if fill is not None:
+        result["fill"] = fill
+        if DEBUG_LAYOUT:
+            logger.debug("[RESOLVED] Slide %s shape %s: Got fill from shape inheritance",
+                         slide_index, z_index)
+
+    if border is not None:
+        result["border"] = border
+        if DEBUG_LAYOUT:
+            logger.debug("[RESOLVED] Slide %s shape %s: Got border from shape inheritance",
+                         slide_index, z_index)
+
+    # STEP 2: If no fill yet, try master txStyles (CRITICAL for dt/ftr/sldNum!)
+    if result["fill"] is None and master_txStyles:
+        # Map placeholder type to txStyle category
+        style_key = None
+        if placeholder_type in ("dt", "ftr", "sldNum"):
+            style_key = "other"  # Date, footer, slide number use otherStyle
+        elif placeholder_type == "title":
+            style_key = "title"
+        elif placeholder_type == "body":
+            style_key = "body"
+
+        if style_key and style_key in master_txStyles:
+            style = master_txStyles[style_key]
+            if "textColor" in style:
+                # Use text color as fill color for placeholders
+                result["fill"] = {
+                    "type": "solid",
+                    "color": style["textColor"],
+                    "opacity": style.get("textOpacity", 1)
+                }
+                result["textColor"] = style["textColor"]
+                result["textOpacity"] = style.get("textOpacity", 1)
+
+                if DEBUG_LAYOUT:
+                    logger.info("[RESOLVED] Slide %s shape %s: Got fill from master txStyles[%s]: %s",
+                                slide_index, z_index, style_key, style["textColor"])
+
+    # STEP 3: Final fallback - use theme default text color (tx1 or dk1)
+    if result["fill"] is None and theme_colors:
+        fallback_color = theme_colors.get("tx1") or theme_colors.get("dk1")
+        if fallback_color:
+            result["fill"] = {
+                "type": "solid",
+                "color": f"#{fallback_color}",
+                "opacity": 1
+            }
+            result["textColor"] = f"#{fallback_color}"
+
+            if DEBUG_LAYOUT:
+                logger.info("[RESOLVED] Slide %s shape %s: Using theme fallback color: %s",
+                            slide_index, z_index, fallback_color)
+
+    # Log final result
+    if DEBUG_LAYOUT:
+        logger.debug("=== RESOLVE INHERITED STYLE END (slide=%s, z=%s, ph=%s) ===",
+                     slide_index, z_index, placeholder_type)
+        logger.debug("    Final fill: %s", result["fill"])
+        logger.debug("    Final border: %s", result["border"])
+
+    return result
 
 
 def extract_fill(
@@ -830,6 +1212,26 @@ def extract_shape(
     border = extract_border(sp_pr, theme_colors)
     shape_type = extract_shape_type(sp_pr)
 
+    # DEBUG: Log when spPr exists but no fill/border extracted
+    if sp_pr is not None and fill is None and border is None:
+        # Check what's actually in spPr
+        has_solid_fill = sp_pr.find("a:solidFill", NS) is not None
+        has_grad_fill = sp_pr.find("a:gradFill", NS) is not None
+        has_no_fill = sp_pr.find("a:noFill", NS) is not None
+        has_line = sp_pr.find("a:ln", NS) is not None
+
+        logger.warning(
+            "Slide %s shape %s: spPr exists but no fill/border extracted. "
+            "XML has: solidFill=%s, gradFill=%s, noFill=%s, ln=%s, placeholder=%s",
+            slide_index,
+            z_index,
+            has_solid_fill,
+            has_grad_fill,
+            has_no_fill,
+            has_line,
+            placeholder
+        )
+
     tx_body = sp_el.find("p:txBody", NS)
     text_runs, align, v_align, bullet = extract_text(tx_body, theme_colors)
 
@@ -838,11 +1240,42 @@ def extract_shape(
     # Theme style refs (fillRef/lnRef) fallback when explicit fill/line missing
     # This handles shapes that inherit their formatting from theme styles
     style_el = sp_el.find("p:style", NS)
+
+    # DEBUG: Log style element status
+    if style_el is None:
+        if fill is None and border is None:
+            # Try to log the actual XML to see what's there
+            xml_str = etree.tostring(sp_el, encoding='unicode')[:500]  # First 500 chars
+            logger.warning(
+                "Slide %s shape %s: NO <p:style> element found and no fill/border! placeholder=%s, XML preview: %s",
+                slide_index,
+                z_index,
+                placeholder,
+                xml_str
+            )
+    else:
+        # Style element exists - log its structure
+        logger.debug(
+            "Slide %s shape %s: Found <p:style>, children: %s",
+            slide_index,
+            z_index,
+            [etree.QName(c.tag).localname for c in style_el]
+        )
+
     if style_el is not None:
         # Extract fill from fillRef if not already set
         if fill is None:
             fill_ref = style_el.find("a:fillRef", NS)
             if fill_ref is not None:
+                # DEBUG: Log fillRef structure
+                logger.debug(
+                    "Slide %s shape %s: Found fillRef, idx=%s, children=%s",
+                    slide_index,
+                    z_index,
+                    fill_ref.get("idx"),
+                    [etree.QName(c.tag).localname for c in fill_ref]
+                )
+
                 # Check for scheme color reference
                 for child in fill_ref:
                     tag_name = etree.QName(child.tag).localname
@@ -850,6 +1283,20 @@ def extract_shape(
                         color, opacity = _parse_color(child, theme_colors)
                         if color:
                             fill = {"type": "solid", "color": f"#{color}", "opacity": opacity if opacity is not None else 1}
+                            logger.debug(
+                                "Slide %s shape %s: Extracted fill from fillRef: color=%s",
+                                slide_index,
+                                z_index,
+                                color
+                            )
+                        else:
+                            logger.warning(
+                                "Slide %s shape %s: fillRef has %s but _parse_color returned None (theme_colors has %s colors)",
+                                slide_index,
+                                z_index,
+                                tag_name,
+                                len(theme_colors)
+                            )
                         break
 
         # Extract border from lnRef if not already set
@@ -892,6 +1339,106 @@ def extract_shape(
     }
 
 
+def parse_master_text_styles(master_tree: Optional[etree._Element], theme_colors: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
+    """
+    Parse master text styles (txStyles) for placeholder formatting.
+
+    Master txStyles contain the default formatting for:
+    - titleStyle: Title placeholders
+    - bodyStyle: Body/content placeholders
+    - otherStyle: Date (dt), Footer (ftr), Slide Number (sldNum)
+
+    This is WHERE date/footer/slidenum colors actually live!
+    """
+    styles = {
+        "title": {},
+        "body": {},
+        "other": {}  # dt, ftr, sldNum all use otherStyle
+    }
+
+    if master_tree is None:
+        return styles
+
+    tx_styles = master_tree.find("p:txStyles", NS)
+    if tx_styles is None:
+        if DEBUG_LAYOUT:
+            logger.warning("Master has no <p:txStyles> element!")
+        return styles
+
+    # Parse each style type
+    style_map = {
+        "p:titleStyle": "title",
+        "p:bodyStyle": "body",
+        "p:otherStyle": "other"
+    }
+
+    for xml_name, key in style_map.items():
+        style_el = tx_styles.find(xml_name, NS)
+        if style_el is not None:
+            # Get level 1 paragraph properties (most common)
+            lvl1 = style_el.find("a:lvl1pPr", NS)
+            if lvl1 is not None:
+                # Extract default run properties
+                def_rpr = lvl1.find("a:defRPr", NS)
+                if def_rpr is not None:
+                    # Extract fill from defRPr
+                    solid_fill = def_rpr.find("a:solidFill", NS)
+                    if solid_fill is not None:
+                        for child in solid_fill:
+                            tag_name = etree.QName(child.tag).localname
+                            if tag_name in ("srgbClr", "schemeClr", "scrgbClr", "sysClr", "prstClr"):
+                                color, opacity = _parse_color(child, theme_colors)
+                                if color:
+                                    styles[key]["textColor"] = f"#{color}"
+                                    styles[key]["textOpacity"] = opacity if opacity is not None else 1
+
+                                    if DEBUG_LAYOUT:
+                                        logger.debug("Master txStyle '%s': textColor=%s", key, color)
+                                break
+
+                    # Extract font size
+                    sz = def_rpr.get("sz")
+                    if sz:
+                        styles[key]["fontSize"] = float(sz) / 100
+
+                    # Extract font family
+                    latin = def_rpr.find("a:latin", NS)
+                    if latin is not None:
+                        styles[key]["fontFamily"] = latin.get("typeface")
+
+    return styles
+
+
+def build_placeholder_xml_map(sp_tree: Optional[etree._Element]) -> Dict[Tuple[str, Optional[str]], etree._Element]:
+    """
+    Build a map of (placeholder_type, placeholder_idx) → XML element
+    for shapes in a shape tree (slide/layout/master).
+
+    This is used for inheritance resolution - we need the raw XML elements
+    to resolve fills/borders from layout/master.
+    """
+    placeholder_xml_map: Dict[Tuple[str, Optional[str]], etree._Element] = {}
+
+    if sp_tree is None:
+        return placeholder_xml_map
+
+    for child in sp_tree:
+        local = etree.QName(child.tag).localname
+        if local in ("sp", "pic"):  # Only regular shapes and pictures have placeholders
+            # Check if this is a placeholder
+            nv_pr = child.find("p:nvSpPr/p:nvPr/p:ph", NS) if local == "sp" else child.find("p:nvPicPr/p:nvPr/p:ph", NS)
+            if nv_pr is not None:
+                placeholder = nv_pr.get("type") or "body"  # Default to "body" if no type specified
+                placeholder_idx = nv_pr.get("idx")
+                key = (placeholder, placeholder_idx)
+                placeholder_xml_map[key] = child
+
+                if DEBUG_LAYOUT:
+                    logger.debug("  Stored XML for placeholder: %s (idx=%s)", placeholder, placeholder_idx)
+
+    return placeholder_xml_map
+
+
 def extract_slide_details(
     zipf: zipfile.ZipFile,
     slide_path: str,
@@ -909,7 +1456,39 @@ def extract_slide_details(
     asset_url_prefix: str,
     slide_index: int,
 ) -> Dict[str, Any]:
+    # DEBUG: Log theme colors at entry
+    if not theme_colors:
+        logger.error("CRITICAL: extract_slide_details received EMPTY theme_colors for slide %s!", slide_index)
+    else:
+        logger.debug("extract_slide_details: slide %s has %s theme colors", slide_index, len(theme_colors))
+
+    if DEBUG_LAYOUT:
+        logger.info("="*80)
+        logger.info("EXTRACTING SLIDE %s WITH FULL INHERITANCE RESOLUTION", slide_index)
+        logger.info("="*80)
+
     slide_tree = _read_xml(zipf, slide_path)
+
+    # Build placeholder XML maps for inheritance resolution
+    slide_sp_tree = slide_tree.find("p:cSld/p:spTree", NS)
+    layout_sp_tree = layout_tree.find("p:cSld/p:spTree", NS) if layout_tree is not None else None
+    master_sp_tree = master_tree.find("p:cSld/p:spTree", NS) if master_tree is not None else None
+
+    if DEBUG_LAYOUT:
+        logger.debug("Building placeholder XML maps...")
+    slide_xml_map = build_placeholder_xml_map(slide_sp_tree)
+    layout_xml_map = build_placeholder_xml_map(layout_sp_tree)
+    master_xml_map = build_placeholder_xml_map(master_sp_tree)
+
+    if DEBUG_LAYOUT:
+        logger.debug("  Slide placeholders: %s", list(slide_xml_map.keys()))
+        logger.debug("  Layout placeholders: %s", list(layout_xml_map.keys()))
+        logger.debug("  Master placeholders: %s", list(master_xml_map.keys()))
+
+    # Parse master text styles (CRITICAL for dt/ftr/sldNum colors!)
+    master_txStyles = parse_master_text_styles(master_tree, theme_colors)
+    if DEBUG_LAYOUT:
+        logger.debug("Master txStyles parsed: %s", master_txStyles)
 
     background = (
         extract_background(
@@ -1020,55 +1599,131 @@ def extract_slide_details(
     all_elements: List[Dict[str, Any]] = []
     placeholder_map: Dict[Tuple[str, Optional[str]], Dict[str, Any]] = {}
 
-    # STEP 1: Add all non-placeholder shapes from master (backgrounds, logos, etc.)
+    # STEP 1: Build master placeholder map (for layout inheritance)
+    master_placeholder_map: Dict[Tuple[str, Optional[str]], Dict[str, Any]] = {}
     for el in master_elements:
-        if el.get("placeholder") == "none":
+        placeholder = el.get("placeholder")
+        if placeholder == "none":
+            # Non-placeholder master decorations (backgrounds, logos)
             all_elements.append(el)
+        else:
+            # Store master placeholders for layout inheritance
+            key = (placeholder, el.get("placeholderIdx"))
+            master_placeholder_map[key] = el
 
-    # STEP 2: Add layout elements
+            # DEBUG: Log master placeholder formatting
+            logger.debug(
+                "Slide %s: Master placeholder %s has fill=%s, border=%s",
+                slide_index,
+                placeholder,
+                el.get("fill", {}).get("color") if el.get("fill") else None,
+                el.get("border", {}).get("color") if el.get("border") else None
+            )
+
+    # STEP 2: Add layout elements with master inheritance
     for el in layout_elements:
         placeholder = el.get("placeholder")
         if placeholder == "none":
             # Non-placeholder layout decorations
             all_elements.append(el)
         else:
-            # Store as placeholder template
+            # Layout placeholder - inherit from master if needed
             key = (placeholder, el.get("placeholderIdx"))
-            placeholder_map[key] = el
 
-    # STEP 3: Add slide elements (override placeholders)
+            # Check if this layout placeholder has a corresponding master placeholder
+            if key in master_placeholder_map and (not el.get("fill") or not el.get("border")):
+                master_template = master_placeholder_map[key]
+
+                # Merge layout with master: Layout > Master
+                resolved_layout = {
+                    **master_template,  # Start with master
+                    **el,  # Override with layout values
+                    # CRITICAL: Inheritance for formatting
+                    "fill": el.get("fill") or master_template.get("fill"),
+                    "border": el.get("border") or master_template.get("border"),
+                }
+
+                # DEBUG: Log if layout inherited from master
+                if not el.get("fill") and master_template.get("fill"):
+                    logger.debug(
+                        "Slide %s: Layout placeholder %s inherited fill from master: %s",
+                        slide_index,
+                        placeholder,
+                        master_template.get("fill", {}).get("color")
+                    )
+
+                placeholder_map[key] = resolved_layout
+            else:
+                # No master placeholder or layout already has all formatting
+                placeholder_map[key] = el
+
+    # STEP 3: Add slide elements with FULL XML-BASED INHERITANCE RESOLUTION
     for el in slide_elements:
         placeholder = el.get("placeholder")
         if placeholder == "none":
             # Direct slide content (not a placeholder)
             all_elements.append(el)
         else:
-            # Slide placeholder - merge with layout template if exists
+            # Slide placeholder - resolve fill/border using XML inheritance chain
             key = (placeholder, el.get("placeholderIdx"))
+
+            # Get XML elements for inheritance resolution
+            slide_xml_el = slide_xml_map.get(key)
+            layout_xml_el = layout_xml_map.get(key)
+            master_xml_el = master_xml_map.get(key)
+
+            if DEBUG_LAYOUT:
+                logger.debug("Resolving placeholder %s (idx=%s): slide=%s, layout=%s, master=%s",
+                           placeholder, el.get("placeholderIdx"),
+                           slide_xml_el is not None, layout_xml_el is not None, master_xml_el is not None)
+
+            # Resolve fill/border using full inheritance chain INCLUDING master txStyles
+            # This is CRITICAL for dt/ftr/sldNum placeholders which get colors from txStyles!
+            resolved_style = resolve_inherited_style(
+                slide_xml_el, layout_xml_el, master_xml_el,
+                master_txStyles,
+                placeholder,
+                slide_rels, layout_rels, master_rels,
+                zipf, slide_path, layout_path, master_path,
+                asset_output_dir, asset_url_prefix,
+                slide_index, el.get("zIndex", 0),
+                theme_colors
+            )
+
+            resolved_fill = resolved_style.get("fill")
+            resolved_border = resolved_style.get("border")
+
+            # Merge with layout template for geometry and text
             if key in placeholder_map:
-                # Merge slide content with layout template
                 layout_template = placeholder_map[key]
 
-                # Slide content ALWAYS wins, but use layout position/size if slide has zero values
+                # Build the final element with proper inheritance
                 merged_el = {
-                    **layout_template,  # Start with layout template
+                    **layout_template,  # Start with layout template for geometry/text
                     **el,  # Override with slide values
                     # Special handling for geometry - use slide if non-zero, else layout
                     "x": el["x"] if el.get("x", 0) != 0 else layout_template.get("x", 0),
                     "y": el["y"] if el.get("y", 0) != 0 else layout_template.get("y", 0),
                     "width": el["width"] if el.get("width", 0) != 0 else layout_template.get("width", 0),
                     "height": el["height"] if el.get("height", 0) != 0 else layout_template.get("height", 0),
-                    # Always use slide's content (text, fill, border) if present
+                    # Inheritance for content: Slide content > Layout content
                     "text": el.get("text") if el.get("text") else layout_template.get("text", []),
-                    "fill": el.get("fill") or layout_template.get("fill"),
-                    "border": el.get("border") or layout_template.get("border"),
+                    # CRITICAL: Use XML-resolved fill/border (full inheritance chain)
+                    "fill": resolved_fill,
+                    "border": resolved_border,
                 }
+
                 all_elements.append(merged_el)
                 # Remove from placeholder map so we don't add it again
                 del placeholder_map[key]
             else:
-                # Slide placeholder with no layout template
-                all_elements.append(el)
+                # Slide placeholder with no layout template - still apply resolved fill/border
+                merged_el = {
+                    **el,
+                    "fill": resolved_fill,
+                    "border": resolved_border,
+                }
+                all_elements.append(merged_el)
 
     # STEP 4: Add any unused layout placeholders (empty placeholders that slide didn't override)
     for placeholder_el in placeholder_map.values():
@@ -1184,8 +1839,18 @@ def parse_pptx_to_layouts(pptx_path: str, asset_output_dir: str, asset_url_prefi
                     theme_target = f"ppt/{rel_target_strip(rel['target'])}"
                 if theme_target in zipf.namelist():
                     theme_colors = _parse_theme_colors(_read_xml(zipf, theme_target))
-                    logger.debug("Loaded theme colors from %s (%s entries)", theme_target, len(theme_colors))
+                    logger.info(
+                        "Loaded %s theme colors from %s: %s",
+                        len(theme_colors),
+                        theme_target,
+                        {k: v for k, v in list(theme_colors.items())[:10]}  # Log first 10
+                    )
+                else:
+                    logger.warning("Theme target not found in zip: %s", theme_target)
                 break
+
+        if not theme_colors:
+            logger.warning("NO THEME COLORS LOADED! This will cause all fills/borders to be missing.")
 
         # Map slide order from presentation.xml rels
         slide_targets: List[str] = []

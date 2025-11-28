@@ -6,7 +6,7 @@ import Link from "next/link";
 import BackBtn from "@/components/BackBtn";
 import { usePathname } from "next/navigation";
 import HeaderNav from "@/app/(presentation-generator)/components/HeaderNab";
-import { Layout, FilePlus2 } from "lucide-react";
+import { Layout, FilePlus2, Sparkles } from "lucide-react";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 const Header = () => {
   const pathname = usePathname();
@@ -25,6 +25,16 @@ const Header = () => {
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href="/content-rewrite"
+              prefetch={false}
+              onClick={() => trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/content-rewrite" })}
+              className="flex items-center gap-2 px-3 py-2 text-white hover:bg-primary/80 rounded-md transition-colors outline-none"
+              role="menuitem"
+            >
+              <Sparkles className="w-5 h-5" />
+              <span className="text-sm font-medium font-inter">AI Rewrite</span>
+            </Link>
             <Link
               href="/custom-template"
               prefetch={false}

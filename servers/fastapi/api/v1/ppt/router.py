@@ -18,6 +18,7 @@ from api.v1.ppt.endpoints.pptx_slides import PPTX_FONTS_ROUTER
 from api.v1.ppt.endpoints.layout_process import LAYOUT_PROCESS_ROUTER
 from api.v1.ppt.endpoints.layout_render import LAYOUT_RENDER_ROUTER
 from api.v1.ppt.endpoints.template_generation import TEMPLATE_GENERATION_ROUTER
+from api.v1.ppt.endpoints.content_rewrite import router as CONTENT_REWRITE_ROUTER
 
 
 API_V1_PPT_ROUTER = APIRouter(prefix="/api/v1/ppt")
@@ -43,3 +44,4 @@ API_V1_PPT_ROUTER.include_router(OPENAI_ROUTER)
 API_V1_PPT_ROUTER.include_router(ANTHROPIC_ROUTER)
 API_V1_PPT_ROUTER.include_router(GOOGLE_ROUTER)
 API_V1_PPT_ROUTER.include_router(PPTX_FONTS_ROUTER)
+API_V1_PPT_ROUTER.include_router(CONTENT_REWRITE_ROUTER, prefix="/rewrite", tags=["Content Rewrite"])

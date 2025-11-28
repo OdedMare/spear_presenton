@@ -3,6 +3,7 @@ import { PresentationCard } from "./PresentationCard";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import { PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
+import { Sparkles } from "lucide-react";
 
 interface PresentationGridProps {
   presentations: PresentationResponse[];
@@ -26,6 +27,10 @@ export const PresentationGrid = ({
     } else {
       router.push("/editor");
     }
+  };
+
+  const handleAIRewrite = () => {
+    router.push("/content-rewrite");
   };
 
   const ShimmerCard = () => (
@@ -57,6 +62,25 @@ export const PresentationGrid = ({
     </div>
   );
 
+  const AIRewriteCard = () => (
+    <div
+      onClick={handleAIRewrite}
+      className="flex flex-col gap-4 min-h-[200px] cursor-pointer group border border-purple-400 hover:border-purple-600 bg-gradient-to-br from-purple-50/70 to-blue-50/70 hover:from-purple-50/90 hover:to-blue-50/90 rounded-lg items-center justify-center transition-all duration-300"
+    >
+      <div className="rounded-full bg-purple-100 group-hover:bg-purple-200 p-4 transition-all duration-300">
+        <Sparkles className="w-8 h-8 text-purple-600 group-hover:text-purple-700 transition-all duration-300" />
+      </div>
+      <div className="text-center">
+        <h3 className="font-semibold text-gray-700 group-hover:text-gray-900 mb-1">
+          AI Content Rewrite
+        </h3>
+        <p className="text-sm text-gray-500 group-hover:text-gray-600 px-4">
+          Keep your design, rewrite content with AI
+        </p>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -69,7 +93,16 @@ export const PresentationGrid = ({
             <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
           </div>
         </div>
-        {[...Array(3)].map((_, i) => (
+        <div className="flex flex-col gap-4 min-h-[200px] cursor-pointer group border border-purple-400 bg-gradient-to-br from-purple-50/70 to-blue-50/70 rounded-lg items-center justify-center animate-pulse">
+          <div className="rounded-full bg-purple-100 p-4">
+            <div className="w-8 h-8" />
+          </div>
+          <div className="text-center space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-32 mx-auto"></div>
+            <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
+          </div>
+        </div>
+        {[...Array(2)].map((_, i) => (
           <ShimmerCard key={i} />
         ))}
       </div>
@@ -80,7 +113,8 @@ export const PresentationGrid = ({
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <CreateNewCard />
-        <div className="col-span-3 flex items-center justify-center">
+        <AIRewriteCard />
+        <div className="col-span-2 flex items-center justify-center">
           <div className="text-center text-gray-500">
             <p className="mb-2">{error}</p>
             <button
@@ -98,6 +132,7 @@ export const PresentationGrid = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <CreateNewCard />
+      <AIRewriteCard />
       {presentations &&
         presentations.length > 0 &&
         presentations.map((presentation) => (
