@@ -405,15 +405,15 @@ export default function ContentRewritePage() {
   const getLoadingMessage = (stage: LoadingStage): string => {
     switch (stage) {
       case 'extracting_placeholders':
-        return 'Analyzing your presentation structure...'
+        return 'מנתח את מבנה המצגת שלך...'
       case 'extracting_content':
-        return 'Extracting content from file...'
+        return 'מחלץ תוכן מהקובץ...'
       case 'generating_content':
-        return 'AI is generating new content for your slides...'
+        return 'AI יוצר תוכן חדש עבור השקפים שלך...'
       case 'injecting_content':
-        return 'Creating your rewritten presentation...'
+        return 'יוצר את המצגת המשוכתבת שלך...'
       default:
-        return 'Processing...'
+        return 'מעבד...'
     }
   }
 
@@ -422,12 +422,12 @@ export default function ContentRewritePage() {
       {/* Extracted Content Preview Modal */}
       {showExtractedPreview && extractedContent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col" dir="rtl">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-2xl font-semibold text-gray-900">Extracted Content Preview</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">תצוגה מקדימה של תוכן מחולץ</h2>
               <p className="text-sm text-gray-600 mt-1">
-                Review the extracted content from {sourceFile?.name}
+                בדוק את התוכן שחולץ מ-{sourceFile?.name}
               </p>
             </div>
 
@@ -443,7 +443,7 @@ export default function ContentRewritePage() {
 
               {/* Character Count */}
               <div className="mt-4 text-sm text-gray-500">
-                {extractedContent.length} characters extracted
+                {extractedContent.length} תווים חולצו
               </div>
             </div>
 
@@ -454,14 +454,14 @@ export default function ContentRewritePage() {
                 variant="outline"
                 className="border-gray-300 hover:bg-gray-100"
               >
-                Discard
+                בטל
               </Button>
               <Button
                 onClick={handleUseExtractedContent}
                 className="bg-[#5146E5] hover:bg-[#4136D5] text-white"
               >
                 <Check className="w-4 h-4 mr-2" />
-                Use This Content
+                השתמש בתוכן זה
               </Button>
             </div>
           </div>
@@ -486,16 +486,16 @@ export default function ContentRewritePage() {
                   {getLoadingMessage(loadingStage)}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  This may take a few moments
+                  זה עשוי לקחת כמה רגעים
                 </p>
               </div>
 
               {/* Progress Steps */}
               <div className="w-full space-y-2">
                 {[
-                  { stage: 'extracting_placeholders', label: 'Extract Structure' },
-                  { stage: 'generating_content', label: 'Generate Content' },
-                  { stage: 'injecting_content', label: 'Create Presentation' },
+                  { stage: 'extracting_placeholders', label: 'חילוץ מבנה' },
+                  { stage: 'generating_content', label: 'יצירת תוכן' },
+                  { stage: 'injecting_content', label: 'יצירת מצגת' },
                 ].map(({ stage: stepStage, label }) => {
                   const isActive = loadingStage === stepStage
                   const isPast =
@@ -533,14 +533,14 @@ export default function ContentRewritePage() {
         </div>
       )}
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8" dir="rtl">
         {/* Header */}
         <div className="text-center mb-8 relative">
           <h1 className="text-3xl font-semibold font-instrument_sans mb-2">
-            AI Content Rewrite
+            שכתוב תוכן עם AI
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Keep your presentation design, rewrite the content with AI
+            שמור על עיצוב המצגת, שכתב את התוכן עם AI
           </p>
 
           {/* Help Button - Positioned in top right */}
@@ -565,11 +565,11 @@ export default function ContentRewritePage() {
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#5146E5] text-white font-semibold">
                   1
                 </div>
-                <h2 className="text-xl font-semibold font-instrument_sans">Upload Your Presentation</h2>
+                <h2 className="text-xl font-semibold font-instrument_sans">העלה את המצגת שלך</h2>
               </div>
 
               <p className="text-gray-600 mb-6">
-                Upload a PowerPoint file (.pptx) with the design you want to keep
+                העלה קובץ PowerPoint (.pptx) עם העיצוב שברצונך לשמור
               </p>
 
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-[#5146E5] transition-colors">
@@ -589,9 +589,9 @@ export default function ContentRewritePage() {
                   </div>
                   <div>
                     <span className="text-base font-medium text-gray-700 block mb-1">
-                      {file ? file.name : 'Click to upload or drag and drop'}
+                      {file ? file.name : 'לחץ להעלאה או גרור ושחרר'}
                     </span>
-                    <span className="text-sm text-gray-500">PowerPoint (.pptx) files only</span>
+                    <span className="text-sm text-gray-500">קבצי PowerPoint (.pptx) בלבד</span>
                   </div>
                 </label>
               </div>
@@ -606,12 +606,12 @@ export default function ContentRewritePage() {
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Extracting Placeholders...
+                      מחלץ מציינים...
                     </>
                   ) : (
                     <>
-                      Continue to Next Step
-                      <ChevronRight className="w-5 h-5 ml-2" />
+                      המשך לשלב הבא
+                      <ChevronRight className="w-5 h-5 ml-2 rotate-180" />
                     </>
                   )}
                 </Button>
@@ -627,10 +627,10 @@ export default function ContentRewritePage() {
             <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-4">
                 <FileText className="w-5 h-5 text-[#5146E5]" />
-                <h3 className="text-lg font-semibold">Placeholder Structure</h3>
+                <h3 className="text-lg font-semibold">מבנה מציינים</h3>
               </div>
               <p className="text-sm text-gray-600 mb-4">
-                Found {placeholderStructure.slides.length} slides with the following structure
+                נמצאו {placeholderStructure.slides.length} שקפים עם המבנה הבא
               </p>
               <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto border border-gray-200">
                 <pre className="text-xs font-mono text-gray-700">
@@ -655,20 +655,20 @@ export default function ContentRewritePage() {
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#5146E5] text-white font-semibold">
                   2
                 </div>
-                <h2 className="text-xl font-semibold font-instrument_sans">Describe Your Content</h2>
+                <h2 className="text-xl font-semibold font-instrument_sans">תאר את התוכן שלך</h2>
               </div>
 
               <p className="text-gray-600 mb-6">
-                Tell the AI what presentation content you want to generate
+                ספר ל-AI איזה תוכן מצגת אתה רוצה ליצור
               </p>
 
               {/* Mode Selector */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Rewrite Mode</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">מצב שכתוב</label>
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => setRewriteMode('strict')}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${rewriteMode === 'strict'
+                    className={`p-4 rounded-lg border-2 transition-all text-right ${rewriteMode === 'strict'
                       ? 'border-[#5146E5] bg-[#E9E8F8]'
                       : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
@@ -680,21 +680,21 @@ export default function ContentRewritePage() {
                           <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
                         )}
                       </div>
-                      <span className="font-semibold text-gray-900">Strict Mode</span>
+                      <span className="font-semibold text-gray-900">מצב קפדני</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Maintains exact structure - only rewrites text within existing elements. Perfect for preserving precise layouts.
+                      שומר על מבנה מדויק - משכתב רק טקסט באלמנטים קיימים. מושלם לשמירה על פריסות מדויקות.
                     </p>
                   </button>
 
                   <button
                     onClick={() => setRewriteMode('flexible')}
-                    className={`p-4 rounded-lg border-2 transition-all text-left relative ${rewriteMode === 'flexible'
+                    className={`p-4 rounded-lg border-2 transition-all text-right relative ${rewriteMode === 'flexible'
                       ? 'border-[#5146E5] bg-[#E9E8F8]'
                       : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
                   >
-                    <span className="absolute top-2 right-2 bg-yellow-400 text-xs px-2 py-1 rounded-full text-gray-900 font-bold">בקרוב</span>
+                    <span className="absolute top-2 left-2 bg-yellow-400 text-xs px-2 py-1 rounded-full text-gray-900 font-bold">בקרוב</span>
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${rewriteMode === 'flexible' ? 'border-[#5146E5]' : 'border-gray-300'
                         }`}>
@@ -702,13 +702,13 @@ export default function ContentRewritePage() {
                           <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
                         )}
                       </div>
-                      <span className="font-semibold text-gray-900">Flexible Mode</span>
+                      <span className="font-semibold text-gray-900">מצב גמיש</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Adapts structure as needed - can suggest new slides, tables, SmartArt, and charts. Adjusts bullet points and content flow while keeping overall design.
+                      מתאים מבנה לפי הצורך - יכול להציע שקפים חדשים, טבלאות,  ותרשימים. מתאים נקודות תבליט ותזרים תוכן תוך שמירה על העיצוב הכללי.
                     </p>
                     <p className="text-xs text-amber-600 mt-2 font-medium">
-                      Note: Adding completely new slides or elements is currently experimental. Some new elements generated by AI might not appear in the final downloaded file.
+                      הערה: הוספת שקפים או אלמנטים חדשים לחלוטין היא כרגע ניסיונית. אלמנטים חדשים שנוצרו על ידי AI עשויים לא להופיע בקובץ הסופי שהורד.
                     </p>
                   </button>
                 </div>
@@ -716,11 +716,11 @@ export default function ContentRewritePage() {
 
               {/* Language Selector */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Output Language</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">שפת פלט</label>
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => setLanguage('english')}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${language === 'english'
+                    className={`p-3 rounded-lg border-2 transition-all text-right ${language === 'english'
                       ? 'border-[#5146E5] bg-[#E9E8F8]'
                       : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
@@ -734,12 +734,12 @@ export default function ContentRewritePage() {
                       </div>
                       <span className="font-medium text-gray-900">English</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 ml-5">Left-to-right text</p>
+                    <p className="text-xs text-gray-500 mt-1 mr-5">טקסט משמאל לימין</p>
                   </button>
 
                   <button
                     onClick={() => setLanguage('hebrew')}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${language === 'hebrew'
+                    className={`p-3 rounded-lg border-2 transition-all text-right ${language === 'hebrew'
                       ? 'border-[#5146E5] bg-[#E9E8F8]'
                       : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
@@ -753,7 +753,7 @@ export default function ContentRewritePage() {
                       </div>
                       <span className="font-medium text-gray-900">עברית (Hebrew)</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 ml-5">Left-to-right display</p>
+                    <p className="text-xs text-gray-500 mt-1 mr-5">תצוגה מימין לשמאל</p>
                   </button>
                 </div>
               </div>
@@ -762,7 +762,7 @@ export default function ContentRewritePage() {
               {rewriteMode === 'flexible' && (
                 <div className="mb-6">
                   <label htmlFor="slideCount" className="block text-sm font-medium text-gray-700 mb-2">
-                    Target Slide Count (Optional)
+                    מספר שקפים יעד (אופציונלי)
                   </label>
                   <input
                     id="slideCount"
@@ -771,11 +771,12 @@ export default function ContentRewritePage() {
                     max="50"
                     value={targetSlideCount || ''}
                     onChange={(e) => setTargetSlideCount(parseInt(e.target.value) || 0)}
-                    placeholder={`Leave empty for automatic (currently ${placeholderStructure?.slides.length || 0} slides)`}
+                    placeholder={`השאר ריק לאוטומטי (כרגע ${placeholderStructure?.slides.length || 0} שקפים)`}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-[#5146E5] focus:ring-1 focus:ring-[#5146E5]"
+                    dir="rtl"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Specify how many slides you want in the final presentation (leave as 0 for automatic)
+                    ציין כמה שקפים אתה רוצה במצגת הסופית (השאר כ-0 לאוטומטי)
                   </p>
                 </div>
               )}
@@ -783,10 +784,10 @@ export default function ContentRewritePage() {
               {/* Source File Upload for Content Extraction */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Extract Content from File (Optional)
+                  חלץ תוכן מקובץ (אופציונלי)
                 </label>
                 <p className="text-xs text-gray-600 mb-3">
-                  Upload a PDF or PPTX file to extract its content and use it as your prompt
+                  העלה קובץ PDF או PPTX כדי לחלץ את התוכן שלו ולהשתמש בו כהנחיה שלך
                 </p>
                 <div className="flex gap-3">
                   <div className="flex-1">
@@ -800,10 +801,11 @@ export default function ContentRewritePage() {
                     <label
                       htmlFor="source-file-upload"
                       className="cursor-pointer flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#5146E5] transition-colors text-sm"
+                      dir="rtl"
                     >
                       <Upload className="w-4 h-4 text-gray-500" />
                       <span className="text-gray-700">
-                        {sourceFile ? sourceFile.name : 'Choose PDF or PPTX file'}
+                        {sourceFile ? sourceFile.name : 'בחר קובץ PDF או PPTX'}
                       </span>
                     </label>
                   </div>
@@ -817,12 +819,12 @@ export default function ContentRewritePage() {
                       {loading ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Extracting...
+                          מחלץ...
                         </>
                       ) : (
                         <>
                           <FileText className="w-4 h-4 mr-2" />
-                          Extract Content
+                          חלץ תוכן
                         </>
                       )}
                     </Button>
@@ -834,15 +836,15 @@ export default function ContentRewritePage() {
                       size="sm"
                       className="border-red-300 text-red-600 hover:bg-red-50"
                     >
-                      Remove Extracted Content
+                      הסר תוכן מחולץ
                     </Button>
                   )}
                 </div>
                 {extractedContent && userPrompt === extractedContent && (
-                  <div className="mt-2">
+                  <div className="mt-2" dir="rtl">
                     <p className="text-xs text-green-600 flex items-center gap-1">
                       <Check className="w-3 h-3" />
-                      Using extracted content ({extractedContent.length} characters from {sourceFile?.name})
+                      משתמש בתוכן מחולץ ({extractedContent.length} תווים מ-{sourceFile?.name})
                     </p>
                   </div>
                 )}
@@ -851,9 +853,10 @@ export default function ContentRewritePage() {
               <Textarea
                 value={userPrompt}
                 onChange={(e) => setUserPrompt(e.target.value)}
-                placeholder="Example: Create a presentation about sustainable energy solutions, focusing on solar and wind power. Include benefits, implementation strategies, and case studies."
+                placeholder="דוגמה: צור מצגת על פתרונות אנרגיה בת-קיימא, עם התמקדות באנרגיה סולארית ורוח. כלול יתרונות, אסטרטגיות יישום ומקרי בוחן."
                 rows={6}
                 className="w-full mb-6 border-gray-300 focus:border-[#5146E5] focus:ring-[#5146E5]"
+                dir="rtl"
               />
 
               <div className="flex gap-3">
@@ -864,7 +867,7 @@ export default function ContentRewritePage() {
                   size="lg"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
-                  Start Over
+                  התחל מחדש
                 </Button>
                 <Button
                   onClick={handleGenerateContent}
@@ -875,12 +878,12 @@ export default function ContentRewritePage() {
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Generating Content...
+                      יוצר תוכן...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5 mr-2" />
-                      Generate Content
+                    יצירת תוכן
                     </>
                   )}
                 </Button>

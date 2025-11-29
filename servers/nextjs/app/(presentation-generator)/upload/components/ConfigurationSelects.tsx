@@ -71,8 +71,9 @@ const SlideCountSelect: React.FC<{
       <SelectTrigger
         className="w-[180px] font-instrument_sans font-medium bg-blue-100 border-blue-200 focus-visible:ring-blue-300"
         data-testid="slides-select"
+        dir="rtl"
       >
-        <SelectValue placeholder="Select Slides" />
+        <SelectValue placeholder="בחר מספר שקפים" />
       </SelectTrigger>
       <SelectContent className="font-instrument_sans">
         {/* Sticky custom input at the top */}
@@ -104,14 +105,14 @@ const SlideCountSelect: React.FC<{
               placeholder="--"
               className="h-8 w-16 px-2 text-sm"
             />
-            <span className="text-sm font-medium">slides</span>
+            <span className="text-sm font-medium">שקפים</span>
           </div>
         </div>
 
         {/* Hidden item to allow SelectValue to render custom selection */}
         {value && !SLIDE_OPTIONS.includes(value as SlideOption) && (
           <SelectItem value={value} className="hidden">
-            {value} slides
+            {value} שקפים
           </SelectItem>
         )}
 
@@ -121,8 +122,9 @@ const SlideCountSelect: React.FC<{
             value={option}
             className="font-instrument_sans text-sm font-medium"
             role="option"
+            dir="rtl"
           >
-            {option} slides
+            {option} שקפים
           </SelectItem>
         ))}
       </SelectContent>
@@ -148,9 +150,10 @@ const LanguageSelect: React.FC<{
         data-testid="language-select"
         aria-expanded={open}
         className="w-[200px] justify-between font-instrument_sans font-semibold overflow-hidden bg-blue-100 hover:bg-blue-100 border-blue-200 focus-visible:ring-blue-300 border-none"
+        dir="rtl"
       >
         <p className="text-sm font-medium truncate">
-          {value || "Select language"}
+          {value || "בחר שפה"}
         </p>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
@@ -158,11 +161,12 @@ const LanguageSelect: React.FC<{
     <PopoverContent className="w-[300px] p-0" align="end">
       <Command>
         <CommandInput
-          placeholder="Search language..."
+          placeholder="חפש שפה..."
           className="font-instrument_sans"
+          dir="rtl"
         />
         <CommandList>
-          <CommandEmpty>No language found.</CommandEmpty>
+          <CommandEmpty>לא נמצאה שפה.</CommandEmpty>
           <CommandGroup>
             {Object.values(LanguageType).map((language) => (
               <CommandItem
@@ -243,11 +247,11 @@ export function ConfigurationSelects({
         open={openLanguage}
         onOpenChange={setOpenLanguage}
       />
-      <ToolTip content="Advanced settings">
+      <ToolTip content="הגדרות מתקדמות">
 
       <button
-        aria-label="Advanced settings"
-        title="Advanced settings"
+        aria-label="הגדרות מתקדמות"
+        title="הגדרות מתקדמות"
         type="button"
         onClick={() => handleOpenAdvancedChange(true)}
         className="ml-auto flex items-center gap-2 text-sm underline underline-offset-4  bg-blue-100 hover:bg-blue-100 border-blue-200 focus-visible:ring-blue-300 border-none p-2 rounded-md font-instrument_sans font-medium"
@@ -257,22 +261,22 @@ export function ConfigurationSelects({
         </ToolTip>
 
       <Dialog open={openAdvanced} onOpenChange={handleOpenAdvancedChange}>
-        <DialogContent className="max-w-2xl font-instrument_sans">
+        <DialogContent className="max-w-2xl font-instrument_sans" dir="rtl">
           <DialogHeader>
-            <DialogTitle>Advanced settings</DialogTitle>
+            <DialogTitle>הגדרות מתקדמות</DialogTitle>
           </DialogHeader>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Tone */}
             <div className="w-full flex flex-col gap-2">
-              <label className="text-sm font-semibold text-gray-700">Tone</label>
-              <p className="text-xs text-gray-500">Controls the writing style (e.g., casual, professional, funny).</p>
+              <label className="text-sm font-semibold text-gray-700">טון</label>
+              <p className="text-xs text-gray-500">שולט בסגנון הכתיבה (לדוגמה: קז'ואל, מקצועי, מצחיק).</p>
               <Select
                 value={advancedDraft.tone}
                 onValueChange={(value) => setAdvancedDraft((prev) => ({ ...prev, tone: value as ToneType }))}
               >
                 <SelectTrigger className="w-full font-instrument_sans capitalize font-medium bg-blue-100 border-blue-200 focus-visible:ring-blue-300">
-                  <SelectValue placeholder="Select tone" />
+                  <SelectValue placeholder="בחר טון" />
                 </SelectTrigger>
                 <SelectContent className="font-instrument_sans">
                   {Object.values(ToneType).map((tone) => (
@@ -286,14 +290,14 @@ export function ConfigurationSelects({
 
             {/* Verbosity */}
             <div className="w-full flex flex-col gap-2">
-              <label className="text-sm font-semibold text-gray-700">Verbosity</label>
-              <p className="text-xs text-gray-500">Controls how detailed slide descriptions are: concise, standard, or text-heavy.</p>
+              <label className="text-sm font-semibold text-gray-700">רמת פירוט</label>
+              <p className="text-xs text-gray-500">שולט בכמות הפירוט בשקפים: תמציתי, רגיל, או מפורט.</p>
               <Select
                 value={advancedDraft.verbosity}
                 onValueChange={(value) => setAdvancedDraft((prev) => ({ ...prev, verbosity: value as VerbosityType }))}
               >
                 <SelectTrigger className="w-full font-instrument_sans capitalize font-medium bg-blue-100 border-blue-200 focus-visible:ring-blue-300">
-                  <SelectValue placeholder="Select verbosity" />
+                  <SelectValue placeholder="בחר רמת פירוט" />
                 </SelectTrigger>
                 <SelectContent className="font-instrument_sans">
                   {Object.values(VerbosityType).map((verbosity) => (
@@ -310,52 +314,52 @@ export function ConfigurationSelects({
             {/* Toggles */}
             <div className="w-full flex flex-col gap-2 p-3 rounded-md bg-blue-100 border-blue-200">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-gray-700">Include table of contents</label>
+                <label className="text-sm font-semibold text-gray-700">כלול תוכן עניינים</label>
                 <Switch
                   checked={advancedDraft.includeTableOfContents}
                   onCheckedChange={(checked) => setAdvancedDraft((prev) => ({ ...prev, includeTableOfContents: checked }))}
                 />
               </div>
-              <p className="text-xs text-gray-600">Add an index slide summarizing sections (requires 3+ slides).</p>
+              <p className="text-xs text-gray-600">הוסף שקף אינדקס המסכם את הסעיפים (דורש 3+ שקפים).</p>
             </div>
             <div className="w-full flex flex-col gap-2 p-3 rounded-md bg-blue-100 border-blue-200">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-gray-700">Title slide</label>
+                <label className="text-sm font-semibold text-gray-700">שקף כותרת</label>
                 <Switch
                   checked={advancedDraft.includeTitleSlide}
                   onCheckedChange={(checked) => setAdvancedDraft((prev) => ({ ...prev, includeTitleSlide: checked }))}
                 />
               </div>
-              <p className="text-xs text-gray-600">Include a title slide as the first slide.</p>
+              <p className="text-xs text-gray-600">כלול שקף כותרת כשקף הראשון.</p>
             </div>
             <div className="w-full flex flex-col gap-2 p-3 rounded-md bg-blue-100 border-blue-200">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-gray-700">Web search</label>
+                <label className="text-sm font-semibold text-gray-700">חיפוש ברשת</label>
                 <Switch
                   checked={advancedDraft.webSearch}
                   onCheckedChange={(checked) => setAdvancedDraft((prev) => ({ ...prev, webSearch: checked }))}
                 />
               </div>
-              <p className="text-xs text-gray-600">Allow the model to consult the web for fresher facts.</p>
+              <p className="text-xs text-gray-600">אפשר למודל לחפש ברשת עבור מידע עדכני יותר.</p>
             </div>
 
             {/* Instructions */}
             <div className="w-full sm:col-span-2 flex flex-col gap-2">
-              <label className="text-sm font-semibold text-gray-700">Instructions</label>
-              <p className="text-xs text-gray-500">Optional guidance for the AI. These override defaults except format constraints.</p>
+              <label className="text-sm font-semibold text-gray-700">הנחיות</label>
+              <p className="text-xs text-gray-500">הנחיות אופציונליות ל-AI. אלו דורסות את ברירות המחדל למעט מגבלות פורמט.</p>
               <Textarea
                 value={advancedDraft.instructions}
                 rows={4}
                 onChange={(e) => setAdvancedDraft((prev) => ({ ...prev, instructions: e.target.value }))}
-                placeholder="Example: Focus on enterprise buyers, emphasize ROI and security compliance. Keep slides data-driven, avoid jargon, and include a short call-to-action on the final slide."
+                placeholder="דוגמה: התמקד בקונים ארגוניים, הדגש ROI ותאימות אבטחה. שמור על שקפים מבוססי נתונים, הימנע מז'רגון, וכלול קריאה לפעולה קצרה בשקף הסופי."
                 className="py-2 px-3 border-2 font-medium text-sm min-h-[100px] max-h-[200px] border-blue-200 focus-visible:ring-offset-0 focus-visible:ring-blue-300"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => handleOpenAdvancedChange(false)}>Cancel</Button>
-            <Button onClick={handleSaveAdvanced} className="bg-[#5141e5] text-white hover:bg-[#5141e5]/90">Save</Button>
+            <Button variant="outline" onClick={() => handleOpenAdvancedChange(false)}>ביטול</Button>
+            <Button onClick={handleSaveAdvanced} className="bg-[#5141e5] text-white hover:bg-[#5141e5]/90">שמור</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

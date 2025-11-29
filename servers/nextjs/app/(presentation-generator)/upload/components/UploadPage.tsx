@@ -79,12 +79,12 @@ const UploadPage = () => {
    */
   const validateConfiguration = (): boolean => {
     if (!config.language || !config.slides) {
-      toast.error("Please select number of Slides & Language");
+      toast.error("אנא בחר מספר שקפים ושפה");
       return false;
     }
 
     if (!config.prompt.trim() && files.length === 0) {
-      toast.error("No Prompt or Document Provided");
+      toast.error("לא סופק הנחיה או מסמך");
       return false;
     }
     return true;
@@ -115,10 +115,10 @@ const UploadPage = () => {
   const handleDocumentProcessing = async () => {
     setLoadingState({
       isLoading: true,
-      message: "Processing documents...",
+      message: "מעבד מסמכים...",
       showProgress: true,
       duration: 90,
-      extra_info: files.length > 0 ? "It might take a few minutes for large documents." : "",
+      extra_info: files.length > 0 ? "עשוי לקחת מספר דקות למסמכים גדולים." : "",
     });
 
     let documents = [];
@@ -151,7 +151,7 @@ const UploadPage = () => {
   const handleDirectPresentationGeneration = async () => {
     setLoadingState({
       isLoading: true,
-      message: "Generating outlines...",
+      message: "יוצר מתווה...",
       showProgress: true,
       duration: 30,
     });
@@ -189,8 +189,8 @@ const UploadPage = () => {
       duration: 0,
       showProgress: false,
     });
-    toast.error("Error", {
-      description: error.message || "Error in upload page.",
+    toast.error("שגיאה", {
+      description: error.message || "שגיאה בעמוד העלאה.",
     });
   };
 
@@ -227,9 +227,10 @@ const UploadPage = () => {
         onClick={handleGeneratePresentation}
         className="w-full rounded-[32px] flex items-center justify-center py-6 bg-[#5141e5] text-white font-instrument_sans font-semibold text-xl hover:bg-[#5141e5]/80 transition-colors duration-300"
         data-testid="next-button"
+        dir="rtl"
       >
-        <span>Next</span>
-        <ChevronRight className="!w-6 !h-6" />
+        <ChevronRight className="!w-6 !h-6 rotate-180" />
+        <span>הבא</span>
       </Button>
     </Wrapper>
   );
