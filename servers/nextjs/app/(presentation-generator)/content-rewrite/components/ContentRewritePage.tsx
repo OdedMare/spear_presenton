@@ -433,8 +433,8 @@ export default function ContentRewritePage() {
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
               <div className="prose prose-sm max-w-none">
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <pre className="whitespace-pre-wrap font-sans text-sm text-gray-900 leading-relaxed">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800 leading-relaxed">
                     {extractedContent}
                   </pre>
                 </div>
@@ -504,13 +504,12 @@ export default function ContentRewritePage() {
                   return (
                     <div key={stepStage} className="flex items-center gap-3">
                       <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                          isActive
+                        className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${isActive
                             ? 'bg-[#5146E5] ring-4 ring-[#E9E8F8]'
                             : isPast
-                            ? 'bg-green-500'
-                            : 'bg-gray-200'
-                        }`}
+                              ? 'bg-green-500'
+                              : 'bg-gray-200'
+                          }`}
                       >
                         {isPast ? (
                           <Check className="w-3 h-3 text-white" />
@@ -519,9 +518,8 @@ export default function ContentRewritePage() {
                         ) : null}
                       </div>
                       <span
-                        className={`text-sm font-medium ${
-                          isActive || isPast ? 'text-gray-900' : 'text-gray-400'
-                        }`}
+                        className={`text-sm font-medium ${isActive || isPast ? 'text-gray-900' : 'text-gray-400'
+                          }`}
                       >
                         {label}
                       </span>
@@ -664,16 +662,14 @@ export default function ContentRewritePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => setRewriteMode('strict')}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${
-                      rewriteMode === 'strict'
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${rewriteMode === 'strict'
                         ? 'border-[#5146E5] bg-[#E9E8F8]'
                         : 'border-gray-300 bg-white hover:border-gray-400'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        rewriteMode === 'strict' ? 'border-[#5146E5]' : 'border-gray-300'
-                      }`}>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${rewriteMode === 'strict' ? 'border-[#5146E5]' : 'border-gray-300'
+                        }`}>
                         {rewriteMode === 'strict' && (
                           <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
                         )}
@@ -687,16 +683,14 @@ export default function ContentRewritePage() {
 
                   <button
                     onClick={() => setRewriteMode('flexible')}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${
-                      rewriteMode === 'flexible'
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${rewriteMode === 'flexible'
                         ? 'border-[#5146E5] bg-[#E9E8F8]'
                         : 'border-gray-300 bg-white hover:border-gray-400'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        rewriteMode === 'flexible' ? 'border-[#5146E5]' : 'border-gray-300'
-                      }`}>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${rewriteMode === 'flexible' ? 'border-[#5146E5]' : 'border-gray-300'
+                        }`}>
                         {rewriteMode === 'flexible' && (
                           <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
                         )}
@@ -719,16 +713,14 @@ export default function ContentRewritePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => setLanguage('english')}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${
-                      language === 'english'
+                    className={`p-3 rounded-lg border-2 transition-all text-left ${language === 'english'
                         ? 'border-[#5146E5] bg-[#E9E8F8]'
                         : 'border-gray-300 bg-white hover:border-gray-400'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
-                        language === 'english' ? 'border-[#5146E5]' : 'border-gray-300'
-                      }`}>
+                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${language === 'english' ? 'border-[#5146E5]' : 'border-gray-300'
+                        }`}>
                         {language === 'english' && (
                           <div className="w-1.5 h-1.5 rounded-full bg-[#5146E5]"></div>
                         )}
@@ -740,16 +732,14 @@ export default function ContentRewritePage() {
 
                   <button
                     onClick={() => setLanguage('hebrew')}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${
-                      language === 'hebrew'
+                    className={`p-3 rounded-lg border-2 transition-all text-left ${language === 'hebrew'
                         ? 'border-[#5146E5] bg-[#E9E8F8]'
                         : 'border-gray-300 bg-white hover:border-gray-400'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
-                        language === 'hebrew' ? 'border-[#5146E5]' : 'border-gray-300'
-                      }`}>
+                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${language === 'hebrew' ? 'border-[#5146E5]' : 'border-gray-300'
+                        }`}>
                         {language === 'hebrew' && (
                           <div className="w-1.5 h-1.5 rounded-full bg-[#5146E5]"></div>
                         )}
@@ -920,9 +910,8 @@ export default function ContentRewritePage() {
                   const originalSlide = placeholderStructure?.slides[slideIdx]
 
                   return (
-                    <div key={slideIdx} className={`border rounded-lg p-6 transition-all ${
-                      isEditing ? 'border-[#5146E5] bg-white shadow-lg' : 'border-gray-200 bg-gray-50'
-                    }`}>
+                    <div key={slideIdx} className={`border rounded-lg p-6 transition-all ${isEditing ? 'border-[#5146E5] bg-white shadow-lg' : 'border-gray-200 bg-gray-50'
+                      }`}>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-lg text-[#5146E5]">
                           Slide {slide.slideNumber} ({slide.elements.length} elements)
@@ -980,9 +969,8 @@ export default function ContentRewritePage() {
                                   value={element.text}
                                   onChange={(e) => handleUpdateElementText(slideIdx, element.id, e.target.value)}
                                   rows={Math.min(element.text.split('\n').length + 1, 5)}
-                                  className={`w-full border-gray-300 focus:border-[#5146E5] focus:ring-[#5146E5] text-sm ${
-                                    maxLengthWarning ? 'border-red-300' : ''
-                                  }`}
+                                  className={`w-full border-gray-300 focus:border-[#5146E5] focus:ring-[#5146E5] text-sm ${maxLengthWarning ? 'border-red-300' : ''
+                                    }`}
                                   placeholder={`Enter ${displayName.toLowerCase()} text...`}
                                 />
                               ) : (

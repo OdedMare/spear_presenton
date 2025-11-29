@@ -1,33 +1,23 @@
-from constants.supported_ollama_models import SUPPORTED_OLLAMA_MODELS
 from constants.llm import OPENAI_URL
 from enums.image_provider import ImageProvider
 from enums.llm_provider import LLMProvider
 from utils.available_models import (
-    list_available_anthropic_models,
-    list_available_google_models,
     list_available_openai_compatible_models,
 )
 from utils.get_env import (
-    get_anthropic_api_key_env,
-    get_anthropic_model_env,
     get_can_change_keys_env,
-    get_google_model_env,
     get_openai_api_key_env,
     get_openai_model_env,
     get_pixabay_api_key_env,
     get_pexels_api_key_env,
+    get_custom_llm_api_key_env,
+    get_custom_llm_url_env,
+    get_custom_model_env,
 )
-from utils.get_env import get_google_api_key_env
-from utils.get_env import get_ollama_model_env
-from utils.get_env import get_custom_llm_api_key_env
-from utils.get_env import get_custom_llm_url_env
-from utils.get_env import get_custom_model_env
 from utils.llm_provider import (
     get_llm_provider,
     is_custom_llm_selected,
-    is_ollama_selected,
 )
-from utils.ollama import pull_ollama_model
 from utils.image_provider import get_selected_image_provider
 
 
@@ -47,47 +37,6 @@ async def check_llm_and_image_provider_api_or_model_availability():
                     print("-" * 50)
                     print("Available models: ", available_models)
                     raise Exception(f"Model {openai_model} is not available")
-
-        elif get_llm_provider() == LLMProvider.GOOGLE:
-            google_api_key = get_google_api_key_env()
-            if not google_api_key:
-                raise Exception("GOOGLE_API_KEY must be provided")
-            google_model = get_google_model_env()
-            if google_model:
-                available_models = await list_available_google_models(google_api_key)
-                if google_model not in available_models:
-                    print("-" * 50)
-                    print("Available models: ", available_models)
-                    raise Exception(f"Model {google_model} is not available")
-
-        elif get_llm_provider() == LLMProvider.ANTHROPIC:
-            anthropic_api_key = get_anthropic_api_key_env()
-            if not anthropic_api_key:
-                raise Exception("ANTHROPIC_API_KEY must be provided")
-            anthropic_model = get_anthropic_model_env()
-            if anthropic_model:
-                available_models = await list_available_anthropic_models(
-                    anthropic_api_key
-                )
-                if anthropic_model not in available_models:
-                    print("-" * 50)
-                    print("Available models: ", available_models)
-                    raise Exception(f"Model {anthropic_model} is not available")
-
-        elif is_ollama_selected():
-            ollama_model = get_ollama_model_env()
-            if not ollama_model:
-                raise Exception("OLLAMA_MODEL must be provided")
-
-            if ollama_model not in SUPPORTED_OLLAMA_MODELS:
-                raise Exception(f"Model {ollama_model} is not supported")
-
-            print("-" * 50)
-            print("Pulling model: ", ollama_model)
-            async for event in pull_ollama_model(ollama_model):
-                print(event)
-            print("Pulled model: ", ollama_model)
-            print("-" * 50)
 
         elif is_custom_llm_selected():
             custom_model = get_custom_model_env()
@@ -118,11 +67,6 @@ async def check_llm_and_image_provider_api_or_model_availability():
             pixabay_api_key = get_pixabay_api_key_env()
             if not pixabay_api_key:
                 raise Exception("PIXABAY_API_KEY must be provided")
-
-        elif selected_image_provider == ImageProvider.GEMINI_FLASH:
-            google_api_key = get_google_api_key_env()
-            if not google_api_key:
-                raise Exception("GOOGLE_API_KEY must be provided")
 
         elif selected_image_provider == ImageProvider.DALLE3:
             openai_api_key = get_openai_api_key_env()

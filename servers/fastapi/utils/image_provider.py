@@ -1,6 +1,5 @@
 from enums.image_provider import ImageProvider
 from utils.get_env import (
-    get_google_api_key_env,
     get_image_provider_env,
     get_openai_api_key_env,
     get_pexels_api_key_env,
@@ -43,7 +42,7 @@ def get_image_provider_api_key() -> str:
     elif selected_image_provider == ImageProvider.PIXABAY:
         return get_pixabay_api_key_env()
     elif selected_image_provider == ImageProvider.GEMINI_FLASH:
-        return get_google_api_key_env()
+        raise ValueError("GEMINI_FLASH image provider is no longer supported (Google provider removed)")
     elif selected_image_provider == ImageProvider.DALLE3:
         return get_openai_api_key_env()
     else:

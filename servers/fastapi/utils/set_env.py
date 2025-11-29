@@ -13,10 +13,6 @@ def set_llm_provider_env(value):
     os.environ["LLM"] = value
 
 
-def set_ollama_url_env(value):
-    os.environ["OLLAMA_URL"] = value
-
-
 def set_custom_llm_url_env(value):
     os.environ["CUSTOM_LLM_URL"] = value
 
@@ -29,28 +25,8 @@ def set_openai_model_env(value):
     os.environ["OPENAI_MODEL"] = value
 
 
-def set_google_api_key_env(value):
-    os.environ["GOOGLE_API_KEY"] = value
-
-
-def set_google_model_env(value):
-    os.environ["GOOGLE_MODEL"] = value
-
-
-def set_anthropic_api_key_env(value):
-    os.environ["ANTHROPIC_API_KEY"] = value
-
-
-def set_anthropic_model_env(value):
-    os.environ["ANTHROPIC_MODEL"] = value
-
-
 def set_custom_llm_api_key_env(value):
     os.environ["CUSTOM_LLM_API_KEY"] = value
-
-
-def set_ollama_model_env(value):
-    os.environ["OLLAMA_MODEL"] = value
 
 
 def set_custom_model_env(value):
