@@ -6,6 +6,10 @@ import { Providers } from "./providers";
 import MixpanelInitializer from "./MixpanelInitializer";
 import { LayoutProvider } from "./(presentation-generator)/context/LayoutContext";
 import { Toaster } from "@/components/ui/sonner";
+import { TutorialProvider } from "@/components/tutorial/TutorialProvider";
+import { TutorialModal } from "@/components/tutorial/TutorialModal";
+import { WelcomeTutorial } from "@/components/tutorial/WelcomeTutorial";
+
 const inter = localFont({
   src: [
     {
@@ -88,7 +92,11 @@ export default function RootLayout({
         <Providers>
           <MixpanelInitializer>
             <LayoutProvider>
-              {children}
+              <TutorialProvider>
+                {children}
+                <TutorialModal />
+                <WelcomeTutorial />
+              </TutorialProvider>
             </LayoutProvider>
           </MixpanelInitializer>
         </Providers>
