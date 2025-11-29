@@ -53,6 +53,21 @@ def _read_xml(zipf: zipfile.ZipFile, path: str) -> Optional[etree._Element]:
         return None
 
 
+def is_rtl_text(text: str) -> bool:
+    """
+    Check if text contains right-to-left characters (Hebrew, Arabic).
+    """
+    if not text:
+        return False
+        
+    for char in text:
+        # Hebrew: 0590-05FF, Arabic: 0600-06FF
+        if '\u0590' <= char <= '\u05FF' or '\u0600' <= char <= '\u06FF':
+            return True
+            
+    return False
+
+
 def replace_text_in_element(element_el: etree._Element, new_text: str, namespace_prefix: str = "p") -> bool:
     """
     Replace all text content in any element with new text.
@@ -81,27 +96,50 @@ def replace_text_in_element(element_el: etree._Element, new_text: str, namespace
     # Split new text into paragraphs
     paragraphs = new_text.split("\\n") if new_text else [""]
 
-    # Save formatting from first existing run (if any)
+    # Save formatting from first existing run (if any) and paragraph properties
     existing_paras = tx_body.findall("a:p", NS)
     existing_rpr = None
+    existing_ppr = None
+    
     if existing_paras:
+        # Save run properties
         first_run = existing_paras[0].find("a:r/a:rPr", NS)
         if first_run is not None:
             existing_rpr = first_run
+            
+        # Save paragraph properties
+        first_ppr = existing_paras[0].find("a:pPr", NS)
+        if first_ppr is not None:
+            existing_ppr = first_ppr
 
     # Clear existing paragraphs
     for para in existing_paras:
         tx_body.remove(para)
+        
+    # Determine text direction
+    is_rtl = is_rtl_text(new_text)
+    rtl_val = "1" if is_rtl else "0"
+    align_val = "r" if is_rtl else None # Only enforce right alignment for RTL, let LTR default
 
     # Create new paragraphs
     for para_text in paragraphs:
         # Create new paragraph element
         new_para = etree.Element(f"{{{NS['a']}}}p")
 
-        # Add paragraph properties to force LTR (left-to-right) text direction
-        # This prevents Hebrew and other RTL text from being displayed right-to-left
-        para_props = etree.SubElement(new_para, f"{{{NS['a']}}}pPr")
-        para_props.set("rtl", "0")  # 0 = LTR, 1 = RTL
+        # Add paragraph properties
+        if existing_ppr is not None:
+            # Clone existing pPr
+            para_props = etree.fromstring(etree.tostring(existing_ppr, encoding='unicode'))
+            new_para.append(para_props)
+        else:
+            # Create new pPr
+            para_props = etree.SubElement(new_para, f"{{{NS['a']}}}pPr")
+            
+        # Apply RTL/Alignment overrides
+        # We set these even if pPr existed, to ensure text direction matches content
+        para_props.set("rtl", rtl_val)
+        if align_val:
+            para_props.set("algn", align_val)
 
         # Create run
         run = etree.SubElement(new_para, f"{{{NS['a']}}}r")
@@ -124,6 +162,46 @@ def replace_text_in_element(element_el: etree._Element, new_text: str, namespace
 
 def inject_shape_text(shape_el: etree._Element, new_text: str) -> bool:
     """Inject text into a regular shape element (sp)."""
+    # Check if txBody exists
+    tx_body = shape_el.find(".//p:txBody", NS)
+    
+    # Determine text direction for potential new txBody
+    is_rtl = is_rtl_text(new_text)
+    rtl_col_val = "1" if is_rtl else "0"
+    
+    if tx_body is None:
+        # Create txBody if missing
+        # p:sp children: nvSpPr, spPr, style?, txBody?, extLst?
+        
+        # Create new txBody with basic properties
+        tx_body = etree.Element(f"{{{NS['p']}}}txBody")
+        
+        # Add body properties (wrap="square" is standard for textboxes)
+        body_pr = etree.SubElement(tx_body, f"{{{NS['a']}}}bodyPr")
+        body_pr.set("wrap", "square")
+        body_pr.set("rtlCol", rtl_col_val)
+        etree.SubElement(body_pr, f"{{{NS['a']}}}spAutoFit")
+        
+        # Add list style
+        etree.SubElement(tx_body, f"{{{NS['a']}}}lstStyle")
+        
+        # Add empty paragraph so replace_text_in_element has something to work with
+        para = etree.SubElement(tx_body, f"{{{NS['a']}}}p")
+        etree.SubElement(para, f"{{{NS['a']}}}endParaRPr")
+        
+        # Find insertion point
+        # Try to insert after style, or spPr
+        style = shape_el.find("p:style", NS)
+        if style is not None:
+            style.addnext(tx_body)
+        else:
+            sp_pr = shape_el.find("p:spPr", NS)
+            if sp_pr is not None:
+                sp_pr.addnext(tx_body)
+            else:
+                # Fallback: append (might be invalid schema order but better than nothing)
+                shape_el.append(tx_body)
+                
     return replace_text_in_element(shape_el, new_text, "p")
 
 

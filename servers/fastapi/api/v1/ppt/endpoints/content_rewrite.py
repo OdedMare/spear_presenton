@@ -25,7 +25,7 @@ import uuid
 import json
 import logging
 from urllib.parse import quote
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -57,8 +57,9 @@ def sanitize_rewritten_content(
     """
     Sanitize rewritten content based on the rewrite mode.
 
-    STRICT mode: Ensures exact structure match and respects all constraints
-    FLEXIBLE mode: Allows structure changes, more lenient with length constraints
+    STRICT mode: Ensures exact structure match and respects all constraints.
+                 Matches elements by ID, allowing for reordering.
+    FLEXIBLE mode: Allows structure changes, more lenient with length constraints.
 
     Returns sanitized copy of rewritten_content.
     """
@@ -77,14 +78,34 @@ def sanitize_rewritten_content(
             })
         return sanitized
 
-    # STRICT mode: Apply original constraints
-    for orig_slide, rewritten_slide in zip(original_slides, rewritten_slides):
-        orig_elements = orig_slide.get("elements", [])
-        rewritten_elements = rewritten_slide.get("elements", [])
+    # STRICT mode: Apply original constraints using ID matching
+    # Map original slides by slideNumber for O(1) lookup
+    orig_slides_map = {s.get("slideNumber"): s for s in original_slides}
 
+    for rewritten_slide in rewritten_slides:
+        slide_num = rewritten_slide.get("slideNumber")
+        orig_slide = orig_slides_map.get(slide_num)
+
+        if not orig_slide:
+            # In strict mode, we skip slides that weren't in the original request
+            logger.warning(f"Strict mode: Skipping unknown slide number {slide_num}")
+            continue
+
+        # Map original elements by ID for O(1) lookup
+        orig_elements_map = {e.get("id"): e for e in orig_slide.get("elements", [])}
+        
+        rewritten_elements = rewritten_slide.get("elements", [])
         sanitized_elements = []
 
-        for orig_el, rewritten_el in zip(orig_elements, rewritten_elements):
+        for rewritten_el in rewritten_elements:
+            el_id = rewritten_el.get("id")
+            orig_el = orig_elements_map.get(el_id)
+
+            if not orig_el:
+                # In strict mode, we skip elements that weren't in the original request
+                logger.warning(f"Strict mode: Skipping unknown element ID {el_id}")
+                continue
+
             text = rewritten_el.get("text", "")
             max_length = orig_el.get("maxLength")
             max_lines = orig_el.get("maxLines")
@@ -92,7 +113,7 @@ def sanitize_rewritten_content(
             # Truncate if text exceeds maxLength
             if max_length and len(text) > max_length:
                 logger.warning(
-                    f"Truncating element {rewritten_el.get('id')}: "
+                    f"Truncating element {el_id}: "
                     f"length {len(text)} exceeds maxLength {max_length}"
                 )
                 # Truncate with ellipsis if possible
@@ -106,18 +127,18 @@ def sanitize_rewritten_content(
                 lines = text.split('\n')
                 if len(lines) > max_lines:
                     logger.warning(
-                        f"Truncating lines for element {rewritten_el.get('id')}: "
+                        f"Truncating lines for element {el_id}: "
                         f"{len(lines)} lines exceeds maxLines {max_lines}"
                     )
                     text = '\n'.join(lines[:max_lines])
 
             sanitized_elements.append({
-                "id": rewritten_el.get("id"),
+                "id": el_id,
                 "text": text
             })
 
         sanitized["slides"].append({
-            "slideNumber": rewritten_slide.get("slideNumber"),
+            "slideNumber": slide_num,
             "elements": sanitized_elements
         })
 
@@ -129,6 +150,7 @@ class RewriteRequest(BaseModel):
     user_prompt: str
     placeholder_structure: Dict[str, Any]
     mode: RewriteMode = RewriteMode.STRICT  # Default to strict mode
+    keywords: Optional[List[str]] = None  # List of must-have keywords
 
 
 class RewriteResponse(BaseModel):
@@ -205,6 +227,7 @@ async def generate_rewritten_content(request: RewriteRequest):
         user_prompt = request.user_prompt
         placeholder_structure = request.placeholder_structure
         mode = request.mode
+        keywords = request.keywords or []
 
         # Remove metadata fields before sending to LLM
         clean_structure = {
@@ -224,14 +247,21 @@ async def generate_rewritten_content(request: RewriteRequest):
             if mode == RewriteMode.FLEXIBLE
             else "you must fill these exact placeholders"
         )
+        
+        keyword_instruction = ""
+        if keywords:
+            keyword_list = ", ".join(f'"{k}"' for k in keywords)
+            keyword_instruction = f"\nIMPORTANT: You MUST include the following keywords/terms in the rewritten content: {keyword_list}."
 
         user_message = f"""User's Content Request:
 {user_prompt}
+{keyword_instruction}
 
 Placeholder Structure ({mode_instruction}):
 {json.dumps(clean_structure, indent=2)}
 
-Generate rewritten content in {mode.value} mode."""
+Generate rewritten content in {mode.value} mode.
+IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLines constraints, you MUST generate appropriate content for it based on the User's Content Request. Do not leave it empty."""
 
         logger.info(f"Sending content rewrite request ({mode.value} mode) to LLM for {len(clean_structure['slides'])} slides")
 
@@ -269,6 +299,20 @@ Generate rewritten content in {mode.value} mode."""
         try:
             if mode == RewriteMode.STRICT:
                 validate_rewritten_content(clean_structure, rewritten_content)
+                
+                # Validate keywords in STRICT mode
+                if keywords:
+                    # Collect all text from rewritten content
+                    all_text = ""
+                    for slide in rewritten_content.get("slides", []):
+                        for element in slide.get("elements", []):
+                            all_text += element.get("text", "") + " "
+                    
+                    # Check for missing keywords
+                    missing_keywords = [k for k in keywords if k.lower() not in all_text.lower()]
+                    if missing_keywords:
+                        raise ValueError(f"Rewritten content missing required keywords: {', '.join(missing_keywords)}")
+                        
             else:
                 # Flexible mode: Very lenient validation - just ensure slides exist and have basic structure
                 rewritten_slides = rewritten_content.get("slides", [])

@@ -118,7 +118,7 @@ class TestContentRewriteStrict(unittest.TestCase):
             ]
         }
         
-        with self.assertRaisesRegex(ValueError, "ID mismatch"):
+        with self.assertRaisesRegex(ValueError, "unknown element ID"):
              validate_rewritten_content(MOCK_PLACEHOLDER_STRUCTURE, invalid_content)
 
     def test_validate_rewritten_content_missing_slide(self):

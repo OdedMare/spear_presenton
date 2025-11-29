@@ -236,6 +236,16 @@ def extract_text(tx_body: Optional[etree._Element], theme_colors: Dict[str, str]
 
     for para in tx_body.findall("a:p", NS):
         ppr = para.find("a:pPr", NS)
+        
+        # Parse default run properties (defRPr)
+        def_font = None
+        def_size = None
+        def_bold = None
+        def_italic = None
+        def_underline = None
+        def_color = None
+        def_opacity = None
+
         if ppr is not None:
             align_val = ppr.get("algn")
             align = align or {
@@ -250,27 +260,48 @@ def extract_text(tx_body: Optional[etree._Element], theme_colors: Dict[str, str]
             elif ppr.find("a:buChar", NS) is not None:
                 bullet = "bullet"
 
+            def_rpr = ppr.find("a:defRPr", NS)
+            if def_rpr is not None:
+                def_font = def_rpr.find("a:latin", NS).get("typeface") if def_rpr.find("a:latin", NS) is not None else None
+                def_size = float(def_rpr.get("sz")) / 100 if def_rpr.get("sz") else None
+                def_bold = bool(def_rpr.get("b") == "1")
+                def_italic = bool(def_rpr.get("i") == "1")
+                def_underline = bool(def_rpr.get("u") and def_rpr.get("u") != "none")
+                def_color, def_opacity = _parse_color(def_rpr.find("a:solidFill", NS), theme_colors)
+
         for run in para.findall("a:r", NS):
             rpr = run.find("a:rPr", NS)
-            font = {
-                "family": rpr.find("a:latin", NS).get("typeface")
-                if rpr is not None and rpr.find("a:latin", NS) is not None
-                else None,
-                "size": (float(rpr.get("sz")) / 100 if rpr is not None and rpr.get("sz") else None),
-                "bold": bool(rpr.get("b") == "1") if rpr is not None else False,
-                "italic": bool(rpr.get("i") == "1") if rpr is not None else False,
-                "underline": bool(rpr.get("u") and rpr.get("u") != "none") if rpr is not None else False,
-            }
+            
+            # Run properties override default properties
+            font_family = (rpr.find("a:latin", NS).get("typeface") if rpr is not None and rpr.find("a:latin", NS) is not None else None) or def_font
+            font_size = (float(rpr.get("sz")) / 100 if rpr is not None and rpr.get("sz") else None) or def_size
+            
+            is_bold = (bool(rpr.get("b") == "1") if rpr is not None and rpr.get("b") is not None else None)
+            if is_bold is None:
+                is_bold = def_bold if def_bold is not None else False
+            
+            is_italic = (bool(rpr.get("i") == "1") if rpr is not None and rpr.get("i") is not None else None)
+            if is_italic is None:
+                is_italic = def_italic if def_italic is not None else False
+                
+            is_underline = (bool(rpr.get("u") and rpr.get("u") != "none") if rpr is not None and rpr.get("u") is not None else None)
+            if is_underline is None:
+                is_underline = def_underline if def_underline is not None else False
+
             color, opacity = _parse_color(rpr.find("a:solidFill", NS) if rpr is not None else None, theme_colors)
+            if color is None:
+                color = def_color
+                opacity = def_opacity
+
             runs.append(
                 {
                     "text": "".join(t.text or "" for t in run.findall("a:t", NS)),
-                    "font": font.get("family"),
-                    "size": font.get("size"),
+                    "font": font_family,
+                    "size": font_size,
                     "color": color,
-                    "bold": font.get("bold"),
-                    "italic": font.get("italic"),
-                    "underline": font.get("underline"),
+                    "bold": is_bold,
+                    "italic": is_italic,
+                    "underline": is_underline,
                     "opacity": opacity if opacity is not None else 1,
                 }
             )
@@ -279,7 +310,16 @@ def extract_text(tx_body: Optional[etree._Element], theme_colors: Dict[str, str]
         if not para.findall("a:r", NS):
             text_val = "".join(t.text or "" for t in para.findall("a:t", NS))
             if text_val:
-                runs.append({"text": text_val, "font": None, "size": None, "color": None, "bold": False, "italic": False, "underline": False})
+                runs.append({
+                    "text": text_val, 
+                    "font": def_font, 
+                    "size": def_size, 
+                    "color": def_color, 
+                    "bold": def_bold if def_bold is not None else False, 
+                    "italic": def_italic if def_italic is not None else False, 
+                    "underline": def_underline if def_underline is not None else False,
+                    "opacity": def_opacity if def_opacity is not None else 1
+                })
 
     return runs, align, vertical_align, bullet, wrap
 
@@ -456,14 +496,22 @@ def merge_elements(top_elements: List[Dict[str, Any]], bottom_elements: List[Dic
     Inherits properties like text color from bottom layer if missing in top layer.
     """
     merged: Dict[Tuple[str, Optional[str]], Dict[str, Any]] = {}
+    non_placeholders: List[Dict[str, Any]] = []
     
     # Start with bottom elements
     for el in bottom_elements:
-        key = (el.get("placeholder"), el.get("placeholderIdx"))
-        merged[key] = el
+        if el.get("placeholder") == "none":
+            non_placeholders.append(el)
+        else:
+            key = (el.get("placeholder"), el.get("placeholderIdx"))
+            merged[key] = el
 
     # Overlay top elements
     for el in top_elements:
+        if el.get("placeholder") == "none":
+            non_placeholders.append(el)
+            continue
+
         key = (el.get("placeholder"), el.get("placeholderIdx"))
         if key in merged:
             base = merged[key]
@@ -512,7 +560,7 @@ def merge_elements(top_elements: List[Dict[str, Any]], bottom_elements: List[Dic
         else:
             merged[key] = el
 
-    return list(merged.values())
+    return non_placeholders + list(merged.values())
 
 
 def extract_slide_details(

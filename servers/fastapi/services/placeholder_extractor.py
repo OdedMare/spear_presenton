@@ -60,14 +60,41 @@ def calculate_text_constraints(text: str, width_emu: Optional[int], height_emu: 
     """
     constraints = {}
 
-    # Calculate max length (allow 50% increase for flexibility)
-    original_length = len(text)
-    constraints["maxLength"] = int(original_length * 1.5)
-
-    # Calculate max lines based on newlines in original text
     if text:
+        # Calculate max length (allow 50% increase for flexibility)
+        original_length = len(text)
+        constraints["maxLength"] = int(original_length * 1.5)
+
+        # Calculate max lines based on newlines in original text
         line_count = text.count('\n') + 1
         constraints["maxLines"] = line_count
+    
+    elif width_emu and height_emu:
+        # Estimate capacity for empty elements based on dimensions
+        # Assumptions:
+        # - Font size ~ 18pt (common body text)
+        # - 1 pt = 12700 EMUs
+        # - Char width approx 0.6 * font size
+        # - Line height approx 1.2 * font size
+        
+        EMU_PER_PT = 12700
+        FONT_SIZE_PT = 18
+        FONT_SIZE_EMU = FONT_SIZE_PT * EMU_PER_PT
+        
+        # Estimate lines
+        line_height = FONT_SIZE_EMU * 1.2
+        max_lines = max(1, int(height_emu / line_height))
+        
+        # Estimate chars per line
+        char_width = FONT_SIZE_EMU * 0.6
+        chars_per_line = max(1, int(width_emu / char_width))
+        
+        constraints["maxLines"] = max_lines
+        constraints["maxLength"] = int(max_lines * chars_per_line)
+        
+        # Set a reasonable minimum
+        if constraints["maxLength"] < 10:
+            constraints["maxLength"] = 20
 
     return constraints
 
@@ -130,11 +157,13 @@ def extract_shape_element(shape_el: etree._Element, slide_num: int, element_inde
     Returns element dict with id, type, text, and constraints.
     """
     text, para_count = extract_text_from_element(shape_el, "p")
-    if not text:
-        return None  # Skip shapes with no text
-
+    
     # Get dimensions for constraints
     width_emu, height_emu = get_element_dimensions(shape_el)
+
+    # Skip if no text AND no dimensions (can't estimate constraints)
+    if not text and (not width_emu or not height_emu):
+        return None
 
     # Check if this is a placeholder
     ph_el = shape_el.find(".//p:ph", NS)
@@ -593,9 +622,8 @@ def validate_rewritten_content(original_structure: Dict[str, Any], rewritten_con
     Validate that rewritten content matches the original element structure.
 
     Ensures:
-    - Same number of slides
-    - Same element IDs on each slide
-    - Same element order
+    - Same number of slides (matched by slideNumber)
+    - Same element IDs on each slide (order independent)
     - No extra or missing elements
     - Text length constraints respected
 
@@ -610,32 +638,42 @@ def validate_rewritten_content(original_structure: Dict[str, Any], rewritten_con
             f"rewritten has {len(rewritten_slides)} slides"
         )
 
-    for i, (orig_slide, rewritten_slide) in enumerate(zip(original_slides, rewritten_slides), start=1):
+    # Map original slides by slideNumber
+    orig_slides_map = {s.get("slideNumber"): s for s in original_slides}
+    
+    for rewritten_slide in rewritten_slides:
+        slide_num = rewritten_slide.get("slideNumber")
+        orig_slide = orig_slides_map.get(slide_num)
+        
+        if not orig_slide:
+            raise ValueError(f"Rewritten content contains unknown slide number: {slide_num}")
+
         orig_elements = orig_slide.get("elements", [])
         rewritten_elements = rewritten_slide.get("elements", [])
 
         if len(orig_elements) != len(rewritten_elements):
             raise ValueError(
-                f"Slide {i} element count mismatch: original has {len(orig_elements)} elements, "
+                f"Slide {slide_num} element count mismatch: original has {len(orig_elements)} elements, "
                 f"rewritten has {len(rewritten_elements)} elements"
             )
 
-        # Validate each element
-        for j, (orig_el, rewritten_el) in enumerate(zip(orig_elements, rewritten_elements)):
-            orig_id = orig_el.get("id")
-            rewritten_id = rewritten_el.get("id")
-
-            if orig_id != rewritten_id:
-                raise ValueError(
-                    f"Slide {i}, element {j}: ID mismatch. Expected '{orig_id}', got '{rewritten_id}'"
-                )
+        # Map original elements by ID
+        orig_elements_map = {e.get("id"): e for e in orig_elements}
+        
+        # Validate each rewritten element
+        for rewritten_el in rewritten_elements:
+            el_id = rewritten_el.get("id")
+            orig_el = orig_elements_map.get(el_id)
+            
+            if not orig_el:
+                raise ValueError(f"Slide {slide_num} contains unknown element ID: {el_id}")
 
             # Validate text length constraints
             rewritten_text = rewritten_el.get("text", "")
             max_length = orig_el.get("maxLength")
             if max_length and len(rewritten_text) > max_length:
                 raise ValueError(
-                    f"Slide {i}, element '{orig_id}': Text length {len(rewritten_text)} exceeds maxLength {max_length}"
+                    f"Slide {slide_num}, element '{el_id}': Text length {len(rewritten_text)} exceeds maxLength {max_length}"
                 )
 
             # Validate line count constraints
@@ -644,7 +682,7 @@ def validate_rewritten_content(original_structure: Dict[str, Any], rewritten_con
                 rewritten_lines = rewritten_text.count('\n') + 1
                 if rewritten_lines > max_lines:
                     raise ValueError(
-                        f"Slide {i}, element '{orig_id}': Line count {rewritten_lines} exceeds maxLines {max_lines}"
+                        f"Slide {slide_num}, element '{el_id}': Line count {rewritten_lines} exceeds maxLines {max_lines}"
                     )
 
     logger.info("Rewritten content structure and constraints validation passed")
