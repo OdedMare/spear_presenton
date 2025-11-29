@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import HeaderNav from "@/app/(presentation-generator)/components/HeaderNab";
 import { Layout, FilePlus2, Sparkles } from "lucide-react";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
 const Header = () => {
   const pathname = usePathname();
   return (
@@ -25,6 +26,7 @@ const Header = () => {
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <TutorialButton />
             <Link
               href="/content-rewrite"
               prefetch={false}

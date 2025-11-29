@@ -26,6 +26,7 @@ import { OverlayLoader } from "@/components/ui/overlay-loader";
 import Wrapper from "@/components/Wrapper";
 import { setPptGenUploadState } from "@/store/slices/presentationGenUpload";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
 
 // Types for loading state
 interface LoadingState {
@@ -203,7 +204,7 @@ const UploadPage = () => {
         extra_info={loadingState.extra_info}
       />
       <div className="flex flex-col gap-4 md:items-center md:flex-row justify-between py-4">
-        <p></p>
+        <TutorialButton />
         <ConfigurationSelects
           config={config}
           onConfigChange={handleConfigChange}

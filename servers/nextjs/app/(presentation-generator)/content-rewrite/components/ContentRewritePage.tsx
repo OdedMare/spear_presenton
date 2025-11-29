@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import Wrapper from '@/components/Wrapper'
 import { Input } from '@/components/ui/input'
+import { TutorialButton } from '@/components/tutorial/TutorialButton'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -505,10 +506,10 @@ export default function ContentRewritePage() {
                     <div key={stepStage} className="flex items-center gap-3">
                       <div
                         className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${isActive
-                            ? 'bg-[#5146E5] ring-4 ring-[#E9E8F8]'
-                            : isPast
-                              ? 'bg-green-500'
-                              : 'bg-gray-200'
+                          ? 'bg-[#5146E5] ring-4 ring-[#E9E8F8]'
+                          : isPast
+                            ? 'bg-green-500'
+                            : 'bg-gray-200'
                           }`}
                       >
                         {isPast ? (
@@ -534,13 +535,18 @@ export default function ContentRewritePage() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 relative">
           <h1 className="text-3xl font-semibold font-instrument_sans mb-2">
             AI Content Rewrite
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Keep your presentation design, rewrite the content with AI
           </p>
+
+          {/* Help Button - Positioned in top right */}
+          <div className="absolute top-0 right-0">
+            <TutorialButton />
+          </div>
         </div>
 
         {/* Error Alert */}
@@ -663,8 +669,8 @@ export default function ContentRewritePage() {
                   <button
                     onClick={() => setRewriteMode('strict')}
                     className={`p-4 rounded-lg border-2 transition-all text-left ${rewriteMode === 'strict'
-                        ? 'border-[#5146E5] bg-[#E9E8F8]'
-                        : 'border-gray-300 bg-white hover:border-gray-400'
+                      ? 'border-[#5146E5] bg-[#E9E8F8]'
+                      : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -684,8 +690,8 @@ export default function ContentRewritePage() {
                   <button
                     onClick={() => setRewriteMode('flexible')}
                     className={`p-4 rounded-lg border-2 transition-all text-left ${rewriteMode === 'flexible'
-                        ? 'border-[#5146E5] bg-[#E9E8F8]'
-                        : 'border-gray-300 bg-white hover:border-gray-400'
+                      ? 'border-[#5146E5] bg-[#E9E8F8]'
+                      : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -714,8 +720,8 @@ export default function ContentRewritePage() {
                   <button
                     onClick={() => setLanguage('english')}
                     className={`p-3 rounded-lg border-2 transition-all text-left ${language === 'english'
-                        ? 'border-[#5146E5] bg-[#E9E8F8]'
-                        : 'border-gray-300 bg-white hover:border-gray-400'
+                      ? 'border-[#5146E5] bg-[#E9E8F8]'
+                      : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
                   >
                     <div className="flex items-center gap-2">
@@ -733,8 +739,8 @@ export default function ContentRewritePage() {
                   <button
                     onClick={() => setLanguage('hebrew')}
                     className={`p-3 rounded-lg border-2 transition-all text-left ${language === 'hebrew'
-                        ? 'border-[#5146E5] bg-[#E9E8F8]'
-                        : 'border-gray-300 bg-white hover:border-gray-400'
+                      ? 'border-[#5146E5] bg-[#E9E8F8]'
+                      : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
                   >
                     <div className="flex items-center gap-2">

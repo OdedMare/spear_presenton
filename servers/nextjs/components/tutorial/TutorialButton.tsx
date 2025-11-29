@@ -1,55 +1,63 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { HelpCircle } from 'lucide-react'
 import { useTutorial } from './TutorialProvider'
 import { Button } from '@/components/ui/button'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 export function TutorialButton() {
     const { startTutorial } = useTutorial()
+    const [isOpen, setIsOpen] = useState(false)
+
+    const handleStartTutorial = (path: 'rewrite' | 'create') => {
+        startTutorial(path)
+        setIsOpen(false)
+    }
 
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 border-[#5146E5] text-[#5146E5] hover:bg-[#E9E8F8]"
-                >
-                    <HelpCircle className="w-4 h-4" />
-                    <span className="hidden sm:inline">Help</span>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                    onClick={() => startTutorial('rewrite')}
-                    className="cursor-pointer"
-                >
-                    <div className="flex flex-col gap-1">
-                        <div className="font-medium">Content Rewrite Tutorial</div>
-                        <div className="text-xs text-gray-500">
-                            Learn how to rewrite presentations
+        <div className="relative">
+            <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-[#5146E5] text-[#5146E5] hover:bg-[#E9E8F8]"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <HelpCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Help</span>
+            </Button>
+
+            {isOpen && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsOpen(false)}
+                    />
+
+                    {/* Dropdown Menu */}
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                        <div
+                            onClick={() => handleStartTutorial('rewrite')}
+                            className="px-4 py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                        >
+                            <div className="font-medium text-gray-900">Content Rewrite Tutorial</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                                Learn how to rewrite presentations
+                            </div>
+                        </div>
+                        <div className="border-t border-gray-100" />
+                        <div
+                            onClick={() => handleStartTutorial('create')}
+                            className="px-4 py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                        >
+                            <div className="font-medium text-gray-900">Create Presentation Tutorial</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                                Learn how to create from scratch
+                            </div>
                         </div>
                     </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                    onClick={() => startTutorial('create')}
-                    className="cursor-pointer"
-                >
-                    <div className="flex flex-col gap-1">
-                        <div className="font-medium">Create Presentation Tutorial</div>
-                        <div className="text-xs text-gray-500">
-                            Learn how to create from scratch
-                        </div>
-                    </div>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+                </>
+            )}
+        </div>
     )
 }
