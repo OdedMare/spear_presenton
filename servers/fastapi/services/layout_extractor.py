@@ -1,6 +1,4 @@
 Default = "rect"
-
-
 import base64
 import logging
 import os
@@ -128,6 +126,11 @@ def _parse_color(color_el: Optional[etree._Element], theme_colors: Dict[str, str
     scrgb = color_el.find("a:scrgbClr", NS)
     if scrgb is not None:
         return _parse_color(scrgb, theme_colors)
+    
+    # Log unhandled color type if it's not None
+    if color_el is not None:
+        logger.debug(f"Unhandled color element: {etree.QName(color_el).localname}")
+        
     return None, None
 
 
@@ -168,24 +171,34 @@ def extract_fill(
     if blip is not None:
         blip_el = blip.find("a:blip", NS)
         rid = blip_el.get(f"{{{NS['r']}}}embed") if blip_el is not None else None
-        if rid and rid in rels and zipf is not None:
-            target = _resolve_target(part_path, rels[rid]["target"])
-            target_path = target if target.startswith("ppt/") else f"ppt/{rel_target_strip(rels[rid]['target'])}"
-            if target_path in zipf.namelist():
-                data = zipf.read(target_path)
-                ext = os.path.splitext(target_path)[1] or ".png"
-                filename = f"slide_{slide_index}_el_{element_index}{ext}"
-                os.makedirs(asset_output_dir, exist_ok=True)
-                with open(os.path.join(asset_output_dir, filename), "wb") as fp:
-                    fp.write(data)
-                return {
-                    "type": "image",
-                    "image": {
-                        "embed": rid,
-                        "src": f"{asset_url_prefix}/{filename}",
-                        "base64": f"data:image/{ext.lstrip('.').lower()};base64,{base64.b64encode(data).decode()}",
-                    },
-                }
+        
+        if rid:
+            if rid in rels and zipf is not None:
+                target = _resolve_target(part_path, rels[rid]["target"])
+                target_path = target if target.startswith("ppt/") else f"ppt/{rel_target_strip(rels[rid]['target'])}"
+                
+                if target_path in zipf.namelist():
+                    data = zipf.read(target_path)
+                    ext = os.path.splitext(target_path)[1] or ".png"
+                    filename = f"slide_{slide_index}_el_{element_index}{ext}"
+                    os.makedirs(asset_output_dir, exist_ok=True)
+                    with open(os.path.join(asset_output_dir, filename), "wb") as fp:
+                        fp.write(data)
+                    return {
+                        "type": "image",
+                        "image": {
+                            "embed": rid,
+                            "src": f"{asset_url_prefix}/{filename}",
+                            "base64": f"data:image/{ext.lstrip('.').lower()};base64,{base64.b64encode(data).decode()}",
+                        },
+                    }
+                else:
+                    logger.warning(f"Image target not found in zip: {target_path}")
+            else:
+                logger.warning(f"Image relationship ID {rid} not found in rels")
+        else:
+            logger.debug("Blip fill found but no embed ID")
+            
     return None
 
 
@@ -204,19 +217,22 @@ def extract_line(ln_el: Optional[etree._Element], theme_colors: Dict[str, str]) 
     return {"width": width or 1, "color": color, "dash": dash, "opacity": opacity if opacity is not None else 1}
 
 
-def extract_text(tx_body: Optional[etree._Element], theme_colors: Dict[str, str]) -> Tuple[List[Dict[str, Any]], Optional[str], Optional[str], Optional[str]]:
+def extract_text(tx_body: Optional[etree._Element], theme_colors: Dict[str, str]) -> Tuple[List[Dict[str, Any]], Optional[str], Optional[str], Optional[str], str]:
     """Extract paragraph runs into a flat list of spans with formatting."""
     runs: List[Dict[str, Any]] = []
     align: Optional[str] = None
     vertical_align: Optional[str] = None
     bullet: Optional[str] = None
+    wrap: str = "square"
 
     if tx_body is None:
-        return runs, align, vertical_align, bullet
+        return runs, align, vertical_align, bullet, wrap
 
     body_pr = tx_body.find("a:bodyPr", NS)
     if body_pr is not None:
         vertical_align = body_pr.get("anchor")
+        if body_pr.get("wrap") == "none":
+            wrap = "none"
 
     for para in tx_body.findall("a:p", NS):
         ppr = para.find("a:pPr", NS)
@@ -265,7 +281,7 @@ def extract_text(tx_body: Optional[etree._Element], theme_colors: Dict[str, str]
             if text_val:
                 runs.append({"text": text_val, "font": None, "size": None, "color": None, "bold": False, "italic": False, "underline": False})
 
-    return runs, align, vertical_align, bullet
+    return runs, align, vertical_align, bullet, wrap
 
 
 def extract_background(
@@ -390,7 +406,7 @@ def extract_shape(
     shape_type = prst.get("prst") if prst is not None else "custom"
 
     tx_body = sp_el.find("p:txBody", NS)
-    text_runs, align, v_align, bullet = extract_text(tx_body, theme_colors)
+    text_runs, align, v_align, bullet, wrap = extract_text(tx_body, theme_colors)
 
     element_type = "text" if text_runs else "shape"
 
@@ -428,29 +444,95 @@ def extract_shape(
         "align": align,
         "verticalAlign": v_align,
         "bullet": bullet,
+        "wrap": wrap,
         "image": None,
     }
 
 
+def merge_elements(top_elements: List[Dict[str, Any]], bottom_elements: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Merge top layer elements (e.g. Slide) over bottom layer elements (e.g. Layout).
+    Matches elements by placeholder type and index.
+    Inherits properties like text color from bottom layer if missing in top layer.
+    """
+    merged: Dict[Tuple[str, Optional[str]], Dict[str, Any]] = {}
+    
+    # Start with bottom elements
+    for el in bottom_elements:
+        key = (el.get("placeholder"), el.get("placeholderIdx"))
+        merged[key] = el
+
+    # Overlay top elements
+    for el in top_elements:
+        key = (el.get("placeholder"), el.get("placeholderIdx"))
+        if key in merged:
+            base = merged[key]
+            
+            # Merge text runs to inherit properties
+            slide_text = el.get("text")
+            base_text = base.get("text")
+            
+            if slide_text and base_text:
+                # If top has text but missing properties, try to inherit from first run of base
+                base_run = base_text[0]
+                for run in slide_text:
+                    if not run.get("color"):
+                        if base_run.get("color"):
+                            # logger.debug(f"Inheriting color {base_run.get('color')} from base")
+                            pass
+                        run["color"] = base_run.get("color")
+                    if not run.get("font"):
+                        run["font"] = base_run.get("font")
+                    if not run.get("size"):
+                        run["size"] = base_run.get("size")
+                    if run.get("bold") is None: 
+                        run["bold"] = base_run.get("bold")
+                    if run.get("italic") is None:
+                        run["italic"] = base_run.get("italic")
+                    if run.get("underline") is None:
+                        run["underline"] = base_run.get("underline")
+
+            merged[key] = {
+                **base,
+                **{
+                    # prefer top geometry if non-zero, else keep bottom
+                    "x": el["x"] or base.get("x", 0),
+                    "y": el["y"] or base.get("y", 0),
+                    "width": el["width"] or base.get("width", 0),
+                    "height": el["height"] or base.get("height", 0),
+                    "rotation": el.get("rotation") if el.get("rotation") is not None else base.get("rotation"),
+                    "fill": el.get("fill") or base.get("fill"),
+                    "border": el.get("border") or base.get("border"),
+                    "opacity": el.get("opacity") or base.get("opacity"),
+                    "shapeType": el.get("shapeType") or base.get("shapeType"),
+                    "text": slide_text or base_text,
+                    "wrap": el.get("wrap") or base.get("wrap"),
+                },
+            }
+        else:
+            merged[key] = el
+
+    return list(merged.values())
+
+
 def extract_slide_details(
+    slide_tree: etree._Element,
+    slide_rels: Dict[str, Any],
+    layout_tree: Optional[etree._Element],
+    layout_rels: Dict[str, Any],
+    master_tree: Optional[etree._Element],
+    master_rels: Dict[str, Any],
     zipf: zipfile.ZipFile,
     slide_path: str,
-    slide_rels: Dict[str, Dict[str, str]],
-    layout_tree: Optional[etree._Element],
-    layout_rels: Dict[str, Dict[str, str]],
-    master_tree: Optional[etree._Element],
-    master_rels: Dict[str, Dict[str, str]],
     layout_path: Optional[str],
     master_path: Optional[str],
-    theme_colors: Dict[str, str],
-    width_px: int,
-    height_px: int,
     asset_output_dir: str,
     asset_url_prefix: str,
     slide_index: int,
+    theme_colors: Dict[str, str],
+    width_px: int,
+    height_px: int,
 ) -> Dict[str, Any]:
-    slide_tree = _read_xml(zipf, slide_path)
-
     background = (
         extract_background(
             slide_tree.find("p:bg", NS),
@@ -504,41 +586,25 @@ def extract_slide_details(
                         theme_colors,
                     )
                 )
+            elif local == "grpSp":
+                # Recursively extract group shapes
+                grp_sp_pr = child.find("p:grpSpPr", NS)
+                # Recurse
+                group_elems = parse_sp_tree(child, rels, part_path, z_offset + z_index)
+                elems.extend(group_elems)
         return elems
+
+    master_sp_tree = master_tree.find("p:cSld/p:spTree", NS) if master_tree is not None else None
+    master_elements = parse_sp_tree(master_sp_tree, master_rels, master_path or "", 0)
 
     layout_sp_tree = layout_tree.find("p:cSld/p:spTree", NS) if layout_tree is not None else None
     layout_elements = parse_sp_tree(layout_sp_tree, layout_rels, layout_path or slide_path, 0)
+
+    merged_layout = merge_elements(layout_elements, master_elements)
+
     slide_elements = parse_sp_tree(slide_tree.find("p:cSld/p:spTree", NS), slide_rels, slide_path, 0)
-
-    # Merge slide elements over layout elements by placeholder/type+idx
-    merged: Dict[Tuple[str, Optional[str]], Dict[str, Any]] = {}
-    for el in layout_elements:
-        key = (el.get("placeholder"), el.get("placeholderIdx"))
-        merged[key] = el
-    for el in slide_elements:
-        key = (el.get("placeholder"), el.get("placeholderIdx"))
-        if key in merged:
-            base = merged[key]
-            merged[key] = {
-                **base,
-                **{
-                    # prefer slide geometry if non-zero, else keep layout
-                    "x": el["x"] or base.get("x", 0),
-                    "y": el["y"] or base.get("y", 0),
-                    "width": el["width"] or base.get("width", 0),
-                    "height": el["height"] or base.get("height", 0),
-                    "rotation": el.get("rotation") if el.get("rotation") is not None else base.get("rotation"),
-                    "fill": el.get("fill") or base.get("fill"),
-                    "border": el.get("border") or base.get("border"),
-                    "opacity": el.get("opacity") or base.get("opacity"),
-                    "shapeType": el.get("shapeType") or base.get("shapeType"),
-                    "text": el.get("text") or base.get("text"),
-                },
-            }
-        else:
-            merged[key] = el
-
-    elements = list(merged.values())
+    
+    elements = merge_elements(slide_elements, merged_layout)
 
     fonts = list({run.get("font") for el in elements for run in (el.get("text") or []) if run.get("font")})
     logger.debug(
@@ -664,23 +730,25 @@ def parse_pptx_to_layouts(pptx_path: str, asset_output_dir: str, asset_url_prefi
                 master_rels = {}
                 layout_path = None
 
+            slide_tree = _read_xml(zipf, slide_path)
             layouts.append(
                 extract_slide_details(
-                    zipf,
-                    slide_path,
+                    slide_tree,
                     slide_rels,
                     layout_tree,
                     layout_rels,
                     master_tree,
                     master_rels,
+                    zipf,
+                    slide_path,
                     layout_path,
                     master_path,
-                    theme_colors,
-                    width_px,
-                    height_px,
                     asset_output_dir,
                     asset_url_prefix,
                     slide_index,
+                    theme_colors,
+                    width_px,
+                    height_px,
                 )
             )
 

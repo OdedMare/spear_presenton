@@ -24,6 +24,7 @@ import os
 import uuid
 import json
 import logging
+from urllib.parse import quote
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
@@ -357,12 +358,16 @@ async def inject_and_download(
         logger.info(f"Successfully created rewritten PPTX: {output_path}")
 
         # Return file for download
+        # Use RFC 5987 encoding for non-ASCII filenames (e.g., Hebrew)
+        # Format: filename*=UTF-8''encoded_filename
+        encoded_filename = quote(output_filename)
+
         return FileResponse(
             path=output_path,
             media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
             filename=output_filename,
             headers={
-                "Content-Disposition": f'attachment; filename="{output_filename}"'
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
             }
         )
 

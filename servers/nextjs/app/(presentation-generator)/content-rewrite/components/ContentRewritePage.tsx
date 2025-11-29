@@ -42,8 +42,18 @@ interface RewrittenContent {
 type RewriteMode = 'strict' | 'flexible'
 type Language = 'english' | 'hebrew'
 
+type LoadingStage =
+  | 'extracting_placeholders'
+  | 'extracting_content'
+  | 'generating_content'
+  | 'injecting_content'
+  | null
+
 export default function ContentRewritePage() {
   const [file, setFile] = useState<File | null>(null)
+  const [sourceFile, setSourceFile] = useState<File | null>(null) // PDF/PPTX to extract content from
+  const [extractedContent, setExtractedContent] = useState<string>('')
+  const [showExtractedPreview, setShowExtractedPreview] = useState(false)
   const [userPrompt, setUserPrompt] = useState('')
   const [rewriteMode, setRewriteMode] = useState<RewriteMode>('strict')
   const [language, setLanguage] = useState<Language>('english')
@@ -51,6 +61,7 @@ export default function ContentRewritePage() {
   const [placeholderStructure, setPlaceholderStructure] = useState<PlaceholderStructure | null>(null)
   const [rewrittenContent, setRewrittenContent] = useState<RewrittenContent | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingStage, setLoadingStage] = useState<LoadingStage>(null)
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState<'upload' | 'prompt' | 'preview' | 'download'>('upload')
   const [editingSlide, setEditingSlide] = useState<number | null>(null)
@@ -67,10 +78,109 @@ export default function ContentRewritePage() {
     }
   }
 
+  const handleSourceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0]
+      const validExtensions = ['.pdf', '.pptx']
+      const isValid = validExtensions.some(ext => selectedFile.name.toLowerCase().endsWith(ext))
+
+      if (!isValid) {
+        setError('Please upload a PDF or PPTX file')
+        return
+      }
+      setSourceFile(selectedFile)
+      setError(null)
+    }
+  }
+
+  const handleExtractContent = async () => {
+    if (!sourceFile) return
+
+    setLoading(true)
+    setLoadingStage('extracting_content')
+    setError(null)
+
+    try {
+      // Step 1: Upload the file
+      const uploadFormData = new FormData()
+      uploadFormData.append('files', sourceFile)
+
+      const uploadResponse = await fetch(`${API_BASE_URL}/api/v1/ppt/files/upload`, {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload source file')
+      }
+
+      const filePaths = await uploadResponse.json()
+
+      // Step 2: Decompose the file to extract text
+      const decomposeResponse = await fetch(`${API_BASE_URL}/api/v1/ppt/files/decompose`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          file_paths: filePaths
+        }),
+      })
+
+      if (!decomposeResponse.ok) {
+        throw new Error('Failed to extract content from file')
+      }
+
+      const decomposedFiles = await decomposeResponse.json()
+
+      // Step 3: Read the extracted text using the read-file API
+      if (decomposedFiles.length > 0) {
+        const textFilePath = decomposedFiles[0].file_path
+
+        // Use the same read-file endpoint as the upload page
+        const textResponse = await fetch('/api/read-file', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ filePath: textFilePath }),
+        })
+
+        if (!textResponse.ok) {
+          throw new Error('Failed to read extracted content')
+        }
+
+        const { content } = await textResponse.json()
+
+        setExtractedContent(content)
+        setShowExtractedPreview(true)
+      }
+
+    } catch (err: any) {
+      console.error('Extract content error:', err)
+      setError(err.message || 'An error occurred while extracting content')
+    } finally {
+      setLoading(false)
+      setLoadingStage(null)
+    }
+  }
+
+  const handleUseExtractedContent = () => {
+    setUserPrompt(extractedContent)
+    setShowExtractedPreview(false)
+  }
+
+  const handleDiscardExtractedContent = () => {
+    setExtractedContent('')
+    setSourceFile(null)
+    setShowExtractedPreview(false)
+  }
+
   const handleExtractPlaceholders = async () => {
     if (!file) return
 
     setLoading(true)
+    setLoadingStage('extracting_placeholders')
     setError(null)
 
     try {
@@ -99,6 +209,7 @@ export default function ContentRewritePage() {
       }
     } finally {
       setLoading(false)
+      setLoadingStage(null)
     }
   }
 
@@ -106,12 +217,13 @@ export default function ContentRewritePage() {
     if (!placeholderStructure || !userPrompt) return
 
     setLoading(true)
+    setLoadingStage('generating_content')
     setError(null)
 
     try {
       // Build enhanced prompt with language and slide count instructions
       const languageInstruction = language === 'hebrew'
-        ? '\n\nIMPORTANT: Generate all content in HEBREW language with RIGHT-TO-LEFT text direction.'
+        ? '\n\nIMPORTANT: Generate all content in HEBREW language. The text will be displayed left-to-right.'
         : '\n\nIMPORTANT: Generate all content in ENGLISH language.';
 
       const slideCountInstruction = rewriteMode === 'flexible' && targetSlideCount > 0
@@ -144,6 +256,7 @@ export default function ContentRewritePage() {
       setError(err.message || 'An error occurred while generating content')
     } finally {
       setLoading(false)
+      setLoadingStage(null)
     }
   }
 
@@ -190,6 +303,7 @@ export default function ContentRewritePage() {
     if (!placeholderStructure || !rewrittenContent) return
 
     setLoading(true)
+    setLoadingStage('injecting_content')
     setError(null)
 
     try {
@@ -223,11 +337,15 @@ export default function ContentRewritePage() {
       setError(err.message || 'An error occurred while downloading')
     } finally {
       setLoading(false)
+      setLoadingStage(null)
     }
   }
 
   const handleReset = () => {
     setFile(null)
+    setSourceFile(null)
+    setExtractedContent('')
+    setShowExtractedPreview(false)
     setUserPrompt('')
     setRewriteMode('strict')
     setLanguage('english')
@@ -283,8 +401,139 @@ export default function ContentRewritePage() {
     setEditingSlide(editingSlide === slideIndex ? null : slideIndex)
   }
 
+  const getLoadingMessage = (stage: LoadingStage): string => {
+    switch (stage) {
+      case 'extracting_placeholders':
+        return 'Analyzing your presentation structure...'
+      case 'extracting_content':
+        return 'Extracting content from file...'
+      case 'generating_content':
+        return 'AI is generating new content for your slides...'
+      case 'injecting_content':
+        return 'Creating your rewritten presentation...'
+      default:
+        return 'Processing...'
+    }
+  }
+
   return (
     <Wrapper>
+      {/* Extracted Content Preview Modal */}
+      {showExtractedPreview && extractedContent && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-2xl font-semibold text-gray-900">Extracted Content Preview</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Review the extracted content from {sourceFile?.name}
+              </p>
+            </div>
+
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="prose prose-sm max-w-none">
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <pre className="whitespace-pre-wrap font-sans text-sm text-gray-900 leading-relaxed">
+                    {extractedContent}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Character Count */}
+              <div className="mt-4 text-sm text-gray-500">
+                {extractedContent.length} characters extracted
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end bg-gray-50 rounded-b-2xl">
+              <Button
+                onClick={handleDiscardExtractedContent}
+                variant="outline"
+                className="border-gray-300 hover:bg-gray-100"
+              >
+                Discard
+              </Button>
+              <Button
+                onClick={handleUseExtractedContent}
+                className="bg-[#5146E5] hover:bg-[#4136D5] text-white"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Use This Content
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay */}
+      {loading && loadingStage && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <div className="flex flex-col items-center gap-6">
+              {/* Animated Spinner */}
+              <div className="relative">
+                <div className="w-20 h-20 border-4 border-[#E9E8F8] rounded-full"></div>
+                <div className="absolute top-0 left-0 w-20 h-20 border-4 border-[#5146E5] border-t-transparent rounded-full animate-spin"></div>
+                <Sparkles className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-[#5146E5]" />
+              </div>
+
+              {/* Loading Message */}
+              <div className="text-center space-y-2">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {getLoadingMessage(loadingStage)}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  This may take a few moments
+                </p>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="w-full space-y-2">
+                {[
+                  { stage: 'extracting_placeholders', label: 'Extract Structure' },
+                  { stage: 'generating_content', label: 'Generate Content' },
+                  { stage: 'injecting_content', label: 'Create Presentation' },
+                ].map(({ stage: stepStage, label }) => {
+                  const isActive = loadingStage === stepStage
+                  const isPast =
+                    (stepStage === 'extracting_placeholders' && ['generating_content', 'injecting_content'].includes(loadingStage)) ||
+                    (stepStage === 'generating_content' && loadingStage === 'injecting_content')
+
+                  return (
+                    <div key={stepStage} className="flex items-center gap-3">
+                      <div
+                        className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                          isActive
+                            ? 'bg-[#5146E5] ring-4 ring-[#E9E8F8]'
+                            : isPast
+                            ? 'bg-green-500'
+                            : 'bg-gray-200'
+                        }`}
+                      >
+                        {isPast ? (
+                          <Check className="w-3 h-3 text-white" />
+                        ) : isActive ? (
+                          <Loader2 className="w-3 h-3 text-white animate-spin" />
+                        ) : null}
+                      </div>
+                      <span
+                        className={`text-sm font-medium ${
+                          isActive || isPast ? 'text-gray-900' : 'text-gray-400'
+                        }`}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -507,7 +756,7 @@ export default function ContentRewritePage() {
                       </div>
                       <span className="font-medium text-gray-900">עברית (Hebrew)</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 ml-5">Right-to-left text</p>
+                    <p className="text-xs text-gray-500 mt-1 ml-5">Left-to-right display</p>
                   </button>
                 </div>
               </div>
@@ -533,6 +782,74 @@ export default function ContentRewritePage() {
                   </p>
                 </div>
               )}
+
+              {/* Source File Upload for Content Extraction */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Extract Content from File (Optional)
+                </label>
+                <p className="text-xs text-gray-600 mb-3">
+                  Upload a PDF or PPTX file to extract its content and use it as your prompt
+                </p>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept=".pdf,.pptx"
+                      onChange={handleSourceFileChange}
+                      className="hidden"
+                      id="source-file-upload"
+                    />
+                    <label
+                      htmlFor="source-file-upload"
+                      className="cursor-pointer flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#5146E5] transition-colors text-sm"
+                    >
+                      <Upload className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-700">
+                        {sourceFile ? sourceFile.name : 'Choose PDF or PPTX file'}
+                      </span>
+                    </label>
+                  </div>
+                  {sourceFile && !extractedContent && (
+                    <Button
+                      onClick={handleExtractContent}
+                      disabled={loading}
+                      variant="outline"
+                      className="border-[#5146E5] text-[#5146E5] hover:bg-[#E9E8F8]"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Extracting...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4 mr-2" />
+                          Extract Content
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  {extractedContent && userPrompt === extractedContent && (
+                    <Button
+                      onClick={handleDiscardExtractedContent}
+                      variant="outline"
+                      size="sm"
+                      className="border-red-300 text-red-600 hover:bg-red-50"
+                    >
+                      Remove Extracted Content
+                    </Button>
+                  )}
+                </div>
+                {extractedContent && userPrompt === extractedContent && (
+                  <div className="mt-2">
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Using extracted content ({extractedContent.length} characters from {sourceFile?.name})
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <Textarea
                 value={userPrompt}

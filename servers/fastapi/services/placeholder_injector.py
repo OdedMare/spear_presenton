@@ -98,12 +98,17 @@ def replace_text_in_element(element_el: etree._Element, new_text: str, namespace
         # Create new paragraph element
         new_para = etree.Element(f"{{{NS['a']}}}p")
 
+        # Add paragraph properties to force LTR (left-to-right) text direction
+        # This prevents Hebrew and other RTL text from being displayed right-to-left
+        para_props = etree.SubElement(new_para, f"{{{NS['a']}}}pPr")
+        para_props.set("rtl", "0")  # 0 = LTR, 1 = RTL
+
         # Create run
         run = etree.SubElement(new_para, f"{{{NS['a']}}}r")
 
         # Copy existing run properties if available
         if existing_rpr is not None:
-            run.append(etree.fromstring(etree.tostring(existing_rpr, encoding='UTF-8')))
+            run.append(etree.fromstring(etree.tostring(existing_rpr, encoding='unicode')))
 
         # Add text element
         text_el = etree.SubElement(run, f"{{{NS['a']}}}t")
@@ -278,7 +283,7 @@ def inject_chart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str, n
                     output_chart_path = os.path.join(temp_dir, chart_path)
                     os.makedirs(os.path.dirname(output_chart_path), exist_ok=True)
                     with open(output_chart_path, 'wb') as f:
-                        f.write(etree.tostring(chart_tree, xml_declaration=True, encoding='UTF-8'))
+                        f.write(etree.tostring(chart_tree, xml_declaration=True, encoding='utf-8'))
                     return True
 
         elif subtype.startswith("axis"):
@@ -294,7 +299,7 @@ def inject_chart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str, n
                                 output_chart_path = os.path.join(temp_dir, chart_path)
                                 os.makedirs(os.path.dirname(output_chart_path), exist_ok=True)
                                 with open(output_chart_path, 'wb') as f:
-                                    f.write(etree.tostring(chart_tree, xml_declaration=True, encoding='UTF-8'))
+                                    f.write(etree.tostring(chart_tree, xml_declaration=True, encoding='utf-8'))
                                 return True
                     current_axis += 1
 
@@ -433,7 +438,7 @@ def inject_smartart_text(slide_path: str, zipf: zipfile.ZipFile, element_id: str
                             output_diagram_path = os.path.join(temp_dir, diagram_path)
                             os.makedirs(os.path.dirname(output_diagram_path), exist_ok=True)
                             with open(output_diagram_path, 'wb') as f:
-                                f.write(etree.tostring(diagram_tree, xml_declaration=True, encoding='UTF-8'))
+                                f.write(etree.tostring(diagram_tree, xml_declaration=True, encoding='utf-8'))
 
                             logger.info(f"Successfully injected text into SmartArt node {node_num} on {slide_path}")
                             logger.info(f"Wrote modified diagram to: {output_diagram_path}")
@@ -484,7 +489,7 @@ def inject_speaker_notes(slide_path: str, zipf: zipfile.ZipFile, new_text: str, 
                     output_notes_path = os.path.join(temp_dir, notes_path)
                     os.makedirs(os.path.dirname(output_notes_path), exist_ok=True)
                     with open(output_notes_path, 'wb') as f:
-                        f.write(etree.tostring(notes_tree, xml_declaration=True, encoding='UTF-8'))
+                        f.write(etree.tostring(notes_tree, xml_declaration=True, encoding='utf-8'))
                     return True
 
     return False
@@ -671,7 +676,7 @@ def inject_content_into_pptx(
                 # Write modified slide back to temp directory
                 output_slide_path = os.path.join(temp_dir, slide_path)
                 with open(output_slide_path, 'wb') as f:
-                    f.write(etree.tostring(modified_tree, xml_declaration=True, encoding='UTF-8'))
+                    f.write(etree.tostring(modified_tree, xml_declaration=True, encoding='utf-8'))
 
                 processed_count += 1
                 logger.info(f"Injected content into slide {slide_file}")

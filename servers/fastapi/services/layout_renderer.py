@@ -102,6 +102,11 @@ def _render_text(el: Dict[str, Any]) -> str:
     if shadow_css:
         style["text-shadow"] = shadow_css
 
+    if el.get("wrap") == "none":
+        style["white-space"] = "nowrap"
+    else:
+        style["white-space"] = "pre-wrap"  # Preserve newlines but wrap text
+
     text_runs = el.get("text") or []
     bullet = el.get("bullet")
     lines: List[str] = []
