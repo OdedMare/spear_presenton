@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TutorialProvider } from "@/components/tutorial/TutorialProvider";
 import { TutorialModal } from "@/components/tutorial/TutorialModal";
 import { WelcomeTutorial } from "@/components/tutorial/WelcomeTutorial";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 const inter = localFont({
   src: [
@@ -89,18 +90,20 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${roboto.variable} ${instrument_sans.variable} antialiased`}
       >
-        <Providers>
-          <MixpanelInitializer>
-            <LayoutProvider>
-              <TutorialProvider>
-                {children}
-                <TutorialModal />
-                <WelcomeTutorial />
-              </TutorialProvider>
-            </LayoutProvider>
-          </MixpanelInitializer>
-        </Providers>
-        <Toaster position="top-center" />
+        <ThemeProvider>
+          <Providers>
+            <MixpanelInitializer>
+              <LayoutProvider>
+                <TutorialProvider>
+                  {children}
+                  <TutorialModal />
+                  <WelcomeTutorial />
+                </TutorialProvider>
+              </LayoutProvider>
+            </MixpanelInitializer>
+          </Providers>
+          <Toaster position="top-center" />
+        </ThemeProvider>
       </body>
     </html>
   );

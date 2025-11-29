@@ -689,11 +689,12 @@ export default function ContentRewritePage() {
 
                   <button
                     onClick={() => setRewriteMode('flexible')}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${rewriteMode === 'flexible'
+                    className={`p-4 rounded-lg border-2 transition-all text-left relative ${rewriteMode === 'flexible'
                       ? 'border-[#5146E5] bg-[#E9E8F8]'
                       : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
                   >
+                    <span className="absolute top-2 right-2 bg-yellow-400 text-xs px-2 py-1 rounded-full text-gray-900 font-bold">בקרוב</span>
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${rewriteMode === 'flexible' ? 'border-[#5146E5]' : 'border-gray-300'
                         }`}>

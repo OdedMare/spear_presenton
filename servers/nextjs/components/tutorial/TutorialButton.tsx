@@ -23,7 +23,7 @@ export function TutorialButton() {
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <HelpCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Help</span>
+                <span className="hidden sm:inline">עזרה</span>
             </Button>
 
             {isOpen && (
@@ -35,14 +35,14 @@ export function TutorialButton() {
                     />
 
                     {/* Dropdown Menu */}
-                    <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50" dir="rtl">
                         <div
                             onClick={() => handleStartTutorial('rewrite')}
                             className="px-4 py-3 hover:bg-gray-100 cursor-pointer transition-colors"
                         >
-                            <div className="font-medium text-gray-900">Content Rewrite Tutorial</div>
+                            <div className="font-medium text-gray-900">הדרכה - שכתוב תוכן</div>
                             <div className="text-xs text-gray-500 mt-1">
-                                Learn how to rewrite presentations
+                                למד כיצד לשכתב מצגות קיימות
                             </div>
                         </div>
                         <div className="border-t border-gray-100" />
@@ -50,9 +50,9 @@ export function TutorialButton() {
                             onClick={() => handleStartTutorial('create')}
                             className="px-4 py-3 hover:bg-gray-100 cursor-pointer transition-colors"
                         >
-                            <div className="font-medium text-gray-900">Create Presentation Tutorial</div>
+                            <div className="font-medium text-gray-900">הדרכה - יצירת מצגת</div>
                             <div className="text-xs text-gray-500 mt-1">
-                                Learn how to create from scratch
+                                למד כיצד ליצור מצגת מאפס
                             </div>
                         </div>
                     </div>

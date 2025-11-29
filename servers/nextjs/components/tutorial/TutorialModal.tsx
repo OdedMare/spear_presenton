@@ -15,56 +15,56 @@ interface TutorialStep {
 
 const rewriteSteps: TutorialStep[] = [
     {
-        title: 'Upload Your Template',
-        description: 'Start by uploading a PowerPoint (.pptx) file with the design you want to keep. We\'ll extract all the text placeholders.',
+        title: 'העלאת התבנית שלך',
+        description: 'התחל בהעלאת קובץ PowerPoint (.pptx) עם העיצוב שברצונך לשמור. נחלץ את כל מקומות הטקסט.',
         icon: <FileText className="w-8 h-8" />,
     },
     {
-        title: 'Extract Structure',
-        description: 'Our AI analyzes your presentation and identifies all text elements, preserving your layout and design.',
+        title: 'חילוץ המבנה',
+        description: 'הבינה המלאכותית שלנו מנתחת את המצגת ומזהה את כל אלמנטי הטקסט, תוך שמירה על הפריסה והעיצוב.',
         icon: <Sparkles className="w-8 h-8" />,
     },
     {
-        title: 'Provide Instructions',
-        description: 'Tell us what content you want. Be specific! You can describe the topic, tone, and key points to include.',
+        title: 'הוספת הוראות',
+        description: 'ספר לנו איזה תוכן אתה רוצה. היה ספציפי! תוכל לתאר את הנושא, הטון ונקודות המפתח לכלול.',
         icon: <Wand2 className="w-8 h-8" />,
     },
     {
-        title: 'Choose Your Mode',
-        description: 'Strict Mode keeps exact structure. Flexible Mode allows AI to adjust slides and add new content.',
+        title: 'בחירת המצב',
+        description: 'מצב קפדני שומר על המבנה המדויק. מצב גמיש מאפשר לבינה המלאכותית להתאים שקופיות ולהוסיף תוכן חדש.',
         icon: <Sparkles className="w-8 h-8" />,
     },
     {
-        title: 'Review & Download',
-        description: 'Preview your rewritten presentation, make any edits, and download the final result!',
+        title: 'סקירה והורדה',
+        description: 'צפה במצגת המשוכתבת, בצע עריכות לפי הצורך, והורד את התוצאה הסופית!',
         icon: <FileText className="w-8 h-8" />,
     },
 ]
 
 const createSteps: TutorialStep[] = [
     {
-        title: 'Choose a Template',
-        description: 'Browse our collection of professional templates or upload your own custom design.',
+        title: 'בחירת תבנית',
+        description: 'עיין באוסף התבניות המקצועיות שלנו או העלה עיצוב מותאם אישית משלך.',
         icon: <FileText className="w-8 h-8" />,
     },
     {
-        title: 'Describe Your Presentation',
-        description: 'Write a detailed prompt about what you want to present. Include topics, audience, and key messages.',
+        title: 'תיאור המצגת',
+        description: 'כתוב הנחיה מפורטת על מה שברצונך להציג. כלול נושאים, קהל יעד והמסרים העיקריים.',
         icon: <Wand2 className="w-8 h-8" />,
     },
     {
-        title: 'AI Generates Outline',
-        description: 'Our AI creates a structured outline with slides, titles, and content based on your requirements.',
+        title: 'הבינה המלאכותית יוצרת מתווה',
+        description: 'הבינה המלאכותית שלנו יוצרת מתווה מובנה עם שקופיות, כותרות ותוכן על בסיס הדרישות שלך.',
         icon: <Sparkles className="w-8 h-8" />,
     },
     {
-        title: 'Customize Slides',
-        description: 'Edit any slide content, add images, adjust layouts, and make it perfect for your needs.',
+        title: 'התאמת השקופיות',
+        description: 'ערוך את תוכן השקופיות, הוסף תמונות, התאם פריסות והפוך אותה למושלמת עבור הצרכים שלך.',
         icon: <Wand2 className="w-8 h-8" />,
     },
     {
-        title: 'Export & Present',
-        description: 'Download your presentation as PowerPoint or PDF and you\'re ready to present!',
+        title: 'ייצוא והצגה',
+        description: 'הורד את המצגת שלך כ-PowerPoint או PDF ואתה מוכן להציג!',
         icon: <FileText className="w-8 h-8" />,
     },
 ]
@@ -98,12 +98,12 @@ export function TutorialModal() {
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl mx-4"
                     >
-                        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden" dir="rtl">
                             {/* Header */}
                             <div className="bg-gradient-to-r from-[#9034EA] to-[#5146E5] px-6 py-4 text-white">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-semibold font-instrument_sans">
-                                        {tutorialPath === 'rewrite' ? 'Content Rewrite Tutorial' : 'Create Presentation Tutorial'}
+                                        {tutorialPath === 'rewrite' ? 'הדרכה - שכתוב תוכן' : 'הדרכה - יצירת מצגת'}
                                     </h2>
                                     <button
                                         onClick={skipTutorial}
@@ -146,7 +146,7 @@ export function TutorialModal() {
                                         {/* Step Info */}
                                         <div className="text-center space-y-3">
                                             <div className="text-sm font-medium text-[#5146E5]">
-                                                Step {currentStep + 1} of {steps.length}
+                                                שלב {currentStep + 1} מתוך {steps.length}
                                             </div>
                                             <h3 className="text-2xl font-semibold text-gray-900">
                                                 {currentStepData.title}
@@ -167,8 +167,8 @@ export function TutorialModal() {
                                     variant="outline"
                                     className="border-gray-300"
                                 >
-                                    <ChevronLeft className="w-4 h-4 mr-2" />
-                                    Previous
+                                    <ChevronRight className="w-4 h-4 ml-2" />
+                                    הקודם
                                 </Button>
 
                                 <div className="text-sm text-gray-500">
@@ -180,16 +180,16 @@ export function TutorialModal() {
                                         onClick={completeTutorial}
                                         className="bg-[#5146E5] hover:bg-[#4136D5] text-white"
                                     >
-                                        Get Started
-                                        <Sparkles className="w-4 h-4 ml-2" />
+                                        <Sparkles className="w-4 h-4 mr-2" />
+                                        בואו נתחיל
                                     </Button>
                                 ) : (
                                     <Button
                                         onClick={nextStep}
                                         className="bg-[#5146E5] hover:bg-[#4136D5] text-white"
                                     >
-                                        Next
-                                        <ChevronRight className="w-4 h-4 ml-2" />
+                                        <ChevronLeft className="w-4 h-4 mr-2" />
+                                        הבא
                                     </Button>
                                 )}
                             </div>
