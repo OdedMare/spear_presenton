@@ -72,11 +72,11 @@ export default function TemplateModelConfig({
         console.error("Failed to fetch custom models");
         setCustomModels([]);
         setCustomModelsChecked(true);
-        toast.error("Failed to fetch custom models");
+        toast.error("שגיאה בטעינת מודלים מותאמים אישית");
       }
     } catch (error) {
       console.error("Error fetching custom models:", error);
-      toast.error("Error fetching custom models");
+      toast.error("שגיאה בטעינת מודלים מותאמים אישית");
       setCustomModels([]);
       setCustomModelsChecked(true);
     } finally {
@@ -88,7 +88,7 @@ export default function TemplateModelConfig({
     <div className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Custom Template LLM URL
+          כתובת URL למודל תבניות מותאם אישית
         </label>
         <input
           type="text"
@@ -104,11 +104,11 @@ export default function TemplateModelConfig({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Custom Template API Key
+          מפתח API למודל תבניות מותאם אישית
         </label>
         <input
           type="text"
-          placeholder="Optional"
+          placeholder="אופציונלי"
           className="w-full px-4 py-2.5 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
           value={templateLlmApiKey}
           onChange={(e) => {
@@ -123,19 +123,18 @@ export default function TemplateModelConfig({
           <button
             onClick={fetchCustomModels}
             disabled={customModelsLoading || !url}
-            className={`w-full py-2.5 px-4 rounded-lg transition-all duration-200 border-2 ${
-              customModelsLoading || !url
+            className={`w-full py-2.5 px-4 rounded-lg transition-all duration-200 border-2 ${customModelsLoading || !url
                 ? "bg-gray-100 border-gray-300 cursor-not-allowed text-gray-500"
                 : "bg-white border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-2 focus:ring-blue-500/20"
-            }`}
+              }`}
           >
             {customModelsLoading ? (
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Checking for available models...
+                בודק מודלים זמינים...
               </div>
             ) : (
-              "Check for available models"
+              "בדוק מודלים זמינים"
             )}
           </button>
         </div>
@@ -144,7 +143,7 @@ export default function TemplateModelConfig({
       {customModelsChecked && customModels.length === 0 && (
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
-            No models found. Please make sure your API key is valid and has access to models.
+            לא נמצאו מודלים. אנא ודא שמפתח ה-API שלך תקין ויש לו גישה למודלים.
           </p>
         </div>
       )}
@@ -152,7 +151,7 @@ export default function TemplateModelConfig({
       {customModelsChecked && customModels.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Template Model
+            בחר מודל תבניות
           </label>
           <Popover open={openModelSelect} onOpenChange={setOpenModelSelect}>
             <PopoverTrigger asChild>
@@ -163,7 +162,7 @@ export default function TemplateModelConfig({
                 className="w-full h-12 px-4 py-4 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors hover:border-gray-400 justify-between"
               >
                 <span className="text-sm font-medium text-gray-900">
-                  {templateModel || "Select a model"}
+                  {templateModel || "בחר מודל"}
                 </span>
                 <ChevronsUpDown className="w-4 h-4 text-gray-500" />
               </Button>
@@ -174,9 +173,9 @@ export default function TemplateModelConfig({
               style={{ width: "var(--radix-popover-trigger-width)" }}
             >
               <Command>
-                <CommandInput placeholder="Search model..." />
+                <CommandInput placeholder="חפש מודל..." />
                 <CommandList>
-                  <CommandEmpty>No model found.</CommandEmpty>
+                  <CommandEmpty>לא נמצא מודל.</CommandEmpty>
                   <CommandGroup>
                     {customModels.map((model, index) => (
                       <CommandItem

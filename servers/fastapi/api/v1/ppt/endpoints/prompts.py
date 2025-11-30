@@ -627,6 +627,7 @@ NEW ELEMENT ID CONVENTIONS:
 - New tables: "slide{N}_table_new_{INDEX}_cell{CELL_NUM}"
 - New SmartArt: "slide{N}_smartart_new_{INDEX}_node{NODE_NUM}"
 - New charts: "slide{N}_chart_new_{INDEX}_title" or "..._axis{NUM}"
+- New text shapes: "slide{N}_shape_new_{INDEX}" (use placeholderType="body" or "subtitle")
 - New slides: Use sequential slideNumber and mark with "isNew": true
 
 OUTPUT RULES:
@@ -635,6 +636,7 @@ OUTPUT RULES:
 ✓ Include "type" field for each element
 ✓ Include "placeholderType" when creating shape elements
 ✓ Use "isNew": true to mark new slides and elements
+✓ Use "remove": true to delete existing slides or elements
 ✓ For new tables, include tableInfo with row, col, and isNew
 ✓ Use natural, flowing content that fits the user's prompt
 ✓ Prioritize content quality over strict structure matching

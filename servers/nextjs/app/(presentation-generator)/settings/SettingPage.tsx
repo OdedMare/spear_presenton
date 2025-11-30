@@ -33,10 +33,25 @@ const SettingsPage = () => {
     userConfigState.llm_config
   );
   const canChangeKeys = userConfigState.can_change_keys;
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [authError, setAuthError] = useState(false);
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === "oded2002" || passwordInput === "spear1") {
+      setIsAuthenticated(true);
+      setAuthError(false);
+    } else {
+      setAuthError(true);
+      toast.error("סיסמה שגויה");
+    }
+  };
+
   const [buttonState, setButtonState] = useState<ButtonState>({
     isLoading: false,
     isDisabled: false,
-    text: "Save Configuration",
+    text: "שמור הגדרות",
     showProgress: false,
   });
 
@@ -69,7 +84,7 @@ const SettingsPage = () => {
         ...prev,
         isLoading: true,
         isDisabled: true,
-        text: "Saving Configuration...",
+        text: "שומר הגדרות...",
       }));
       trackEvent(MixpanelEvent.Settings_SaveConfiguration_API_Call);
       await handleSaveLLMConfig(llmConfig);
@@ -84,22 +99,22 @@ const SettingsPage = () => {
           await handleModelDownload();
         }
       }
-      toast.info("Configuration saved successfully");
+      toast.info("ההגדרות נשמרו בהצלחה");
       setButtonState(prev => ({
         ...prev,
         isLoading: false,
         isDisabled: false,
-        text: "Save Configuration",
+        text: "שמור הגדרות",
       }));
       trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/upload" });
       router.push("/upload");
     } catch (error) {
-      toast.info(error instanceof Error ? error.message : "Failed to save configuration");
+      toast.info(error instanceof Error ? error.message : "שמירת ההגדרות נכשלה");
       setButtonState(prev => ({
         ...prev,
         isLoading: false,
         isDisabled: false,
-        text: "Save Configuration",
+        text: "שמור הגדרות",
       }));
     }
   };
@@ -126,7 +141,7 @@ const SettingsPage = () => {
       setButtonState({
         isLoading: true,
         isDisabled: true,
-        text: `Downloading Model (${percentage}%)`,
+        text: `מוריד מודל (${percentage}%)`,
         showProgress: true,
         progressPercentage: percentage,
         status: downloadingModel.status,
@@ -137,7 +152,7 @@ const SettingsPage = () => {
       setTimeout(() => {
         setShowDownloadModal(false);
         setDownloadingModel(null);
-        toast.info("Model downloaded successfully!");
+        toast.info("המודל ירד בהצלחה!");
       }, 2000);
     }
   }, [downloadingModel]);
@@ -152,8 +167,44 @@ const SettingsPage = () => {
     return null;
   }
 
+  if (!isAuthenticated) {
+    return (
+      <div className="h-screen bg-gradient-to-b font-instrument_sans from-gray-50 to-white flex flex-col overflow-hidden" dir="rtl">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 max-w-md flex flex-col items-center justify-center">
+          <div className="bg-white p-8 rounded-xl shadow-lg w-full">
+            <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">הגדרות מוגנות בסיסמה</h2>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${authError
+                      ? "border-red-500 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-blue-200 focus:border-blue-500"
+                    }`}
+                  placeholder="הכנס סיסמה"
+                  autoFocus
+                />
+                {authError && <p className="text-red-500 text-sm mt-1">סיסמה שגויה</p>}
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                כניסה
+              </button>
+            </form>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen bg-gradient-to-b font-instrument_sans from-gray-50 to-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-gradient-to-b font-instrument_sans from-gray-50 to-white flex flex-col overflow-hidden" dir="rtl">
       <Header />
       <main className="flex-1 container mx-auto px-4 max-w-3xl overflow-hidden flex flex-col">
         {/* LLM Selection Component */}
@@ -173,11 +224,10 @@ const SettingsPage = () => {
           <button
             onClick={handleSaveConfig}
             disabled={buttonState.isDisabled}
-            className={`w-full font-semibold py-3 px-4 rounded-lg transition-all duration-500 ${
-              buttonState.isDisabled
+            className={`w-full font-semibold py-3 px-4 rounded-lg transition-all duration-500 ${buttonState.isDisabled
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-200"
-            } text-white`}
+              } text-white`}
           >
             {buttonState.isLoading ? (
               <div className="flex items-center justify-center gap-2">
@@ -209,8 +259,8 @@ const SettingsPage = () => {
               {/* Title */}
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 {downloadingModel.done
-                  ? "Download Complete!"
-                  : "Downloading Model"}
+                  ? "ההורדה הושלמה!"
+                  : "מוריד מודל"}
               </h3>
 
               {/* Model Name */}
@@ -228,7 +278,7 @@ const SettingsPage = () => {
                     />
                   </div>
                   <p className="text-sm text-gray-600 mt-2">
-                    {downloadProgress}% Complete
+                    {downloadProgress}% הושלמו
                   </p>
                 </div>
               )}
@@ -248,11 +298,11 @@ const SettingsPage = () => {
                 downloadingModel.status !== "pulled" && (
                   <div className="text-xs text-gray-500">
                     {downloadingModel.status === "downloading" &&
-                      "Downloading model files..."}
+                      "מוריד קבצי מודל..."}
                     {downloadingModel.status === "verifying" &&
-                      "Verifying model integrity..."}
+                      "מאמת תקינות מודל..."}
                     {downloadingModel.status === "pulling" &&
-                      "Pulling model from registry..."}
+                      "מושך מודל מהמאגר..."}
                   </div>
                 )}
 
@@ -261,12 +311,12 @@ const SettingsPage = () => {
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                   <div className="flex justify-between text-xs text-gray-600">
                     <span>
-                      Downloaded:{" "}
+                      ירד:{" "}
                       {(downloadingModel.downloaded / 1024 / 1024).toFixed(1)}{" "}
                       MB
                     </span>
                     <span>
-                      Total: {(downloadingModel.size / 1024 / 1024).toFixed(1)}{" "}
+                      סה״כ: {(downloadingModel.size / 1024 / 1024).toFixed(1)}{" "}
                       MB
                     </span>
                   </div>

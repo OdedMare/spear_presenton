@@ -79,11 +79,11 @@ export default function CustomConfig({
         console.error('Failed to fetch custom models');
         setCustomModels([]);
         setCustomModelsChecked(true);
-        toast.error('Failed to fetch custom models');
+        toast.error('שגיאה בטעינת מודלים מותאמים אישית');
       }
     } catch (error) {
       console.error('Error fetching custom models:', error);
-      toast.error('Error fetching custom models');
+      toast.error('שגיאה בטעינת מודלים מותאמים אישית');
       setCustomModels([]);
       setCustomModelsChecked(true);
     } finally {
@@ -96,13 +96,13 @@ export default function CustomConfig({
       {/* URL Input */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          OpenAI Compatible URL
+          כתובת URL תואמת OpenAI
         </label>
         <div className="relative">
           <input
             type="text"
             required
-            placeholder="Enter your URL"
+            placeholder="הזן כתובת URL"
             className="w-full px-4 py-2.5 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             value={customLlmUrl}
             onChange={(e) => onUrlChange(e.target.value)}
@@ -113,13 +113,13 @@ export default function CustomConfig({
       {/* API Key Input */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          OpenAI Compatible API Key
+          מפתח API תואם OpenAI
         </label>
         <div className="relative">
           <input
             type="text"
             required
-            placeholder="Enter your API Key"
+            placeholder="הזן מפתח API"
             className="w-full px-4 py-2.5 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
             value={customLlmApiKey}
             onChange={(e) => onApiKeyChange(e.target.value)}
@@ -141,10 +141,10 @@ export default function CustomConfig({
             {customModelsLoading ? (
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Checking for models...
+                בודק מודלים...
               </div>
             ) : (
-              "Check for available models"
+              "בדוק מודלים זמינים"
             )}
           </button>
         </div>
@@ -154,7 +154,7 @@ export default function CustomConfig({
       {customModelsChecked && customModels.length === 0 && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
-            No models found. Please make sure your API key is valid and has access to models.
+            לא נמצאו מודלים. אנא ודא שמפתח ה-API שלך תקין ויש לו גישה למודלים.
           </p>
         </div>
       )}
@@ -164,13 +164,11 @@ export default function CustomConfig({
         <div className="mb-4">
           <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm text-amber-800">
-              <strong>Important:</strong> Only models with function
-              calling capabilities (tool calls) or JSON schema support
-              will work.
+              <strong>חשוב:</strong> רק מודלים עם יכולות קריאת פונקציות (tool calls) או תמיכה ב-JSON schema יעבדו.
             </p>
           </div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Model
+            בחר מודל
           </label>
           <div className="w-full">
             <Popover
@@ -185,7 +183,7 @@ export default function CustomConfig({
                   className="w-full h-12 px-4 py-4 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors hover:border-gray-400 justify-between"
                 >
                   <span className="text-sm font-medium text-gray-900">
-                    {customModel || "Select a model"}
+                    {customModel || "בחר מודל"}
                   </span>
                   <ChevronsUpDown className="w-4 h-4 text-gray-500" />
                 </Button>
@@ -196,9 +194,9 @@ export default function CustomConfig({
                 style={{ width: "var(--radix-popover-trigger-width)" }}
               >
                 <Command>
-                  <CommandInput placeholder="Search model..." />
+                  <CommandInput placeholder="חפש מודל..." />
                   <CommandList>
-                    <CommandEmpty>No model found.</CommandEmpty>
+                    <CommandEmpty>לא נמצא מודל.</CommandEmpty>
                     <CommandGroup>
                       {customModels.map((model, index) => (
                         <CommandItem
@@ -235,7 +233,7 @@ export default function CustomConfig({
       <div>
         <div className="flex items-center justify-between mb-4 bg-green-50 p-2 rounded-sm">
           <label className="text-sm font-medium text-gray-700">
-            Use Tool Calls
+            השתמש ב-Tool Calls
           </label>
           <Switch
             checked={toolCalls}
@@ -244,14 +242,14 @@ export default function CustomConfig({
         </div>
         <p className="mt-2 text-sm text-gray-500 flex items-center gap-2">
           <span className="block w-1 h-1 rounded-full bg-gray-400"></span>
-          If enabled, Tool Calls will be used instead of JSON Schema for Structured Output.
+          אם מופעל, יעשה שימוש ב-Tool Calls במקום JSON Schema עבור פלט מובנה.
         </p>
       </div>
       {/* Disable Thinking Toggle */}
       <div>
         <div className="flex items-center justify-between mb-4 bg-green-50 p-2 rounded-sm">
           <label className="text-sm font-medium text-gray-700">
-            Disable Thinking
+            בטל חשיבה (Thinking)
           </label>
           <Switch
             checked={disableThinking}
@@ -260,7 +258,7 @@ export default function CustomConfig({
         </div>
         <p className="mt-2 text-sm text-gray-500 flex items-center gap-2">
           <span className="block w-1 h-1 rounded-full bg-gray-400"></span>
-          If enabled, Thinking will be disabled.
+          אם מופעל, החשיבה תבוטל.
         </p>
       </div>
     </div >

@@ -8,7 +8,7 @@ import Wrapper from '@/components/Wrapper'
 import { Input } from '@/components/ui/input'
 import { TutorialButton } from '@/components/tutorial/TutorialButton'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 
 interface TextElement {
   id: string
@@ -106,7 +106,7 @@ export default function ContentRewritePage() {
       const uploadFormData = new FormData()
       uploadFormData.append('files', sourceFile)
 
-      const uploadResponse = await fetch(`${API_BASE_URL}/api/v1/ppt/files/upload`, {
+      const uploadResponse = await fetch(`/api/v1/ppt/files/upload`, {
         method: 'POST',
         body: uploadFormData,
       })
@@ -118,7 +118,7 @@ export default function ContentRewritePage() {
       const filePaths = await uploadResponse.json()
 
       // Step 2: Decompose the file to extract text
-      const decomposeResponse = await fetch(`${API_BASE_URL}/api/v1/ppt/files/decompose`, {
+      const decomposeResponse = await fetch(`/api/v1/ppt/files/decompose`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,7 +188,7 @@ export default function ContentRewritePage() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/ppt/rewrite/extract-placeholders`, {
+      const response = await fetch(`/api/v1/ppt/rewrite/extract-placeholders`, {
         method: 'POST',
         body: formData,
       })
@@ -204,7 +204,7 @@ export default function ContentRewritePage() {
     } catch (err: any) {
       console.error('Upload error:', err)
       if (err.message === 'Failed to fetch') {
-        setError('Cannot connect to API server. Please ensure the backend is running at ' + API_BASE_URL)
+        setError('Cannot connect to API server. Please ensure the backend is running.')
       } else {
         setError(err.message || 'An error occurred while extracting placeholders')
       }
@@ -233,7 +233,7 @@ export default function ContentRewritePage() {
 
       const enhancedPrompt = userPrompt + languageInstruction + slideCountInstruction;
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/ppt/rewrite/generate-rewritten-content`, {
+      const response = await fetch(`/api/v1/ppt/rewrite/generate-rewritten-content`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -273,7 +273,7 @@ export default function ContentRewritePage() {
       formData.append('rewritten_content', JSON.stringify(rewrittenContent))
       formData.append('original_filename', placeholderStructure._original_filename || 'presentation.pptx')
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/ppt/rewrite/inject-and-download`, {
+      const response = await fetch(`/api/v1/ppt/rewrite/inject-and-download`, {
         method: 'POST',
         body: formData,
       })
@@ -313,7 +313,7 @@ export default function ContentRewritePage() {
       formData.append('rewritten_content', JSON.stringify(rewrittenContent))
       formData.append('original_filename', placeholderStructure._original_filename || 'presentation.pptx')
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/ppt/rewrite/inject-and-download`, {
+      const response = await fetch(`/api/v1/ppt/rewrite/inject-and-download`, {
         method: 'POST',
         body: formData,
       })
@@ -694,7 +694,6 @@ export default function ContentRewritePage() {
                       : 'border-gray-300 bg-white hover:border-gray-400'
                       }`}
                   >
-                    <span className="absolute top-2 left-2 bg-yellow-400 text-xs px-2 py-1 rounded-full text-gray-900 font-bold">בקרוב</span>
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${rewriteMode === 'flexible' ? 'border-[#5146E5]' : 'border-gray-300'
                         }`}>
@@ -705,10 +704,7 @@ export default function ContentRewritePage() {
                       <span className="font-semibold text-gray-900">מצב גמיש</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      מתאים מבנה לפי הצורך - יכול להציע שקפים חדשים, טבלאות,  ותרשימים. מתאים נקודות תבליט ותזרים תוכן תוך שמירה על העיצוב הכללי.
-                    </p>
-                    <p className="text-xs text-amber-600 mt-2 font-medium">
-                      הערה: הוספת שקפים או אלמנטים חדשים לחלוטין היא כרגע ניסיונית. אלמנטים חדשים שנוצרו על ידי AI עשויים לא להופיע בקובץ הסופי שהורד.
+                      מתאים מבנה לפי הצורך - יכול להציע שקפים חדשים, טבלאות, ותרשימים. מתאים נקודות תבליט ותזרים תוכן תוך שמירה על העיצוב הכללי.
                     </p>
                   </button>
                 </div>
@@ -883,7 +879,7 @@ export default function ContentRewritePage() {
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5 mr-2" />
-                    יצירת תוכן
+                      יצירת תוכן
                     </>
                   )}
                 </Button>

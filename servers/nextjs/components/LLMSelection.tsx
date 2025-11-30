@@ -72,7 +72,7 @@ export default function LLMProviderSelection({
     setButtonState({
       isLoading: false,
       isDisabled: needsModelSelection || needsApiKey,
-      text: needsModelSelection ? "Please Select a Model" : needsApiKey ? "Please Enter API Key" : "Save Configuration",
+      text: needsModelSelection ? "אנא בחר מודל" : needsApiKey ? "אנא הזן מפתח API" : "שמור הגדרות",
       showProgress: false
     });
 
@@ -110,7 +110,7 @@ export default function LLMProviderSelection({
       : "custom";
 
   return (
-    <div className="h-full flex flex-col mt-10">
+    <div className="h-full flex flex-col mt-10" dir="rtl">
       {/* Provider Selection - Fixed Header */}
       <div className="p-2 rounded-2xl border border-gray-200">
         <Tabs
@@ -120,17 +120,17 @@ export default function LLMProviderSelection({
         >
           <TabsList className="grid w-full grid-cols-2 bg-transparent h-10">
             <TabsTrigger value="openai">OpenAI</TabsTrigger>
-            <TabsTrigger value="custom">Custom</TabsTrigger>
+            <TabsTrigger value="custom">מותאם אישית</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 pt-0 custom_scrollbar">
-          <Tabs
-            value={activeProvider}
-            onValueChange={handleProviderChange}
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-6 pt-0 custom_scrollbar">
+        <Tabs
+          value={activeProvider}
+          onValueChange={handleProviderChange}
           className="w-full"
         >
           {/* OpenAI Content */}
@@ -159,11 +159,11 @@ export default function LLMProviderSelection({
         {/* Template Generator Model */}
         <div className="mt-10 p-6 border border-gray-200 rounded-2xl bg-white shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900">
-            Template Generator Model
+            מודל ליצירת תבניות
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Configure the custom model used exclusively for template creation.
-            Leave blank to reuse the presentation model.
+            הגדר את המודל המותאם אישית המשמש אך ורק ליצירת תבניות.
+            השאר ריק לשימוש חוזר במודל המצגת.
           </p>
           <div className="mt-6">
             <TemplateModelConfig
@@ -180,7 +180,7 @@ export default function LLMProviderSelection({
         {/* Image Provider Selection */}
         <div className="my-8">
           <label className="block text-sm font-medium text-gray-700 mb-3">
-            Select Image Provider
+            בחר ספק תמונות
           </label>
           <div className="w-full">
             <Popover
@@ -199,7 +199,7 @@ export default function LLMProviderSelection({
                       {llmConfig.IMAGE_PROVIDER
                         ? IMAGE_PROVIDERS[llmConfig.IMAGE_PROVIDER]?.label ||
                         llmConfig.IMAGE_PROVIDER
-                        : "Select image provider"}
+                        : "בחר ספק תמונות"}
                     </span>
                   </div>
                   <ChevronsUpDown className="w-4 h-4 text-gray-500" />
@@ -211,9 +211,9 @@ export default function LLMProviderSelection({
                 style={{ width: "var(--radix-popover-trigger-width)" }}
               >
                 <Command>
-                  <CommandInput placeholder="Search provider..." />
+                  <CommandInput placeholder="חפש ספק..." />
                   <CommandList>
-                    <CommandEmpty>No provider found.</CommandEmpty>
+                    <CommandEmpty>לא נמצא ספק.</CommandEmpty>
                     <CommandGroup>
                       {Object.values(IMAGE_PROVIDERS).map(
                         (provider, index) => (
@@ -276,7 +276,7 @@ export default function LLMProviderSelection({
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder={`Enter your ${provider.apiKeyFieldLabel}`}
+                    placeholder={`הזן את ה-${provider.apiKeyFieldLabel} שלך`}
                     className="w-full px-4 py-2.5 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     value={
                       provider.apiKeyField === "PEXELS_API_KEY"
@@ -300,7 +300,7 @@ export default function LLMProviderSelection({
                 </div>
                 <p className="mt-2 text-sm text-gray-500 flex items-center gap-2">
                   <span className="block w-1 h-1 rounded-full bg-gray-400"></span>
-                  API key for {provider.label} image generation
+                  מפתח API ליצירת תמונות עם {provider.label}
                 </p>
               </div>
             );
@@ -312,21 +312,21 @@ export default function LLMProviderSelection({
             <Info className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
               <h3 className="text-sm font-medium text-blue-900 mb-1">
-                Selected Models
+                מודלים נבחרים
               </h3>
               <p className="text-sm text-blue-700">
-                Using{" "}
+                משתמש ב-{" "}
                 {llmConfig.LLM === "custom"
                   ? llmConfig.CUSTOM_MODEL ?? "xxxxx"
                   : llmConfig.LLM === "openai"
                     ? llmConfig.OPENAI_MODEL ?? "xxxxx"
                     : "xxxxx"}{" "}
-                for text generation and{" "}
+                ליצירת טקסט וב-{" "}
                 {llmConfig.IMAGE_PROVIDER &&
                   IMAGE_PROVIDERS[llmConfig.IMAGE_PROVIDER]
                   ? IMAGE_PROVIDERS[llmConfig.IMAGE_PROVIDER].label
                   : "xxxxx"}{" "}
-                for images
+                לתמונות
               </p>
             </div>
           </div>
