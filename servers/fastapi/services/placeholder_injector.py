@@ -19,6 +19,7 @@ using unique element IDs, preserving all visual design while updating only the t
 
 import zipfile
 import logging
+import os
 from typing import Dict, Any, Optional, List
 from lxml import etree
 import shutil
@@ -593,8 +594,18 @@ def inject_elements_into_slide(
         Modified slide XML tree
     """
     slide_tree = _read_xml(zipf, slide_path)
+    
+    # If slide doesn't exist in zipfile (new slide), read from temp directory
     if slide_tree is None:
-        raise ValueError(f"Could not read slide: {slide_path}")
+        temp_slide_path = os.path.join(temp_dir, slide_path)
+        if os.path.exists(temp_slide_path):
+            try:
+                slide_tree = etree.parse(temp_slide_path).getroot()
+            except Exception as e:
+                logger.error(f"Error reading slide from temp directory: {e}")
+                raise ValueError(f"Could not read slide: {slide_path}")
+        else:
+            raise ValueError(f"Could not read slide: {slide_path}")
 
     sp_tree = slide_tree.find("p:cSld/p:spTree", NS)
     if sp_tree is None:

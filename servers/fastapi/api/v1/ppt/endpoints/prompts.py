@@ -459,14 +459,16 @@ The user provides a prompt describing COMPLETELY NEW CONTENT they want you to ge
 YOUR TASK:
 Generate BRAND NEW content with MAXIMUM FLEXIBILITY - you can:
 ✓ Add or remove slides as needed for the content
-✓ Add new structural elements: tables, SmartArt, charts, titles
-✓ Change the number of bullet points
-✓ Add or remove existing elements
-✓ Modify element types (e.g., convert body text to bullet points)
-✓ Adjust content structure to fit the narrative
-✓ Create new tables with custom row/column counts
-✓ Add SmartArt diagrams for visual representation
-✓ Insert graph/chart placeholders where data visualization helps
+✓ Add new text shapes (titles, subtitles, body text) to slides
+✓ Change the number of bullet points in existing text
+✓ Modify text content length and structure
+✓ Adjust content flow to fit the narrative
+✓ Create multiple text sections on new slides
+
+IMPORTANT LIMITATIONS (these features are not yet supported):
+✗ Cannot add new tables - only modify existing table text
+✗ Cannot add new SmartArt - only modify existing SmartArt text
+✗ Cannot add new charts - only modify existing chart text
 
 You MUST maintain:
 ✓ Overall design aesthetics (color schemes, font families, visual style)
@@ -482,13 +484,12 @@ FLEXIBLE MODE RULES
    - Remove slides if content is more concise
    - Each slide should have a clear purpose
 
-2. **Element Flexibility**: You can add structural elements
+2. **Element Flexibility**: You can add text shapes
    - Add bullet points if content needs more detail
    - Remove bullet points if content is simpler
-   - Add NEW tables by creating table_cell elements with row/column info
-   - Add NEW SmartArt by creating smartart_node elements
-   - Add NEW chart placeholders by creating chart_text elements
-   - Add NEW titles by creating shape elements with placeholderType="title"
+   - Add NEW text shapes (title, subtitle, body) by creating shape elements
+   - Modify existing tables, SmartArt, charts (but cannot create new ones)
+   - Add multiple text boxes to new slides for better content organization
 
 3. **Visual Consistency**: Maintain design DNA from original
    - Keep similar text lengths for similar element types
@@ -558,27 +559,17 @@ You MUST output ONLY JSON in this format:
           "placeholderType": "body"
         },
         {
-          "id": "slide1_table_new_0_cell0",
-          "text": "Header 1",
-          "type": "table_cell",
-          "tableInfo": {"row": 0, "col": 0, "isNew": true}
-        },
-        {
-          "id": "slide1_table_new_0_cell1",
-          "text": "Header 2",
-          "type": "table_cell",
-          "tableInfo": {"row": 0, "col": 1, "isNew": true}
-        },
-        {
-          "id": "slide1_smartart_new_0_node0",
-          "text": "Process Step 1",
-          "type": "smartart",
+          "id": "slide1_shape_new_2",
+          "text": "Additional content subtitle",
+          "type": "shape",
+          "placeholderType": "subtitle",
           "isNew": true
         },
         {
-          "id": "slide1_smartart_new_0_node1",
-          "text": "Process Step 2",
-          "type": "smartart",
+          "id": "slide1_shape_new_3",
+          "text": "More detailed explanation of the topic",
+          "type": "shape",
+          "placeholderType": "body",
           "isNew": true
         }
       ]
@@ -600,10 +591,10 @@ You MUST output ONLY JSON in this format:
           "placeholderType": "body"
         },
         {
-          "id": "slide2_chart_new_0_title",
-          "text": "Sales Growth Chart",
-          "type": "chart_text",
-          "subtype": "title",
+          "id": "slide2_shape_new_2",
+          "text": "Key insights and conclusions",
+          "type": "shape",
+          "placeholderType": "body",
           "isNew": true
         }
       ]
@@ -613,37 +604,36 @@ You MUST output ONLY JSON in this format:
 
 FLEXIBLE MODE RULES:
 ✓ You CAN add or remove slides - use "isNew": true for new slides
-✓ You CAN add new tables - use "table_new_" in ID and include tableInfo
-✓ You CAN add new SmartArt - use "smartart_new_" in ID and "isNew": true
-✓ You CAN add new charts - use "chart_new_" in ID and "isNew": true
-✓ You CAN add new titles - create shape elements with placeholderType="title"
-✓ You can change the number of lines in body text (add/remove bullet points)
+✓ You CAN add new text shapes - use "slide{N}_shape_new_{INDEX}" as ID
+✓ You CAN change the number of lines in body text (add/remove bullet points)
 ✓ You can exceed maxLength by up to 100% if content requires it
 ✓ You can change maxLines for body/content elements
 ✓ Title and subtitle elements should stay relatively short
 ✓ Use \\n for line breaks in bullet points
 
 NEW ELEMENT ID CONVENTIONS:
-- New tables: "slide{N}_table_new_{INDEX}_cell{CELL_NUM}"
-- New SmartArt: "slide{N}_smartart_new_{INDEX}_node{NODE_NUM}"
-- New charts: "slide{N}_chart_new_{INDEX}_title" or "..._axis{NUM}"
-- New text shapes: "slide{N}_shape_new_{INDEX}" (use placeholderType="body" or "subtitle")
+- New text shapes: "slide{N}_shape_new_{INDEX}"
+  - Must include "type": "shape"
+  - Must include "placeholderType": "title", "subtitle", or "body"
+  - Must include "isNew": true
 - New slides: Use sequential slideNumber and mark with "isNew": true
+
+IMPORTANT: Do NOT create new tables, SmartArt, or charts - only text shapes are supported for new elements
 
 OUTPUT RULES:
 ✓ Return ONLY clean JSON - no markdown, no code blocks, no explanations
 ✓ Use sequential slideNumber values (1, 2, 3, ...)
 ✓ Include "type" field for each element
-✓ Include "placeholderType" when creating shape elements
-✓ Use "isNew": true to mark new slides and elements
+✓ Include "placeholderType" when creating shape elements (title/subtitle/body)
+✓ Use "isNew": true to mark new slides and new text shapes
 ✓ Use "remove": true to delete existing slides or elements
-✓ For new tables, include tableInfo with row, col, and isNew
 ✓ Use natural, flowing content that fits the user's prompt
 ✓ Prioritize content quality over strict structure matching
 
 ✗ DO NOT make titles excessively long (keep under 100 characters)
 ✗ DO NOT include originalLength, maxLength, maxLines in output
 ✗ DO NOT create more than 20 slides total (keep presentations reasonable)
+✗ DO NOT create new tables, SmartArt, or charts (not supported)
 
 ═══════════════════════════════════════════════════════════════════════════════
 
