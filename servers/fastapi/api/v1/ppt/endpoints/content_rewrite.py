@@ -33,9 +33,19 @@ from pydantic import BaseModel
 from services.placeholder_extractor import extract_all_placeholders, validate_rewritten_content
 from services.placeholder_injector import inject_content_into_pptx
 from services.llm_client import LLMClient
+from services.content_chunker import (
+    chunk_placeholder_structure,
+    combine_chunked_results,
+    estimate_structure_tokens
+)
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from utils.llm_provider import get_model
-from api.v1.ppt.endpoints.prompts import CONTENT_REWRITE_SYSTEM_PROMPT, CONTENT_REWRITE_FLEXIBLE_SYSTEM_PROMPT
+from api.v1.ppt.endpoints.prompts import (
+    CONTENT_REWRITE_SYSTEM_PROMPT, 
+    CONTENT_REWRITE_FLEXIBLE_SYSTEM_PROMPT,
+    CONTENT_REWRITE_LITE_SYSTEM_PROMPT,
+    CONTENT_REWRITE_FLEXIBLE_LITE_SYSTEM_PROMPT
+)
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -218,10 +228,13 @@ async def extract_placeholders(
 @router.post("/generate-rewritten-content", response_model=RewrittenContentResponse)
 async def generate_rewritten_content(request: RewriteRequest):
     """
-    Generate rewritten content using LLM.
+    Generate rewritten content using LLM with smart chunking and automatic fallback.
 
-    This is step 2 of the content rewrite workflow.
-    Takes placeholder structure and user prompt, returns rewritten content.
+    Features:
+    - Estimates token usage before sending to LLM
+    - Automatically chunks large presentations
+    - Tries full prompt first, falls back to lite prompt on failure
+    - Processes chunks sequentially
     """
     try:
         user_prompt = request.user_prompt
@@ -234,14 +247,25 @@ async def generate_rewritten_content(request: RewriteRequest):
             "slides": placeholder_structure.get("slides", [])
         }
 
-        # Select system prompt based on mode
-        system_prompt = (
-            CONTENT_REWRITE_FLEXIBLE_SYSTEM_PROMPT
-            if mode == RewriteMode.FLEXIBLE
-            else CONTENT_REWRITE_SYSTEM_PROMPT
-        )
+        # Determine prompt mode from env (default to "auto" which means try full then lite)
+        prompt_mode = os.getenv("CONTENT_REWRITE_PROMPT_MODE", "auto").lower()
+        
+        # Helper to get prompts based on mode
+        def get_prompts(use_lite: bool):
+            if mode == RewriteMode.FLEXIBLE:
+                return (
+                    CONTENT_REWRITE_FLEXIBLE_LITE_SYSTEM_PROMPT 
+                    if use_lite 
+                    else CONTENT_REWRITE_FLEXIBLE_SYSTEM_PROMPT
+                )
+            else:
+                return (
+                    CONTENT_REWRITE_LITE_SYSTEM_PROMPT 
+                    if use_lite 
+                    else CONTENT_REWRITE_SYSTEM_PROMPT
+                )
 
-        # Format the user message for the LLM
+        # Format the user message template
         mode_instruction = (
             "You can adapt the structure as needed for better content flow."
             if mode == RewriteMode.FLEXIBLE
@@ -253,96 +277,144 @@ async def generate_rewritten_content(request: RewriteRequest):
             keyword_list = ", ".join(f'"{k}"' for k in keywords)
             keyword_instruction = f"\nIMPORTANT: You MUST include the following keywords/terms in the rewritten content: {keyword_list}."
 
-        user_message = f"""User's Content Request:
+        user_message_template = f"""User's Content Request:
 {user_prompt}
 {keyword_instruction}
 
 Placeholder Structure ({mode_instruction}):
-{json.dumps(clean_structure, indent=2)}
+{{PLACEHOLDER_DATA}}
 
 Generate rewritten content in {mode.value} mode.
 IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLines constraints, you MUST generate appropriate content for it based on the User's Content Request. Do not leave it empty."""
 
-        logger.info(f"Sending content rewrite request ({mode.value} mode) to LLM for {len(clean_structure['slides'])} slides")
-
-        # Call LLM to generate rewritten content
+        # Get model
         llm_client = LLMClient()
         model = get_model()
+        
+        # Get max input tokens
+        max_input_tokens = int(os.getenv("CONTENT_REWRITE_MAX_INPUT_TOKENS", "8000"))
+        logger.info(f"Using model '{model}' with max input tokens: {max_input_tokens}")
 
-        # Prepare messages
-        messages = [
-            LLMSystemMessage(content=system_prompt),
-            LLMUserMessage(content=user_message)
-        ]
-
-        # Use generate() for plain text output (LLM will return JSON based on system prompt)
-        response_text = await llm_client.generate(
-            model=model,
-            messages=messages,
+        # Estimate total tokens
+        estimated_tokens = estimate_structure_tokens(clean_structure)
+        logger.info(f"Estimated tokens for {len(clean_structure['slides'])} slides: ~{estimated_tokens}")
+        
+        # Chunk the structure
+        # We use the full prompt for chunking estimation to be safe
+        base_system_prompt = get_prompts(use_lite=False)
+        chunks = chunk_placeholder_structure(
+            clean_structure,
+            base_system_prompt,
+            user_message_template,
+            max_input_tokens=max_input_tokens
         )
 
-        # Parse JSON response
-        try:
-            rewritten_content = json.loads(response_text)
-        except json.JSONDecodeError as e:
-            logger.error(f"LLM returned invalid JSON: {response_text}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"LLM returned invalid JSON format: {str(e)}"
-            )
+        logger.info(f"Processing content rewrite in {len(chunks)} batch(es)")
 
-        # Sanitize content based on mode
-        rewritten_content = sanitize_rewritten_content(clean_structure, rewritten_content, mode)
+        chunked_results = []
+        
+        for i, chunk in enumerate(chunks, 1):
+            chunk_slides = chunk.get("slides", [])
+            slide_numbers = [s.get("slideNumber") for s in chunk_slides]
+            
+            logger.info(f"Processing batch {i}/{len(chunks)}: {len(chunk_slides)} slides")
+            
+            # Create user message for this chunk
+            user_message = user_message_template.replace(
+                "{PLACEHOLDER_DATA}",
+                json.dumps(chunk, indent=2)
+            )
+            
+            # Try processing with fallback logic
+            chunk_result = None
+            last_error = None
+            
+            # Determine attempts based on prompt_mode
+            attempts = []
+            if prompt_mode == "lite":
+                attempts.append(("lite", True))
+            elif prompt_mode == "full":
+                attempts.append(("full", False))
+            else: # auto
+                attempts.append(("full", False))
+                attempts.append(("lite", True))
+            
+            for attempt_name, use_lite in attempts:
+                try:
+                    logger.info(f"Batch {i}: Attempting with {attempt_name} prompt...")
+                    system_prompt = get_prompts(use_lite=use_lite)
+                    
+                    messages = [
+                        LLMSystemMessage(content=system_prompt),
+                        LLMUserMessage(content=user_message)
+                    ]
+
+                    response_text = await llm_client.generate(
+                        model=model,
+                        messages=messages,
+                    )
+                    
+                    try:
+                        chunk_result = json.loads(response_text)
+                        # If successful, break the retry loop
+                        logger.info(f"Batch {i}: Success with {attempt_name} prompt")
+                        break
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Batch {i}: Invalid JSON with {attempt_name} prompt: {e}")
+                        last_error = e
+                        continue
+                        
+                except Exception as e:
+                    logger.warning(f"Batch {i}: Error with {attempt_name} prompt: {e}")
+                    last_error = e
+                    continue
+            
+            if chunk_result is None:
+                error_msg = f"Failed to process batch {i} after {len(attempts)} attempts. Last error: {last_error}"
+                logger.error(error_msg)
+                raise HTTPException(status_code=500, detail=error_msg)
+            
+            # Sanitize chunk result
+            chunk_result = sanitize_rewritten_content(chunk, chunk_result, mode)
+            chunked_results.append(chunk_result)
+        
+        # Combine all chunk results
+        if len(chunks) > 1:
+            logger.info(f"Combining {len(chunked_results)} batches into final result")
+            rewritten_content = combine_chunked_results(chunked_results)
+        else:
+            rewritten_content = chunked_results[0]
 
         # Validate that rewritten content matches original structure
-        # In flexible mode, we allow variable slide counts and new elements
         try:
             if mode == RewriteMode.STRICT:
                 validate_rewritten_content(clean_structure, rewritten_content)
                 
                 # Validate keywords in STRICT mode
                 if keywords:
-                    # Collect all text from rewritten content
                     all_text = ""
                     for slide in rewritten_content.get("slides", []):
                         for element in slide.get("elements", []):
                             all_text += element.get("text", "") + " "
                     
-                    # Check for missing keywords
                     missing_keywords = [k for k in keywords if k.lower() not in all_text.lower()]
                     if missing_keywords:
                         raise ValueError(f"Rewritten content missing required keywords: {', '.join(missing_keywords)}")
                         
             else:
-                # Flexible mode: Very lenient validation - just ensure slides exist and have basic structure
+                # Flexible mode validation
                 rewritten_slides = rewritten_content.get("slides", [])
                 if not rewritten_slides:
                     raise ValueError("Flexible mode: No slides found in rewritten content")
 
-                # Validate each slide has basic structure
                 for i, slide in enumerate(rewritten_slides, start=1):
                     if "slideNumber" not in slide:
                         raise ValueError(f"Flexible mode: Slide {i} missing slideNumber field")
                     if "elements" not in slide:
                         raise ValueError(f"Flexible mode: Slide {i} missing elements field")
 
-                    # Ensure elements are valid
-                    for j, element in enumerate(slide.get("elements", [])):
-                        if "id" not in element:
-                            raise ValueError(f"Flexible mode: Slide {i}, element {j} missing id field")
-                        if "text" not in element:
-                            raise ValueError(f"Flexible mode: Slide {i}, element {j} missing text field")
-                        if "type" not in element:
-                            raise ValueError(f"Flexible mode: Slide {i}, element {j} missing type field")
-
                 logger.info(f"Flexible mode validation passed: {len(rewritten_slides)} slides generated")
 
-                # Warn if slide count changed significantly
-                original_slide_count = len(clean_structure.get("slides", []))
-                if len(rewritten_slides) > original_slide_count * 2:
-                    logger.warning(
-                        f"Flexible mode: Generated {len(rewritten_slides)} slides from {original_slide_count} original slides (>2x increase)"
-                    )
         except ValueError as e:
             logger.error(f"Rewritten content validation failed: {e}")
             raise HTTPException(
@@ -354,7 +426,7 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
 
         return RewrittenContentResponse(
             rewritten_content=rewritten_content,
-            message=f"Successfully generated content for {len(rewritten_content['slides'])} slides"
+            message=f"Successfully generated content for {len(rewritten_content['slides'])} slides in {len(chunks)} batch(es)"
         )
 
     except HTTPException:

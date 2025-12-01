@@ -66,12 +66,12 @@ export function WelcomeTutorial() {
                 </div>
 
                 {/* Content */}
-                <div className="p-8">
+                <div className="p-8 flex flex-col items-center">
                     <p className="text-center text-gray-600 text-lg mb-8">
                         בחר כיצד תרצה להתחיל:
                     </p>
 
-                    <div className="grid md:grid-cols-2 gap-6 mb-8">
+                    <div className="grid md:grid-cols-2 gap-6 mb-8 w-full max-w-4xl">
                         {/* Rewrite Content Card */}
                         <motion.button
                             whileHover={{ scale: 1.02 }}

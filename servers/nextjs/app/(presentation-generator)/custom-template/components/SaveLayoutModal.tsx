@@ -56,12 +56,12 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <DialogHeader className="text-center">
+          <DialogTitle className="flex items-center justify-center gap-2">
             <Save className="w-5 h-5 text-green-600" />
             Save Template
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-center">
             Enter a name and description for your template. This will help you identify it later.
           </DialogDescription>
         </DialogHeader>

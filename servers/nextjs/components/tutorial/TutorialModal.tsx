@@ -87,17 +87,18 @@ export function TutorialModal() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
                         onClick={skipTutorial}
                     />
 
                     {/* Tutorial Modal */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl mx-4"
-                    >
+                    <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="w-full max-w-2xl pointer-events-auto"
+                        >
                         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden" dir="rtl">
                             {/* Header */}
                             <div className="bg-gradient-to-r from-[#9034EA] to-[#5146E5] px-6 py-4 text-white">
@@ -126,7 +127,7 @@ export function TutorialModal() {
                             </div>
 
                             {/* Content */}
-                            <div className="p-8">
+                            <div className="p-8 flex items-center justify-center">
                                 <AnimatePresence mode="wait">
                                     <motion.div
                                         key={currentStep}
@@ -134,7 +135,7 @@ export function TutorialModal() {
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -20 }}
                                         transition={{ duration: 0.3 }}
-                                        className="space-y-6"
+                                        className="space-y-6 w-full"
                                     >
                                         {/* Icon */}
                                         <div className="flex items-center justify-center">
@@ -144,7 +145,7 @@ export function TutorialModal() {
                                         </div>
 
                                         {/* Step Info */}
-                                        <div className="text-center space-y-3">
+                                        <div className="text-center space-y-3 flex flex-col items-center">
                                             <div className="text-sm font-medium text-[#5146E5]">
                                                 שלב {currentStep + 1} מתוך {steps.length}
                                             </div>
@@ -194,7 +195,8 @@ export function TutorialModal() {
                                 )}
                             </div>
                         </div>
-                    </motion.div>
+                        </motion.div>
+                    </div>
                 </>
             )}
         </AnimatePresence>

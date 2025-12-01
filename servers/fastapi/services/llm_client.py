@@ -498,3 +498,31 @@ class LLMClient:
                     model=model, messages=messages, max_tokens=max_tokens
                 ):
                     yield content
+
+    async def stream_structured(
+        self,
+        model: str,
+        messages: List[LLMMessage],
+        response_format: dict,
+        strict: bool = False,
+        tools: Optional[List[type[LLMTool] | LLMDynamicTool]] = None,
+        max_tokens: Optional[int] = None,
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream structured output from LLM.
+        For now, this falls back to non-streaming generate_structured and yields the complete result.
+        True streaming of structured output would require parsing partial JSON, which is complex.
+        """
+        # For now, we'll use the non-streaming method and yield the complete result
+        # This maintains the async generator interface while we work on true streaming support
+        result = await self.generate_structured(
+            model=model,
+            messages=messages,
+            response_format=response_format,
+            strict=strict,
+            tools=tools,
+            max_tokens=max_tokens,
+        )
+        # Convert the dict result to JSON string and yield it
+        import json
+        yield json.dumps(result)
