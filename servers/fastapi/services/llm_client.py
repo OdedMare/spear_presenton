@@ -28,6 +28,7 @@ from utils.get_env import (
     get_disable_thinking_env,
     get_openai_api_key_env,
     get_tool_calls_env,
+    get_web_grounding_env,
 )
 from utils.llm_provider import get_llm_provider, get_model
 from utils.parsers import parse_bool_or_none
@@ -51,6 +52,40 @@ class LLMClient:
     # ? Disable thinking
     def disable_thinking(self) -> bool:
         return parse_bool_or_none(get_disable_thinking_env()) or False
+
+    # ? Enable web grounding
+    def enable_web_grounding(self) -> bool:
+        return parse_bool_or_none(get_web_grounding_env()) or False
+
+    # ? Check if model supports structured outputs (JSON schema)
+    def supports_structured_outputs(self, model: str) -> bool:
+        """
+        Check if the given model supports structured outputs with JSON schema.
+
+        For OpenAI: Only newer models support json_schema response_format.
+        For Custom/Ollama/Qwen: We assume they might support it and let
+        the error handling catch any issues if they don't.
+        """
+        if self.llm_provider != LLMProvider.OPENAI:
+            # For custom providers (Ollama, Qwen, LM Studio, etc.),
+            # we can't know capabilities in advance. Return True to try
+            # structured outputs first, with fallback to tool calls on error.
+            return True
+
+        # Known OpenAI models that support structured outputs
+        # Using a prefix-based whitelist for OpenAI only
+        supported_prefixes = [
+            "gpt-4o",  # matches gpt-4o, gpt-4o-mini, gpt-4o-2024-08-06, etc.
+            "chatgpt-4o",
+        ]
+
+        # Check if model starts with any supported prefix
+        for prefix in supported_prefixes:
+            if model.startswith(prefix):
+                return True
+
+        # For older OpenAI models, use tool calls instead
+        return False
 
     # ? Clients
     def _get_client(self):
@@ -207,9 +242,14 @@ class LLMClient:
         response_schema = response_format
         all_tools = [*tools] if tools else None
 
+        # Use tool calls for structured output if:
+        # 1. Custom LLM explicitly requests it, OR
+        # 2. OpenAI model doesn't support structured outputs
         use_tool_calls_for_structured_output = (
-            self.use_tool_calls_for_structured_output()
+            self.use_tool_calls_for_structured_output() or
+            not self.supports_structured_outputs(model)
         )
+
         if strict and depth == 0:
             response_schema = ensure_strict_json_schema(
                 response_schema,
@@ -231,27 +271,59 @@ class LLMClient:
                 )
             )
 
-        response = await client.chat.completions.create(
-            model=model,
-            messages=[message.model_dump() for message in messages],
-            response_format=(
-                {
-                    "type": "json_schema",
-                    "json_schema": (
-                        {
-                            "name": "ResponseSchema",
-                            "strict": strict,
-                            "schema": response_schema,
-                        }
-                    ),
-                }
-                if not use_tool_calls_for_structured_output
-                else None
-            ),
-            max_completion_tokens=max_tokens,
-            tools=all_tools,
-            extra_body=extra_body,
-        )
+        # Try to use structured outputs, with fallback to tool calls if not supported
+        try:
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[message.model_dump() for message in messages],
+                response_format=(
+                    {
+                        "type": "json_schema",
+                        "json_schema": (
+                            {
+                                "name": "ResponseSchema",
+                                "strict": strict,
+                                "schema": response_schema,
+                            }
+                        ),
+                    }
+                    if not use_tool_calls_for_structured_output
+                    else None
+                ),
+                max_completion_tokens=max_tokens,
+                tools=all_tools,
+                extra_body=extra_body,
+            )
+        except Exception as e:
+            # If structured outputs fail (e.g., model doesn't support it),
+            # retry with tool calls instead
+            error_message = str(e).lower()
+            if ("response_format" in error_message or "json_schema" in error_message) and depth == 0:
+                # Retry with tool calls
+                if all_tools is None:
+                    all_tools = []
+                all_tools.append(
+                    self.tool_calls_handler.parse_tool(
+                        LLMDynamicTool(
+                            name="ResponseSchema",
+                            description="Provide response to the user",
+                            parameters=response_schema,
+                            handler=do_nothing_async,
+                        ),
+                        strict=strict,
+                    )
+                )
+                response = await client.chat.completions.create(
+                    model=model,
+                    messages=[message.model_dump() for message in messages],
+                    response_format=None,  # Don't use json_schema
+                    max_completion_tokens=max_tokens,
+                    tools=all_tools,
+                    extra_body=extra_body,
+                )
+            else:
+                # Re-raise if it's a different error
+                raise
 
         content = response.choices[0].message.content
 
