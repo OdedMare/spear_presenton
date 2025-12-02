@@ -6,7 +6,7 @@ export const layoutName = 'Creative Closing Slide'
 export const layoutDescription = 'Artistic closing slide with playful energy.'
 
 const closingSlideSchema = z.object({
-    title: z.string().min(3).max(80).default('Let's Create Magic').meta({ description: "Closing title" }),
+    title: z.string().min(3).max(80).default("Let's Create Magic").meta({ description: "Closing title" }),
     subtitle: z.string().min(5).max(150).default('Together we can turn imagination into reality').meta({ description: "Closing message" }),
     contact: z.string().min(5).max(100).default('hello@creative.studio').meta({ description: "Contact information" }),
 })
@@ -32,7 +32,7 @@ const ClosingSlideLayout: React.FC<{data?: Partial<ClosingSlideData>}> = ({ data
 
                 <div className="relative z-10 flex flex-col justify-center items-center h-full px-20 py-20 text-center">
                     <h1 className="text-8xl mb-8" style={{ color: "var(--text-heading-color, #2a2a2a)" }}>
-                        {slideData?.title || 'Let's Create Magic'}
+                        {slideData?.title || "Let's Create Magic"}
                     </h1>
 
                     <div className="flex gap-3 justify-center mb-12">
@@ -43,7 +43,7 @@ const ClosingSlideLayout: React.FC<{data?: Partial<ClosingSlideData>}> = ({ data
 
                     <p className="text-3xl font-light mb-12 max-w-3xl"
                        style={{ color: "var(--text-body-color, #5a5a5a)", fontFamily: "var(--body-font-family, Raleway, sans-serif)" }}>
-                        {slideData?.subtitle || 'Together we can turn imagination into reality'}
+                        {slideData?.subtitle || "Together we can turn imagination into reality"}
                     </p>
 
                     <div className="border-4 rounded-3xl px-10 py-5 transform -rotate-2" style={{ borderColor: "var(--primary-accent-color, #e76f51)" }}>

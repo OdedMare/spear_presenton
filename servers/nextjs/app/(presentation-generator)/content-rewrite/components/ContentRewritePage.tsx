@@ -40,8 +40,20 @@ interface RewrittenContent {
   }>
 }
 
-type RewriteMode = 'strict' | 'flexible'
+type RewriteMode = 'strict' | 'flexible' | 'translate'
 type Language = 'english' | 'hebrew'
+
+const LANGUAGE_OPTIONS = [
+  { value: 'hebrew', label: 'עברית (Hebrew)', rtl: true },
+  { value: 'english', label: 'English', rtl: false },
+  { value: 'arabic', label: 'العربية (Arabic)', rtl: true },
+  { value: 'spanish', label: 'Español (Spanish)', rtl: false },
+  { value: 'french', label: 'Français (French)', rtl: false },
+  { value: 'german', label: 'Deutsch (German)', rtl: false },
+  { value: 'russian', label: 'Русский (Russian)', rtl: false },
+  { value: 'chinese', label: '中文 (Chinese)', rtl: false },
+  { value: 'japanese', label: '日本語 (Japanese)', rtl: false },
+]
 
 type LoadingStage =
   | 'extracting_placeholders'
@@ -50,7 +62,11 @@ type LoadingStage =
   | 'injecting_content'
   | null
 
-export default function ContentRewritePage() {
+interface ContentRewritePageProps {
+  defaultMode?: 'rewrite' | 'translate'
+}
+
+export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentRewritePageProps = {}) {
   const [file, setFile] = useState<File | null>(null)
   const [sourceFile, setSourceFile] = useState<File | null>(null) // PDF/PPTX to extract content from
   const [extractedContent, setExtractedContent] = useState<string>('')
@@ -59,6 +75,9 @@ export default function ContentRewritePage() {
   const [rewriteMode, setRewriteMode] = useState<RewriteMode>('strict')
   const [language, setLanguage] = useState<Language>('english')
   const [targetSlideCount, setTargetSlideCount] = useState<number>(0)
+  const [isTranslateMode, setIsTranslateMode] = useState(defaultMode === 'translate')
+  const [sourceLanguage, setSourceLanguage] = useState<string>('hebrew')
+  const [targetLanguage, setTargetLanguage] = useState<string>('english')
   const [placeholderStructure, setPlaceholderStructure] = useState<PlaceholderStructure | null>(null)
   const [rewrittenContent, setRewrittenContent] = useState<RewrittenContent | null>(null)
   const [loading, setLoading] = useState(false)
@@ -215,23 +234,37 @@ export default function ContentRewritePage() {
   }
 
   const handleGenerateContent = async () => {
-    if (!placeholderStructure || !userPrompt) return
+    if (!placeholderStructure) return
+    if (!isTranslateMode && !userPrompt) return
 
     setLoading(true)
     setLoadingStage('generating_content')
     setError(null)
 
     try {
-      // Build enhanced prompt with language and slide count instructions
-      const languageInstruction = language === 'hebrew'
-        ? '\n\nIMPORTANT: Generate all content in HEBREW language. The text will be displayed left-to-right.'
-        : '\n\nIMPORTANT: Generate all content in ENGLISH language.';
+      // Determine mode
+      const mode = isTranslateMode ? 'translate' : rewriteMode
 
-      const slideCountInstruction = rewriteMode === 'flexible' && targetSlideCount > 0
-        ? `\n\nTarget slide count: Generate exactly ${targetSlideCount} slides.`
-        : '';
+      // Build prompt based on mode
+      let enhancedPrompt = ''
 
-      const enhancedPrompt = userPrompt + languageInstruction + slideCountInstruction;
+      if (isTranslateMode) {
+        // Translation mode - simple or with additional instructions
+        enhancedPrompt = userPrompt.trim()
+          ? `Translate from ${sourceLanguage} to ${targetLanguage}. Additional instructions: ${userPrompt}`
+          : `Translate from ${sourceLanguage} to ${targetLanguage}.`
+      } else {
+        // Existing rewrite mode logic
+        const languageInstruction = language === 'hebrew'
+          ? '\n\nIMPORTANT: Generate all content in HEBREW language. The text will be displayed left-to-right.'
+          : '\n\nIMPORTANT: Generate all content in ENGLISH language.'
+
+        const slideCountInstruction = rewriteMode === 'flexible' && targetSlideCount > 0
+          ? `\n\nTarget slide count: Generate exactly ${targetSlideCount} slides.`
+          : ''
+
+        enhancedPrompt = userPrompt + languageInstruction + slideCountInstruction
+      }
 
       const response = await fetch(`/api/v1/ppt/rewrite/generate-rewritten-content`, {
         method: 'POST',
@@ -241,7 +274,9 @@ export default function ContentRewritePage() {
         body: JSON.stringify({
           user_prompt: enhancedPrompt,
           placeholder_structure: placeholderStructure,
-          mode: rewriteMode,
+          mode: mode,
+          source_language: isTranslateMode ? sourceLanguage : undefined,
+          target_language: isTranslateMode ? targetLanguage : undefined,
         }),
       })
 
@@ -537,10 +572,13 @@ export default function ContentRewritePage() {
         {/* Header */}
         <div className="text-center mb-8 relative">
           <h1 className="text-3xl font-semibold font-instrument_sans mb-2">
-            שכתוב תוכן עם AI
+            {isTranslateMode ? 'תרגום מצגת עם AI' : 'שכתוב תוכן עם AI'}
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            שמור על עיצוב המצגת, שכתב את התוכן עם AI
+            {isTranslateMode
+              ? 'שמור על עיצוב המצגת, תרגם את התוכן עם AI'
+              : 'שמור על עיצוב המצגת, שכתב את התוכן עם AI'
+            }
           </p>
 
           {/* Help Button - Positioned in top right */}
@@ -659,12 +697,100 @@ export default function ContentRewritePage() {
               </div>
 
               <p className="text-gray-600 mb-6">
-                ספר ל-AI איזה תוכן מצגת אתה רוצה ליצור
+                {isTranslateMode ? 'בחר שפות ותרגם את המצגת שלך' : 'ספר ל-AI איזה תוכן מצגת אתה רוצה ליצור'}
               </p>
 
-              {/* Mode Selector */}
+              {/* Main Mode Toggle: Rewrite vs Translate */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">מצב שכתוב</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">בחר מצב</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setIsTranslateMode(false)}
+                    className={`p-4 rounded-lg border-2 transition-all text-right ${!isTranslateMode
+                      ? 'border-[#5146E5] bg-[#E9E8F8]'
+                      : 'border-gray-300 bg-white hover:border-gray-400'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${!isTranslateMode ? 'border-[#5146E5]' : 'border-gray-300'
+                        }`}>
+                        {!isTranslateMode && (
+                          <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
+                        )}
+                      </div>
+                      <span className="font-semibold text-gray-900">שכתוב תוכן</span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      יצירת תוכן חדש לחלוטין על בסיס ההנחיה שלך
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => setIsTranslateMode(true)}
+                    className={`p-4 rounded-lg border-2 transition-all text-right ${isTranslateMode
+                      ? 'border-[#5146E5] bg-[#E9E8F8]'
+                      : 'border-gray-300 bg-white hover:border-gray-400'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isTranslateMode ? 'border-[#5146E5]' : 'border-gray-300'
+                        }`}>
+                        {isTranslateMode && (
+                          <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
+                        )}
+                      </div>
+                      <span className="font-semibold text-gray-900">תרגום תוכן</span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      תרגום מדויק של כל התוכן בין שפות שונות
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Translation Language Selectors */}
+              {isTranslateMode && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">בחר שפות לתרגום</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">שפת מקור (Source)</label>
+                      <select
+                        value={sourceLanguage}
+                        onChange={(e) => setSourceLanguage(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#5146E5] focus:ring-1 focus:ring-[#5146E5]"
+                        dir="rtl"
+                      >
+                        {LANGUAGE_OPTIONS.map((lang) => (
+                          <option key={lang.value} value={lang.value}>
+                            {lang.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">שפת יעד (Target)</label>
+                      <select
+                        value={targetLanguage}
+                        onChange={(e) => setTargetLanguage(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#5146E5] focus:ring-1 focus:ring-[#5146E5]"
+                        dir="rtl"
+                      >
+                        {LANGUAGE_OPTIONS.map((lang) => (
+                          <option key={lang.value} value={lang.value}>
+                            {lang.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Rewrite Mode Selector - Only show if NOT in translate mode */}
+              {!isTranslateMode && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">מצב שכתוב</label>
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => setRewriteMode('strict')}
@@ -709,8 +835,10 @@ export default function ContentRewritePage() {
                   </button>
                 </div>
               </div>
+              )}
 
-              {/* Language Selector */}
+              {/* Language Selector - Only show if NOT in translate mode */}
+              {!isTranslateMode && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">שפת פלט</label>
                 <div className="grid grid-cols-2 gap-4">
@@ -753,9 +881,10 @@ export default function ContentRewritePage() {
                   </button>
                 </div>
               </div>
+              )}
 
               {/* Slide Count for Flexible Mode */}
-              {rewriteMode === 'flexible' && (
+              {!isTranslateMode && rewriteMode === 'flexible' && (
                 <div className="mb-6">
                   <label htmlFor="slideCount" className="block text-sm font-medium text-gray-700 mb-2">
                     מספר שקפים יעד (אופציונלי)
@@ -846,14 +975,28 @@ export default function ContentRewritePage() {
                 )}
               </div>
 
-              <Textarea
-                value={userPrompt}
-                onChange={(e) => setUserPrompt(e.target.value)}
-                placeholder="דוגמה: צור מצגת על פתרונות אנרגיה בת-קיימא, עם התמקדות באנרגיה סולארית ורוח. כלול יתרונות, אסטרטגיות יישום ומקרי בוחן."
-                rows={6}
-                className="w-full mb-6 border-gray-300 focus:border-[#5146E5] focus:ring-[#5146E5]"
-                dir="rtl"
-              />
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {isTranslateMode ? 'הוראות נוספות (אופציונלי)' : 'תיאור התוכן'}
+                </label>
+                {isTranslateMode && (
+                  <p className="text-xs text-gray-600 mb-2">
+                    אופציונלי: הוסף הוראות נוספות למתרגם (למשל: "השתמש בשפה פורמלית" או "תרגם מונחים טכניים")
+                  </p>
+                )}
+                <Textarea
+                  value={userPrompt}
+                  onChange={(e) => setUserPrompt(e.target.value)}
+                  placeholder={
+                    isTranslateMode
+                      ? 'אופציונלי: הוסף הוראות נוספות למתרגם...'
+                      : 'דוגמה: צור מצגת על פתרונות אנרגיה בת-קיימא, עם התמקדות באנרגיה סולארית ורוח. כלול יתרונות, אסטרטגיות יישום ומקרי בוחן.'
+                  }
+                  rows={6}
+                  className="w-full border-gray-300 focus:border-[#5146E5] focus:ring-[#5146E5]"
+                  dir="rtl"
+                />
+              </div>
 
               <div className="flex gap-3">
                 <Button
@@ -867,19 +1010,19 @@ export default function ContentRewritePage() {
                 </Button>
                 <Button
                   onClick={handleGenerateContent}
-                  disabled={loading || !userPrompt.trim()}
+                  disabled={loading || (!isTranslateMode && !userPrompt.trim())}
                   className="flex-1 bg-[#5146E5] hover:bg-[#4136D5] text-white font-medium py-6"
                   size="lg"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      יוצר תוכן...
+                      {isTranslateMode ? 'מתרגם...' : 'יוצר תוכן...'}
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5 mr-2" />
-                      יצירת תוכן
+                      {isTranslateMode ? 'תרגם מצגת' : 'יצירת תוכן'}
                     </>
                   )}
                 </Button>
@@ -896,11 +1039,23 @@ export default function ContentRewritePage() {
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#5146E5] text-white font-semibold">
                   3
                 </div>
-                <h2 className="text-xl font-semibold font-instrument_sans">Preview Generated Content</h2>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold font-instrument_sans">
+                    {isTranslateMode ? 'תצוגה מקדימה של תרגום' : 'Preview Generated Content'}
+                  </h2>
+                  {isTranslateMode && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      תורגם: {sourceLanguage} → {targetLanguage}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <p className="text-gray-600 mb-4">
-                Review and edit the rewritten content before downloading
+                {isTranslateMode
+                  ? 'בדוק וערוך את התרגום לפני ההורדה'
+                  : 'Review and edit the rewritten content before downloading'
+                }
               </p>
 
               <div className="mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">

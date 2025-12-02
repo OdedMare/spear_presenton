@@ -6,7 +6,7 @@ export const layoutName = 'Gradient Closing Slide'
 export const layoutDescription = 'Modern closing slide with flowing gradient.'
 
 const closingSlideSchema = z.object({
-    title: z.string().min(3).max(80).default('Let's Build Together').meta({ description: "Closing title" }),
+    title: z.string().min(3).max(80).default("Let's Build Together").meta({ description: "Closing title" }),
     subtitle: z.string().min(5).max(150).default('Ready to transform your vision into reality').meta({ description: "Closing message" }),
     contact: z.string().min(5).max(100).default('hello@gradient.design').meta({ description: "Contact information" }),
 })
@@ -34,13 +34,13 @@ const ClosingSlideLayout: React.FC<{data?: Partial<ClosingSlideData>}> = ({ data
 
                 <div className="relative z-10 flex flex-col justify-center items-center h-full px-20 py-20 text-center">
                     <h1 className="text-7xl font-bold mb-8" style={{ color: "var(--text-heading-color, #ffffff)" }}>
-                        {slideData?.title || 'Let's Build Together'}
+                        {slideData?.title || "Let's Build Together"}
                     </h1>
 
                     <div className="w-32 h-1 mb-12 mx-auto rounded-full bg-white/40"></div>
 
                     <p className="text-3xl font-light mb-12 max-w-3xl text-white/90">
-                        {slideData?.subtitle || 'Ready to transform your vision into reality'}
+                        {slideData?.subtitle || "Ready to transform your vision into reality"}
                     </p>
 
                     <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-8 py-4 border border-white/30">

@@ -41,10 +41,12 @@ from services.content_chunker import (
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from utils.llm_provider import get_model
 from api.v1.ppt.endpoints.prompts import (
-    CONTENT_REWRITE_SYSTEM_PROMPT, 
+    CONTENT_REWRITE_SYSTEM_PROMPT,
     CONTENT_REWRITE_FLEXIBLE_SYSTEM_PROMPT,
     CONTENT_REWRITE_LITE_SYSTEM_PROMPT,
-    CONTENT_REWRITE_FLEXIBLE_LITE_SYSTEM_PROMPT
+    CONTENT_REWRITE_FLEXIBLE_LITE_SYSTEM_PROMPT,
+    CONTENT_TRANSLATE_SYSTEM_PROMPT,
+    CONTENT_TRANSLATE_LITE_SYSTEM_PROMPT
 )
 from enum import Enum
 
@@ -57,6 +59,7 @@ class RewriteMode(str, Enum):
     """Rewrite mode options"""
     STRICT = "strict"  # Exact structure matching - only rewrite text
     FLEXIBLE = "flexible"  # Allow structure changes - can add/remove elements
+    TRANSLATE = "translate"  # Translation mode - translate text while preserving exact structure
 
 
 def sanitize_rewritten_content(
@@ -78,6 +81,7 @@ def sanitize_rewritten_content(
     original_slides = original_structure.get("slides", [])
     rewritten_slides = rewritten_content.get("slides", [])
 
+    # TRANSLATE mode uses same strict validation as STRICT mode
     if mode == RewriteMode.FLEXIBLE:
         # Flexible mode: Just copy elements, no strict validation
         # We'll validate slide count and basic structure only
@@ -161,6 +165,8 @@ class RewriteRequest(BaseModel):
     placeholder_structure: Dict[str, Any]
     mode: RewriteMode = RewriteMode.STRICT  # Default to strict mode
     keywords: Optional[List[str]] = None  # List of must-have keywords
+    source_language: Optional[str] = None  # Source language for translation mode
+    target_language: Optional[str] = None  # Target language for translation mode
 
 
 class RewriteResponse(BaseModel):
@@ -241,6 +247,8 @@ async def generate_rewritten_content(request: RewriteRequest):
         placeholder_structure = request.placeholder_structure
         mode = request.mode
         keywords = request.keywords or []
+        source_language = request.source_language
+        target_language = request.target_language
 
         # Remove metadata fields before sending to LLM
         clean_structure = {
@@ -252,25 +260,32 @@ async def generate_rewritten_content(request: RewriteRequest):
         
         # Helper to get prompts based on mode
         def get_prompts(use_lite: bool):
-            if mode == RewriteMode.FLEXIBLE:
+            if mode == RewriteMode.TRANSLATE:
                 return (
-                    CONTENT_REWRITE_FLEXIBLE_LITE_SYSTEM_PROMPT 
-                    if use_lite 
+                    CONTENT_TRANSLATE_LITE_SYSTEM_PROMPT
+                    if use_lite
+                    else CONTENT_TRANSLATE_SYSTEM_PROMPT
+                )
+            elif mode == RewriteMode.FLEXIBLE:
+                return (
+                    CONTENT_REWRITE_FLEXIBLE_LITE_SYSTEM_PROMPT
+                    if use_lite
                     else CONTENT_REWRITE_FLEXIBLE_SYSTEM_PROMPT
                 )
             else:
                 return (
-                    CONTENT_REWRITE_LITE_SYSTEM_PROMPT 
-                    if use_lite 
+                    CONTENT_REWRITE_LITE_SYSTEM_PROMPT
+                    if use_lite
                     else CONTENT_REWRITE_SYSTEM_PROMPT
                 )
 
         # Format the user message template
-        mode_instruction = (
-            "You can adapt the structure as needed for better content flow."
-            if mode == RewriteMode.FLEXIBLE
-            else "you must fill these exact placeholders"
-        )
+        if mode == RewriteMode.TRANSLATE:
+            mode_instruction = f"Translate all text from {source_language} to {target_language} while preserving exact structure."
+        elif mode == RewriteMode.FLEXIBLE:
+            mode_instruction = "You can adapt the structure as needed for better content flow."
+        else:
+            mode_instruction = "you must fill these exact placeholders"
         
         keyword_instruction = ""
         if keywords:
@@ -387,16 +402,16 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
 
         # Validate that rewritten content matches original structure
         try:
-            if mode == RewriteMode.STRICT:
+            if mode == RewriteMode.STRICT or mode == RewriteMode.TRANSLATE:
                 validate_rewritten_content(clean_structure, rewritten_content)
-                
-                # Validate keywords in STRICT mode
-                if keywords:
+
+                # Validate keywords in STRICT mode (not for TRANSLATE mode)
+                if keywords and mode == RewriteMode.STRICT:
                     all_text = ""
                     for slide in rewritten_content.get("slides", []):
                         for element in slide.get("elements", []):
                             all_text += element.get("text", "") + " "
-                    
+
                     missing_keywords = [k for k in keywords if k.lower() not in all_text.lower()]
                     if missing_keywords:
                         raise ValueError(f"Rewritten content missing required keywords: {', '.join(missing_keywords)}")

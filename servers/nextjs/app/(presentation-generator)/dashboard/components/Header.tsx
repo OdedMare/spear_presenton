@@ -6,7 +6,7 @@ import Link from "next/link";
 import BackBtn from "@/components/BackBtn";
 import { usePathname } from "next/navigation";
 import HeaderNav from "@/app/(presentation-generator)/components/HeaderNab";
-import { Layout, FilePlus2, Sparkles } from "lucide-react";
+import { Layout, FilePlus2, Sparkles, Languages } from "lucide-react";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
 const Header = () => {
@@ -36,6 +36,16 @@ const Header = () => {
             >
               <Sparkles className="w-5 h-5" />
               <span className="text-sm font-medium font-inter">שכתוב AI</span>
+            </Link>
+            <Link
+              href="/translate"
+              prefetch={false}
+              onClick={() => trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/translate" })}
+              className="flex items-center gap-2 px-3 py-2 text-white hover:bg-primary/80 rounded-md transition-colors outline-none"
+              role="menuitem"
+            >
+              <Languages className="w-5 h-5" />
+              <span className="text-sm font-medium font-inter">תרגום AI</span>
             </Link>
             <Link
               href="/custom-template"
