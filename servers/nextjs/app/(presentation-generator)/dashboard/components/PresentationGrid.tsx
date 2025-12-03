@@ -3,7 +3,7 @@ import { PresentationCard } from "./PresentationCard";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import { PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Languages } from "lucide-react";
 
 interface PresentationGridProps {
   presentations: PresentationResponse[];
@@ -33,6 +33,10 @@ export const PresentationGrid = ({
     router.push("/content-rewrite");
   };
 
+  const handleAITranslate = () => {
+    router.push("/translate");
+  };
+
   const ShimmerCard = () => (
     <div className="flex flex-col gap-4 min-h-[200px] bg-white/70 rounded-lg p-4 animate-pulse">
       <div className="w-full h-24 bg-gray-200 rounded-lg"></div>
@@ -53,10 +57,10 @@ export const PresentationGrid = ({
       </div>
       <div className="text-center">
         <h3 className="font-semibold text-gray-700 group-hover:text-gray-900 mb-1">
-          Create {type === "slide" ? "New" : "Video"} Presentation
+          {type === "slide" ? "יצירת מצגת חדשה" : "יצירת מצגת וידאו"}
         </h3>
         <p className="text-sm text-gray-500 group-hover:text-gray-600 px-4">
-          Start from scratch and bring your ideas to life
+          התחל מאפס והפוך את הרעיונות שלך למציאות
         </p>
       </div>
     </div>
@@ -72,10 +76,29 @@ export const PresentationGrid = ({
       </div>
       <div className="text-center">
         <h3 className="font-semibold text-gray-700 group-hover:text-gray-900 mb-1">
-          AI Content Rewrite
+          שכתוב תוכן עם AI
         </h3>
         <p className="text-sm text-gray-500 group-hover:text-gray-600 px-4">
-          Keep your design, rewrite content with AI
+          שמור על עיצוב המצגת, שכתב את התוכן עם AI
+        </p>
+      </div>
+    </div>
+  );
+
+  const AITranslateCard = () => (
+    <div
+      onClick={handleAITranslate}
+      className="flex flex-col gap-4 min-h-[200px] cursor-pointer group border border-blue-400 hover:border-blue-600 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 hover:from-blue-50/90 hover:to-indigo-50/90 rounded-lg items-center justify-center transition-all duration-300"
+    >
+      <div className="rounded-full bg-blue-100 group-hover:bg-blue-200 p-4 transition-all duration-300">
+        <Languages className="w-8 h-8 text-blue-600 group-hover:text-blue-700 transition-all duration-300" />
+      </div>
+      <div className="text-center">
+        <h3 className="font-semibold text-gray-700 group-hover:text-gray-900 mb-1">
+          תרגום תוכן עם AI
+        </h3>
+        <p className="text-sm text-gray-500 group-hover:text-gray-600 px-4">
+          שמור על עיצוב המצגת, תרגם את התוכן עם AI
         </p>
       </div>
     </div>
@@ -102,7 +125,16 @@ export const PresentationGrid = ({
             <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
           </div>
         </div>
-        {[...Array(2)].map((_, i) => (
+        <div className="flex flex-col gap-4 min-h-[200px] cursor-pointer group border border-blue-400 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 rounded-lg items-center justify-center animate-pulse">
+          <div className="rounded-full bg-blue-100 p-4">
+            <div className="w-8 h-8" />
+          </div>
+          <div className="text-center space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-32 mx-auto"></div>
+            <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
+          </div>
+        </div>
+        {[...Array(1)].map((_, i) => (
           <ShimmerCard key={i} />
         ))}
       </div>
@@ -114,14 +146,15 @@ export const PresentationGrid = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <CreateNewCard />
         <AIRewriteCard />
-        <div className="col-span-2 flex items-center justify-center">
+        <AITranslateCard />
+        <div className="flex items-center justify-center">
           <div className="text-center text-gray-500">
             <p className="mb-2">{error}</p>
             <button
               onClick={() => window.location.reload()}
               className="text-primary hover:text-primary/80 underline"
             >
-              Try again
+              נסה שוב
             </button>
           </div>
         </div>
@@ -133,6 +166,7 @@ export const PresentationGrid = ({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <CreateNewCard />
       <AIRewriteCard />
+      <AITranslateCard />
       {presentations &&
         presentations.length > 0 &&
         presentations.map((presentation) => (

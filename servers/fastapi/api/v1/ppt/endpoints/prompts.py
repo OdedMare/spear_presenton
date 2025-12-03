@@ -281,6 +281,8 @@ STRICT RULES:
 	•	Maintain proportional text length
 	•	Respect maxLength and maxLines constraints
 	•	Preserve design integrity - no overflow, no clipping, no distortion
+	•	NEVER truncate with "..." or cut off mid-word - complete all sentences and words properly
+	•	If text doesn't fit, rephrase to be more concise instead of truncating
 
 ═══════════════════════════════════════════════════════════════════════════════
 INPUT STRUCTURE
@@ -426,6 +428,7 @@ OUTPUT RULES:
 ✓ Use \\n for line breaks
 ✓ Return ONLY clean JSON - no markdown, no code blocks, no explanations
 ✓ Maintain exact slideNumber values from input
+✓ If original text was empty ("") or very short (" "), keep it empty - DO NOT add placeholder text
 
 ✗ DO NOT change element IDs
 ✗ DO NOT reorder elements
@@ -433,6 +436,8 @@ OUTPUT RULES:
 ✗ DO NOT exceed maxLength
 ✗ DO NOT exceed maxLines
 ✗ DO NOT include originalLength, maxLength, maxLines in output
+✗ DO NOT add "null", "empty", "placeholder" or any filler text to empty shapes
+✗ DO NOT truncate with "..." or cut off words - always write complete sentences/words
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -660,6 +665,9 @@ RULES:
 3. Respect maxLength and maxLines. Text must fit the visual space.
 4. Keep text proportional to the original.
 5. No markdown, no explanations. ONLY JSON.
+6. If original text was empty (""), keep it empty - DO NOT add placeholder text, "null", or "empty".
+7. NEVER truncate with "..." or cut off mid-word - always complete sentences and words properly.
+8. If text doesn't fit, rephrase more concisely instead of truncating.
 
 INPUT STRUCTURE:
 {
@@ -699,6 +707,9 @@ RULES:
 5. You CAN remove slides/elements ("remove": true).
 6. Do NOT create new tables, charts, or SmartArt.
 7. Maintain the design style of the original.
+8. If original text was empty (""), keep it empty - DO NOT add placeholder text, "null", or "empty".
+9. NEVER truncate with "..." or cut off mid-word - always complete sentences and words.
+10. If text doesn't fit, rephrase more concisely instead of truncating.
 
 OUTPUT FORMAT:
 {
@@ -770,6 +781,8 @@ STRICT RULES:
 	•	Maintain proportional text length
 	•	Respect maxLength and maxLines constraints
 	•	Preserve design integrity - no overflow, no clipping, no distortion
+	•	NEVER truncate with "..." or cut off mid-word - complete all sentences and words properly
+	•	If text doesn't fit, rephrase to be more concise instead of truncating
 
 ═══════════════════════════════════════════════════════════════════════════════
 INPUT STRUCTURE
@@ -832,8 +845,9 @@ IMPORTANT NOTES:
 - Keep the EXACT same "id" values
 - Keep the EXACT same "slideNumber" values
 - Keep the EXACT same element order
-- Translate ALL text content
-- Empty text ("") can be translated if context suggests appropriate content, or left empty if truly not applicable
+- Translate ALL text content THAT EXISTS
+- Empty text ("") or very short text like " " MUST remain empty - DO NOT add placeholder text, "null", "empty", or any other filler text
+- NEVER add text to decorative shapes that were empty in the original
 """
 
 CONTENT_TRANSLATE_LITE_SYSTEM_PROMPT = """
@@ -850,6 +864,8 @@ RULES:
 6. Translate coherently - related elements should flow together
 7. For short text (titles, labels): be concise
 8. For long text (body, notes): preserve paragraph structure
+9. NEVER truncate with "..." or cut off mid-word - always complete sentences and words
+10. If text doesn't fit maxLength, rephrase more concisely instead of truncating
 
 INPUT: JSON with all text elements from presentation
 OUTPUT: Same JSON structure with translated text
@@ -859,6 +875,8 @@ CRITICAL:
 - Keep "slideNumber" values EXACTLY
 - Keep same element order
 - Output ONLY valid JSON, no explanations
+- Empty text ("") MUST stay empty - DO NOT add "null", "empty", or placeholder text
+- NEVER add text to shapes that were empty in the original
 
 Example:
 Input:

@@ -90,7 +90,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0]
       if (!selectedFile.name.endsWith('.pptx')) {
-        setError('Please upload a .pptx file')
+        setError('אנא העלה קובץ .pptx')
         return
       }
       setFile(selectedFile)
@@ -105,7 +105,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
       const isValid = validExtensions.some(ext => selectedFile.name.toLowerCase().endsWith(ext))
 
       if (!isValid) {
-        setError('Please upload a PDF or PPTX file')
+        setError('אנא העלה קובץ PDF או PPTX')
         return
       }
       setSourceFile(selectedFile)
@@ -131,7 +131,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
       })
 
       if (!uploadResponse.ok) {
-        throw new Error('Failed to upload source file')
+        throw new Error('נכשל בהעלאת קובץ המקור')
       }
 
       const filePaths = await uploadResponse.json()
@@ -148,7 +148,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
       })
 
       if (!decomposeResponse.ok) {
-        throw new Error('Failed to extract content from file')
+        throw new Error('נכשל בחילוץ תוכן מהקובץ')
       }
 
       const decomposedFiles = await decomposeResponse.json()
@@ -167,7 +167,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
         })
 
         if (!textResponse.ok) {
-          throw new Error('Failed to read extracted content')
+          throw new Error('נכשל בקריאת התוכן המחולץ')
         }
 
         const { content } = await textResponse.json()
@@ -178,7 +178,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
 
     } catch (err: any) {
       console.error('Extract content error:', err)
-      setError(err.message || 'An error occurred while extracting content')
+      setError(err.message || 'אירעה שגיאה בעת חילוץ התוכן')
     } finally {
       setLoading(false)
       setLoadingStage(null)
@@ -214,7 +214,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: 'Server error' }))
-        throw new Error(errorData.detail || 'Failed to extract placeholders')
+        throw new Error(errorData.detail || 'נכשל בחילוץ מציינים')
       }
 
       const data = await response.json()
@@ -223,9 +223,9 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
     } catch (err: any) {
       console.error('Upload error:', err)
       if (err.message === 'Failed to fetch') {
-        setError('Cannot connect to API server. Please ensure the backend is running.')
+        setError('לא ניתן להתחבר לשרת ה-API. אנא וודא שהשרת פועל.')
       } else {
-        setError(err.message || 'An error occurred while extracting placeholders')
+        setError(err.message || 'אירעה שגיאה בעת חילוץ המציינים')
       }
     } finally {
       setLoading(false)
@@ -282,14 +282,14 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to generate content')
+        throw new Error(errorData.detail || 'נכשל ביצירת תוכן')
       }
 
       const data = await response.json()
       setRewrittenContent(data.rewritten_content)
       setStep('preview')
     } catch (err: any) {
-      setError(err.message || 'An error occurred while generating content')
+      setError(err.message || 'אירעה שגיאה בעת יצירת התוכן')
     } finally {
       setLoading(false)
       setLoadingStage(null)
@@ -315,7 +315,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to create preview')
+        throw new Error(errorData.detail || 'נכשל ביצירת תצוגה מקדימה')
       }
 
       const blob = await response.blob()
@@ -329,7 +329,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
         window.URL.revokeObjectURL(url)
       }, 1000)
     } catch (err: any) {
-      setError(err.message || 'An error occurred while generating preview')
+      setError(err.message || 'אירעה שגיאה בעת יצירת תצוגה מקדימה')
     } finally {
       setLoading(false)
     }
@@ -355,7 +355,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to create download')
+        throw new Error(errorData.detail || 'נכשל ביצירת הורדה')
       }
 
       const blob = await response.blob()
@@ -370,7 +370,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
 
       setStep('download')
     } catch (err: any) {
-      setError(err.message || 'An error occurred while downloading')
+      setError(err.message || 'אירעה שגיאה בעת ההורדה')
     } finally {
       setLoading(false)
       setLoadingStage(null)
@@ -569,11 +569,8 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
       )}
 
       <main className="container mx-auto px-4 py-8" dir="rtl">
-        {/* Header */}
+        {/* Description and Help */}
         <div className="text-center mb-8 relative">
-          <h1 className="text-3xl font-semibold font-instrument_sans mb-2">
-            {isTranslateMode ? 'תרגום מצגת עם AI' : 'שכתוב תוכן עם AI'}
-          </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
             {isTranslateMode
               ? 'שמור על עיצוב המצגת, תרגם את התוכן עם AI'
@@ -700,7 +697,8 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                 {isTranslateMode ? 'בחר שפות ותרגם את המצגת שלך' : 'ספר ל-AI איזה תוכן מצגת אתה רוצה ליצור'}
               </p>
 
-              {/* Main Mode Toggle: Rewrite vs Translate */}
+              {/* Main Mode Toggle: Rewrite vs Translate - Only show on rewrite page */}
+              {defaultMode !== 'translate' && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">בחר מצב</label>
                 <div className="grid grid-cols-2 gap-4">
@@ -747,6 +745,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                   </button>
                 </div>
               </div>
+              )}
 
               {/* Translation Language Selectors */}
               {isTranslateMode && (
@@ -1041,7 +1040,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-semibold font-instrument_sans">
-                    {isTranslateMode ? 'תצוגה מקדימה של תרגום' : 'Preview Generated Content'}
+                    {isTranslateMode ? 'תצוגה מקדימה של תרגום' : 'תצוגה מקדימה של תוכן שנוצר'}
                   </h2>
                   {isTranslateMode && (
                     <p className="text-sm text-gray-600 mt-1">
@@ -1054,14 +1053,14 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
               <p className="text-gray-600 mb-4">
                 {isTranslateMode
                   ? 'בדוק וערוך את התרגום לפני ההורדה'
-                  : 'Review and edit the rewritten content before downloading'
+                  : 'בדוק וערוך את התוכן שנכתב מחדש לפני ההורדה'
                 }
               </p>
 
               <div className="mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800 flex items-center gap-2">
                   <Edit2 className="w-4 h-4" />
-                  Click on any slide to edit its content
+                  לחץ על כל שקופית כדי לערוך את התוכן שלה
                 </p>
               </div>
 
@@ -1075,7 +1074,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                       }`}>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-lg text-[#5146E5]">
-                          Slide {slide.slideNumber} ({slide.elements.length} elements)
+                          שקופית {slide.slideNumber} ({slide.elements.length} אלמנטים)
                         </h3>
                         <Button
                           onClick={() => toggleEditSlide(slideIdx)}
@@ -1086,12 +1085,12 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                           {isEditing ? (
                             <>
                               <Check className="w-4 h-4 mr-1" />
-                              Done
+                              סיום
                             </>
                           ) : (
                             <>
                               <Edit2 className="w-4 h-4 mr-1" />
-                              Edit
+                              עריכה
                             </>
                           )}
                         </Button>
@@ -1111,17 +1110,17 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                                   <span>{icon}</span>
                                   <span>{displayName}</span>
                                   {originalElement?.type === 'notes' && (
-                                    <span className="text-xs text-gray-500">(Speaker Notes)</span>
+                                    <span className="text-xs text-gray-500">(הערות דובר)</span>
                                   )}
                                   {maxLengthWarning && (
                                     <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">
-                                      Exceeds max length!
+                                      חורג מאורך מקסימלי!
                                     </span>
                                   )}
                                 </label>
                                 {originalElement && (
                                   <span className="text-xs text-gray-500">
-                                    {element.text.length}/{originalElement.maxLength || '∞'} chars
+                                    {element.text.length}/{originalElement.maxLength || '∞'} תווים
                                   </span>
                                 )}
                               </div>
@@ -1132,7 +1131,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                                   rows={Math.min(element.text.split('\n').length + 1, 5)}
                                   className={`w-full border-gray-300 focus:border-[#5146E5] focus:ring-[#5146E5] text-sm ${maxLengthWarning ? 'border-red-300' : ''
                                     }`}
-                                  placeholder={`Enter ${displayName.toLowerCase()} text...`}
+                                  placeholder={`הכנס טקסט ${displayName.toLowerCase()}...`}
                                 />
                               ) : (
                                 <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap bg-white p-3 rounded border border-gray-200">
@@ -1161,12 +1160,12 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Generating Preview...
+                      יוצר תצוגה מקדימה...
                     </>
                   ) : (
                     <>
                       <Eye className="w-5 h-5 mr-2" />
-                      Preview in PowerPoint
+                      תצוגה מקדימה ב-PowerPoint
                     </>
                   )}
                 </Button>
@@ -1179,12 +1178,12 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Creating Download...
+                      יוצר הורדה...
                     </>
                   ) : (
                     <>
                       <Download className="w-5 h-5 mr-2" />
-                      Download Presentation
+                      הורדת מצגת
                     </>
                   )}
                 </Button>
@@ -1196,7 +1195,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                 size="lg"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Start Over
+                התחל מחדש
               </Button>
             </div>
           </div>
@@ -1211,11 +1210,11 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
               </div>
 
               <h2 className="text-2xl font-semibold font-instrument_sans mb-3 text-green-600">
-                Download Complete!
+                ההורדה הושלמה!
               </h2>
 
               <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                The presentation with your new content and original design has been saved to your downloads folder.
+                המצגת עם התוכן החדש והעיצוב המקורי נשמרה בתיקיית ההורדות שלך.
               </p>
 
               <Button
@@ -1224,7 +1223,7 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                 size="lg"
               >
                 <RotateCcw className="w-5 h-5 mr-2" />
-                Create Another Presentation
+                צור מצגת נוספת
               </Button>
             </div>
           </div>

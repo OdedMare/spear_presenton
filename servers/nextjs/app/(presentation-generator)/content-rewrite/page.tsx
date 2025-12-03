@@ -9,9 +9,14 @@ export const metadata = {
 
 const Page = () => {
   return (
-    <div className="min-h-screen bg-[#E9E8F8]">
+    <div className="relative">
       <Header />
-      <ContentRewritePage />
+      <div className="flex flex-col items-center justify-center py-8">
+        <h1 className="text-3xl font-semibold font-instrument_sans">
+          שכתוב תוכן עם AI
+        </h1>
+      </div>
+      <ContentRewritePage defaultMode="rewrite" />
     </div>
   )
 }
