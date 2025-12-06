@@ -621,6 +621,7 @@ def inject_elements_into_slide(
         new_text = element.get("text", "")
         is_new = element.get("isNew", False)
         should_remove = element.get("remove", False)
+        font_size = element.get("fontSize")  # Optional font size
 
         if not element_id:
             logger.warning("Element missing ID, skipping")
@@ -694,6 +695,9 @@ def inject_elements_into_slide(
                         if current_shape == shape_num:
                             if inject_shape_text(child, new_text):
                                 injected_count += 1
+                                # Apply font size if specified
+                                if font_size:
+                                    apply_font_size_to_shape(child, font_size)
                             break
                         current_shape += 1
 
@@ -712,18 +716,81 @@ def inject_elements_into_slide(
     return slide_tree
 
 
+def apply_font_size_to_shape(shape_el: etree._Element, font_size: int) -> bool:
+    """
+    Apply font size to all text runs in a shape.
+
+    Args:
+        shape_el: The shape XML element
+        font_size: Font size in points
+
+    Returns:
+        True if successful
+    """
+    # Find text body
+    tx_body = shape_el.find(".//p:txBody", NS)
+    if tx_body is None:
+        return False
+
+    # Convert points to EMUs (1 point = 12700 EMUs)
+    font_size_emu = font_size * 100
+
+    # Find all text runs and update font size
+    for para in tx_body.findall("a:p", NS):
+        for run in para.findall("a:r", NS):
+            # Get or create run properties
+            rPr = run.find("a:rPr", NS)
+            if rPr is None:
+                rPr = etree.Element(f"{{{NS['a']}}}rPr")
+                # Insert rPr before text element
+                t = run.find("a:t", NS)
+                if t is not None:
+                    run.insert(run.index(t), rPr)
+                else:
+                    run.insert(0, rPr)
+
+            # Set font size
+            rPr.set("sz", str(font_size_emu))
+
+    return True
+
+
 def inject_new_shape(sp_tree: etree._Element, element: Dict[str, Any]) -> bool:
     """
     Inject a new shape into the slide by cloning an existing one.
+
+    Supports position and size control:
+    - position: "top", "middle", "bottom", "left", "right", "center", "top-left", "top-right", "bottom-left", "bottom-right"
+    - size: "small", "medium", "large", "full-width"
+    - layout: "single", "two-column-left", "two-column-right"
+    - shapeType: "textbox", "title", "subtitle" (default: "textbox")
+    - fontSize: font size in points (e.g., 12, 18, 24, 32)
     """
     element_id = element.get("id")
     new_text = element.get("text", "")
     target_ph_type = element.get("placeholderType", "body")
-    
-    # Find reference shape and bottom-most position
+    position = element.get("position", "bottom")  # Default: stack at bottom
+    size = element.get("size", "medium")  # Default: medium
+    layout = element.get("layout", "single")  # Default: single column
+    shape_type = element.get("shapeType", "textbox")  # Type of shape to create
+    font_size = element.get("fontSize")  # Optional font size in points
+
+    # Find reference shape and slide dimensions
     ref_shape = None
     max_y = 0
-    
+    min_x = 999999999
+    max_x = 0
+    slide_width = 9144000  # Standard slide width in EMUs (~25.4cm)
+    slide_height = 6858000  # Standard slide height in EMUs (~19.05cm)
+
+    # Map shape type to placeholder type for better reference selection
+    shape_type_to_ph = {
+        "title": "title",
+        "subtitle": "subTitle",
+        "textbox": "body",
+    }
+    target_ph_type = shape_type_to_ph.get(shape_type, "body")
+
     for child in sp_tree:
         tag_name = etree.QName(child.tag).localname
         if tag_name == "sp":
@@ -733,14 +800,18 @@ def inject_new_shape(sp_tree: etree._Element, element: Dict[str, Any]) -> bool:
                 off = xfrm.find("a:off", NS)
                 ext = xfrm.find("a:ext", NS)
                 if off is not None and ext is not None:
+                    x = int(off.get("x", 0))
                     y = int(off.get("y", 0))
+                    cx = int(ext.get("cx", 0))
                     cy = int(ext.get("cy", 0))
                     max_y = max(max_y, y + cy)
-            
+                    min_x = min(min_x, x)
+                    max_x = max(max_x, x + cx)
+
             # Check for matching placeholder type
             ph = child.find(".//p:ph", NS)
             ph_type = ph.get("type") if ph is not None else "body"
-            
+
             if ph_type == target_ph_type:
                 ref_shape = child
             elif ref_shape is None and ph_type == "body":
@@ -753,23 +824,91 @@ def inject_new_shape(sp_tree: etree._Element, element: Dict[str, Any]) -> bool:
              if tag_name == "sp" and child.find(".//p:txBody", NS) is not None:
                  ref_shape = child
                  break
-    
+
     if ref_shape is None:
         logger.warning(f"Could not find reference shape to clone for new element: {element_id}")
         return False
 
     # Clone
     new_shape = copy.deepcopy(ref_shape)
-    
-    # Position
-    MARGIN = 360000 # ~1cm
-    new_y = max_y + MARGIN
-    
+
+    # Calculate size based on size parameter
+    MARGIN = 360000  # ~1cm
+    size_map = {
+        "small": 0.3,    # 30% of available space
+        "medium": 0.5,   # 50% of available space
+        "large": 0.7,    # 70% of available space
+        "full-width": 0.9  # 90% of slide width
+    }
+    size_factor = size_map.get(size, 0.5)
+
+    # Get reference shape dimensions
+    ref_xfrm = ref_shape.find(".//a:xfrm", NS)
+    ref_cx = int(ref_xfrm.find("a:ext", NS).get("cx", 3000000)) if ref_xfrm is not None else 3000000
+    ref_cy = int(ref_xfrm.find("a:ext", NS).get("cy", 1000000)) if ref_xfrm is not None else 1000000
+
+    # Calculate new dimensions
+    if size == "full-width":
+        new_cx = int(slide_width * size_factor)
+        new_cy = ref_cy  # Keep height from reference
+    else:
+        new_cx = int(ref_cx * (size_factor * 2))  # Scale width
+        new_cy = int(ref_cy * (size_factor * 1.5))  # Scale height proportionally
+
+    # Calculate position based on position parameter
+    if layout == "two-column-left":
+        # Left column (50% width)
+        new_x = MARGIN
+        new_cx = int((slide_width - MARGIN * 3) / 2)
+        new_y = max_y + MARGIN
+    elif layout == "two-column-right":
+        # Right column (50% width)
+        new_x = int(slide_width / 2) + MARGIN
+        new_cx = int((slide_width - MARGIN * 3) / 2)
+        new_y = max_y + MARGIN
+    elif position == "top":
+        new_x = int((slide_width - new_cx) / 2)  # Centered horizontally
+        new_y = MARGIN
+    elif position == "middle" or position == "center":
+        new_x = int((slide_width - new_cx) / 2)
+        new_y = int((slide_height - new_cy) / 2)
+    elif position == "bottom":
+        new_x = int((slide_width - new_cx) / 2)
+        new_y = max_y + MARGIN
+    elif position == "left":
+        new_x = MARGIN
+        new_y = int((slide_height - new_cy) / 2)
+    elif position == "right":
+        new_x = slide_width - new_cx - MARGIN
+        new_y = int((slide_height - new_cy) / 2)
+    elif position == "top-left":
+        new_x = MARGIN
+        new_y = MARGIN
+    elif position == "top-right":
+        new_x = slide_width - new_cx - MARGIN
+        new_y = MARGIN
+    elif position == "bottom-left":
+        new_x = MARGIN
+        new_y = max_y + MARGIN
+    elif position == "bottom-right":
+        new_x = slide_width - new_cx - MARGIN
+        new_y = max_y + MARGIN
+    else:
+        # Default: stack at bottom
+        new_x = int((slide_width - new_cx) / 2)
+        new_y = max_y + MARGIN
+
+    # Apply position and size
     xfrm = new_shape.find(".//a:xfrm", NS)
     if xfrm is not None:
         off = xfrm.find("a:off", NS)
+        ext = xfrm.find("a:ext", NS)
         if off is not None:
+            off.set("x", str(new_x))
             off.set("y", str(new_y))
+        if ext is not None:
+            ext.set("cx", str(new_cx))
+            ext.set("cy", str(new_cy))
             
     # Update ID
     nv_pr = new_shape.find(".//p:nvSpPr", NS)
@@ -780,12 +919,69 @@ def inject_new_shape(sp_tree: etree._Element, element: Dict[str, Any]) -> bool:
             new_id = str(uuid.uuid4().int & (1<<32)-1) # Random uint32
             cNvPr.set("id", new_id)
             cNvPr.set("name", f"New Shape {element_id}")
-            
+
     # Inject Text
     inject_shape_text(new_shape, new_text)
-    
+
+    # Apply font size if specified
+    if font_size:
+        apply_font_size_to_shape(new_shape, font_size)
+
     sp_tree.append(new_shape)
     return True
+
+
+def clone_existing_element(sp_tree: etree._Element, source_id: str, element: Dict[str, Any]) -> bool:
+    """
+    Clone an existing element and create a new one with modified content/position.
+
+    Args:
+        sp_tree: The slide's shape tree
+        source_id: ID of the element to clone (e.g., "slide1_shape0")
+        element: Dict containing new element data (id, text, position, size)
+
+    Returns:
+        True if successful
+    """
+    new_id = element.get("id")
+    new_text = element.get("text", "")
+    position = element.get("position", "bottom")
+    size = element.get("size", "medium")
+    layout = element.get("layout", "single")
+
+    # Find the source element to clone
+    source_shape = None
+
+    if "_shape" in source_id:
+        parts = source_id.split("_")
+        if len(parts) >= 2:
+            shape_num = int(parts[1].replace("shape", ""))
+            current_shape = 0
+
+            for child in sp_tree:
+                tag_name = etree.QName(child.tag).localname
+                if tag_name == "sp":
+                    if current_shape == shape_num:
+                        source_shape = child
+                        break
+                    current_shape += 1
+
+    if source_shape is None:
+        logger.warning(f"Could not find source element to clone: {source_id}")
+        return False
+
+    # Create element dict for inject_new_shape
+    new_element_dict = {
+        "id": new_id,
+        "text": new_text,
+        "position": position,
+        "size": size,
+        "layout": layout
+    }
+
+    # Use inject_new_shape logic but with the cloned shape as reference
+    # For now, just use inject_new_shape which will find a similar placeholder type
+    return inject_new_shape(sp_tree, new_element_dict)
 
 
 def duplicate_slide(temp_dir: str, source_slide_index: int, new_slide_index: int) -> bool:
@@ -1071,9 +1267,17 @@ def inject_content_into_pptx(
 
                 slide_path = f"ppt/slides/{slide_file}"
                 elements = rewritten_slide.get("elements", [])
+                new_elements = rewritten_slide.get("newElements", [])
+
+                # Mark new elements with isNew flag for proper handling
+                for new_el in new_elements:
+                    new_el["isNew"] = True
+
+                # Combine existing and new elements
+                all_elements = elements + new_elements
 
                 # Inject all elements
-                modified_tree = inject_elements_into_slide(slide_path, zipf, elements, temp_dir)
+                modified_tree = inject_elements_into_slide(slide_path, zipf, all_elements, temp_dir)
 
                 # Write modified slide back to temp directory
                 output_slide_path = os.path.join(temp_dir, slide_path)

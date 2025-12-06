@@ -565,18 +565,28 @@ You MUST output ONLY JSON in this format:
           "placeholderType": "body"
         },
         {
-          "id": "slide1_shape_new_2",
+          "id": "new_subtitle_1",
           "text": "Additional content subtitle",
-          "type": "shape",
-          "placeholderType": "subtitle",
-          "isNew": true
+          "position": "top",
+          "size": "large"
         },
         {
-          "id": "slide1_shape_new_3",
+          "id": "new_body_1",
           "text": "More detailed explanation of the topic",
-          "type": "shape",
-          "placeholderType": "body",
-          "isNew": true
+          "position": "bottom",
+          "size": "medium"
+        },
+        {
+          "id": "new_left_column",
+          "text": "Left column content",
+          "layout": "two-column-left",
+          "size": "medium"
+        },
+        {
+          "id": "new_right_column",
+          "text": "Right column content",
+          "layout": "two-column-right",
+          "size": "medium"
         }
       ]
     },
@@ -597,11 +607,8 @@ You MUST output ONLY JSON in this format:
           "placeholderType": "body"
         },
         {
-          "id": "slide2_shape_new_2",
-          "text": "Key insights and conclusions",
-          "type": "shape",
-          "placeholderType": "body",
-          "isNew": true
+          "id": "new_conclusion_1",
+          "text": "Key insights and conclusions"
         }
       ]
     }
@@ -610,7 +617,7 @@ You MUST output ONLY JSON in this format:
 
 FLEXIBLE MODE RULES:
 ✓ You CAN add or remove slides - use "isNew": true for new slides
-✓ You CAN add new text shapes - use "slide{N}_shape_new_{INDEX}" as ID
+✓ You CAN add new text boxes - use IDs starting with "new_" (e.g., "new_title_1", "new_body_2")
 ✓ You CAN change the number of lines in body text (add/remove bullet points)
 ✓ You can exceed maxLength by up to 100% if content requires it
 ✓ You can change maxLines for body/content elements
@@ -618,21 +625,129 @@ FLEXIBLE MODE RULES:
 ✓ Use \\n for line breaks in bullet points
 
 NEW ELEMENT ID CONVENTIONS:
-- New text shapes: "slide{N}_shape_new_{INDEX}"
-  - Must include "type": "shape"
-  - Must include "placeholderType": "title", "subtitle", or "body"
-  - Must include "isNew": true
+- **CRITICAL: New text boxes MUST use ID starting with "new_"**
+  - Examples: "new_title_1", "new_subtitle_1", "new_body_1", "new_conclusion_1"
+  - The ID must start with "new_" prefix to be recognized as a new element
+  - The rest of the ID can be descriptive (title, subtitle, body, etc.)
+  - Only existing element IDs (from the input) should be used to modify existing elements
 - New slides: Use sequential slideNumber and mark with "isNew": true
 
+POSITION AND SIZE CONTROL FOR NEW ELEMENTS:
+New text boxes support optional positioning and sizing:
+
+**position** (optional): Where to place the new text box
+  - "top": Top center of slide
+  - "middle" or "center": Center of slide
+  - "bottom": Bottom center (default)
+  - "left": Middle left
+  - "right": Middle right
+  - "top-left": Top left corner
+  - "top-right": Top right corner
+  - "bottom-left": Bottom left corner
+  - "bottom-right": Bottom right corner
+
+**size** (optional): Size of the new text box
+  - "small": 30% of space (compact text boxes)
+  - "medium": 50% of space (default, balanced size)
+  - "large": 70% of space (prominent text boxes)
+  - "full-width": 90% of slide width (banner-style)
+
+**layout** (optional): Multi-column layouts
+  - "single": Default single column (full width)
+  - "two-column-left": Left half of slide (for side-by-side content)
+  - "two-column-right": Right half of slide (for side-by-side content)
+
+**shapeType** (optional): Type of text element to create
+  - "textbox": Regular text box (default)
+  - "title": Large title-style text
+  - "subtitle": Subtitle-style text
+
+**fontSize** (optional): Font size in points
+  - Use for emphasis or de-emphasis of text
+  - Examples: 12 (small), 18 (normal), 24 (large), 32 (very large), 44 (headline)
+  - Works for BOTH new elements and existing elements
+  - For existing elements, add "fontSize" to change the text size
+
+EXAMPLES:
+
+Creating a large title:
+{
+  "id": "new_header_1",
+  "text": "Main Section Header",
+  "position": "top",
+  "size": "full-width",
+  "shapeType": "title",
+  "fontSize": 44
+}
+
+Making existing text bigger:
+{
+  "id": "slide1_shape0",
+  "text": "Important Message",
+  "fontSize": 32
+}
+
+Two-column layout:
+{
+  "id": "new_left_content",
+  "text": "Benefits:\\n• Benefit 1\\n• Benefit 2",
+  "layout": "two-column-left",
+  "fontSize": 18
+}
+
+{
+  "id": "new_right_content",
+  "text": "Features:\\n• Feature 1\\n• Feature 2",
+  "layout": "two-column-right",
+  "fontSize": 18
+}
+
+Creating a subtitle:
+{
+  "id": "new_subtitle_1",
+  "text": "A compelling subtitle",
+  "position": "top",
+  "shapeType": "subtitle",
+  "fontSize": 24
+}
+
 IMPORTANT: Do NOT create new tables, SmartArt, or charts - only text shapes are supported for new elements
+
+ADVANCED FEATURES:
+
+**Element Removal:**
+Mark any element for deletion using "remove": true
+{
+  "id": "slide1_shape2",
+  "remove": true
+}
+
+**Element Cloning:**
+Clone styling from an existing element when creating a new one using "cloneFrom"
+{
+  "id": "new_callout_1",
+  "text": "New content with same styling",
+  "cloneFrom": "slide1_shape0",
+  "position": "bottom-right"
+}
+
+**Smart Slide Templates:**
+Common slide types you can create:
+- Title Slide: Large title at top, subtitle below
+- Agenda Slide: Numbered list of topics
+- Thank You Slide: Centered thank you message
+- Section Divider: Large centered text
+- Comparison Slide: Two-column layout with headers
+- Key Takeaway: Large centered quote or statement
 
 OUTPUT RULES:
 ✓ Return ONLY clean JSON - no markdown, no code blocks, no explanations
 ✓ Use sequential slideNumber values (1, 2, 3, ...)
-✓ Include "type" field for each element
-✓ Include "placeholderType" when creating shape elements (title/subtitle/body)
-✓ Use "isNew": true to mark new slides and new text shapes
+✓ **For new text boxes: ID MUST start with "new_"** (e.g. "new_title_1")
+✓ For existing elements: Use the exact ID from the input structure
+✓ Use "isNew": true to mark new slides
 ✓ Use "remove": true to delete existing slides or elements
+✓ Use "cloneFrom": "element_id" to copy styling from existing elements
 ✓ Use natural, flowing content that fits the user's prompt
 ✓ Prioritize content quality over strict structure matching
 

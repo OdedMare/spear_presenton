@@ -48,6 +48,21 @@ import uuid
 BLANK_SLIDE_LAYOUT = 6
 
 
+def is_rtl_text(text: str) -> bool:
+    """
+    Check if text contains right-to-left characters (Hebrew, Arabic).
+    """
+    if not text:
+        return False
+
+    for char in text:
+        # Hebrew: 0590-05FF, Arabic: 0600-06FF
+        if '\u0590' <= char <= '\u05FF' or '\u0600' <= char <= '\u06FF':
+            return True
+
+    return False
+
+
 class PptxPresentationCreator:
 
     def __init__(self, ppt_model: PptxPresentationModel, temp_dir: str):
@@ -287,6 +302,22 @@ class PptxPresentationCreator:
             )
         elif paragraph_model.text_runs:
             text_runs = paragraph_model.text_runs
+
+        # Detect RTL text and apply proper text direction
+        all_text = ""
+        if paragraph_model.text:
+            all_text = paragraph_model.text
+        elif text_runs:
+            all_text = " ".join([run.text for run in text_runs if hasattr(run, 'text')])
+
+        if is_rtl_text(all_text):
+            # Apply RTL formatting to paragraph
+            pPr = paragraph._element.get_or_add_pPr()
+            pPr.set('rtl', '1')
+            # Set right alignment for RTL text if no explicit alignment is set
+            if not paragraph_model.alignment:
+                from pptx.enum.text import PP_ALIGN
+                paragraph.alignment = PP_ALIGN.RIGHT
 
         for text_run_model in text_runs:
             text_run = paragraph.add_run()

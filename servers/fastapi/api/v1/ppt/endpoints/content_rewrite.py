@@ -84,12 +84,91 @@ def sanitize_rewritten_content(
 
     # TRANSLATE mode uses same strict validation as STRICT mode
     if mode == RewriteMode.FLEXIBLE:
-        # Flexible mode: Just copy elements, no strict validation
-        # We'll validate slide count and basic structure only
+        # Flexible mode: Support both modifying existing elements AND creating new ones
+        # Elements with IDs from original structure = modify existing
+        # Elements with ID starting with "new_" = create new text boxes
+        orig_slides_map = {s.get("slideNumber"): s for s in original_slides}
+
         for rewritten_slide in rewritten_slides:
+            slide_num = rewritten_slide.get("slideNumber")
+            orig_slide = orig_slides_map.get(slide_num)
+
+            if not orig_slide:
+                logger.warning(f"Flexible mode: Skipping unknown slide number {slide_num}")
+                continue
+
+            # Create a map of valid element IDs for this slide
+            valid_ids = {e.get("id") for e in orig_slide.get("elements", [])}
+
+            # Separate existing elements from new elements
+            existing_elements = []
+            new_elements = []
+
+            for rewritten_el in rewritten_slide.get("elements", []):
+                el_id = rewritten_el.get("id", "")
+                text = rewritten_el.get("text", "")
+
+                # Check if this is a new element (ID starts with "new_")
+                if el_id.startswith("new_"):
+                    # New element - will be created as a text box
+                    # Pass through position, size, layout, shapeType, and fontSize parameters
+                    new_element = {
+                        "id": el_id,
+                        "text": text
+                    }
+
+                    # Optional position control
+                    if "position" in rewritten_el:
+                        new_element["position"] = rewritten_el["position"]
+
+                    # Optional size control
+                    if "size" in rewritten_el:
+                        new_element["size"] = rewritten_el["size"]
+
+                    # Optional layout control
+                    if "layout" in rewritten_el:
+                        new_element["layout"] = rewritten_el["layout"]
+
+                    # Optional shape type (textbox, title, subtitle)
+                    if "shapeType" in rewritten_el:
+                        new_element["shapeType"] = rewritten_el["shapeType"]
+
+                    # Optional font size
+                    if "fontSize" in rewritten_el:
+                        new_element["fontSize"] = rewritten_el["fontSize"]
+
+                    # Optional clone source (to duplicate styling from existing element)
+                    if "cloneFrom" in rewritten_el:
+                        new_element["cloneFrom"] = rewritten_el["cloneFrom"]
+                        logger.info(f"Flexible mode: Element {el_id} will clone styling from {rewritten_el['cloneFrom']}")
+
+                    new_elements.append(new_element)
+                    logger.info(f"Flexible mode: Creating new element {el_id} on slide {slide_num} (position: {new_element.get('position', 'bottom')}, size: {new_element.get('size', 'medium')}, shapeType: {new_element.get('shapeType', 'textbox')}, fontSize: {new_element.get('fontSize', 'default')})")
+                elif el_id in valid_ids:
+                    # Existing element - will be modified via injection
+                    element_data = {
+                        "id": el_id,
+                        "text": text
+                    }
+
+                    # Support element removal
+                    if rewritten_el.get("remove", False):
+                        element_data["remove"] = True
+                        logger.info(f"Flexible mode: Marking element {el_id} for removal on slide {slide_num}")
+
+                    # Support font size changes for existing elements
+                    if "fontSize" in rewritten_el:
+                        element_data["fontSize"] = rewritten_el["fontSize"]
+                        logger.info(f"Flexible mode: Changing font size for {el_id} to {rewritten_el['fontSize']}pt")
+
+                    existing_elements.append(element_data)
+                else:
+                    logger.warning(f"Flexible mode: Skipping invalid element ID {el_id} on slide {slide_num}")
+
             sanitized["slides"].append({
-                "slideNumber": rewritten_slide.get("slideNumber"),
-                "elements": rewritten_slide.get("elements", [])
+                "slideNumber": slide_num,
+                "elements": existing_elements,
+                "newElements": new_elements  # Separate list for new elements
             })
         return sanitized
 
