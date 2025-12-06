@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea'
 import Wrapper from '@/components/Wrapper'
 import { Input } from '@/components/ui/input'
 import { TutorialButton } from '@/components/tutorial/TutorialButton'
+import { useSelector } from 'react-redux'
+import { RootState } from '@/store/store'
 
 
 
@@ -67,6 +69,10 @@ interface ContentRewritePageProps {
 }
 
 export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentRewritePageProps = {}) {
+  // Get user config from Redux for translation agent settings
+  const userConfigState = useSelector((state: RootState) => state.userConfig)
+  const llmConfig = userConfigState.llm_config
+
   const [file, setFile] = useState<File | null>(null)
   const [sourceFile, setSourceFile] = useState<File | null>(null) // PDF/PPTX to extract content from
   const [extractedContent, setExtractedContent] = useState<string>('')
@@ -85,6 +91,47 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState<'upload' | 'prompt' | 'preview' | 'download'>('upload')
   const [editingSlide, setEditingSlide] = useState<number | null>(null)
+
+  // Translation agents state
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [translationParserModel, setTranslationParserModel] = useState<string>(llmConfig.TRANSLATION_PARSER_MODEL || '')
+  const [translationModel, setTranslationModel] = useState<string>(llmConfig.TRANSLATION_MODEL || '')
+  const [translationValidatorModel, setTranslationValidatorModel] = useState<string>(llmConfig.TRANSLATION_VALIDATOR_MODEL || '')
+
+  // Fetch models from custom URL when in translate mode
+  React.useEffect(() => {
+    const fetchModels = async () => {
+      if (!isTranslateMode) return
+
+      // Use translation-specific URL if set, otherwise fall back to main custom URL
+      const customUrl = llmConfig.TRANSLATION_CUSTOM_URL || llmConfig.CUSTOM_LLM_URL
+      const customApiKey = llmConfig.TRANSLATION_CUSTOM_API_KEY || llmConfig.CUSTOM_LLM_API_KEY
+
+      if (!customUrl) return
+
+      try {
+        const response = await fetch('/api/v1/ppt/openai/models/available', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: customUrl,
+            api_key: customApiKey,
+          }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableModels(data)
+        }
+      } catch (error) {
+        console.error('Error fetching models:', error)
+      }
+    }
+
+    fetchModels()
+  }, [isTranslateMode, llmConfig.TRANSLATION_CUSTOM_URL, llmConfig.TRANSLATION_CUSTOM_API_KEY, llmConfig.CUSTOM_LLM_URL, llmConfig.CUSTOM_LLM_API_KEY])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -277,6 +324,14 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
           mode: mode,
           source_language: isTranslateMode ? sourceLanguage : undefined,
           target_language: isTranslateMode ? targetLanguage : undefined,
+          // Translation agent configuration (only sent in translate mode)
+          // Use locally selected models if available, otherwise fall back to settings
+          translation_use_agents: isTranslateMode ? (llmConfig.TRANSLATION_USE_AGENTS ?? true) : undefined,
+          translation_parser_use_llm: isTranslateMode ? llmConfig.TRANSLATION_PARSER_USE_LLM : undefined,
+          translation_parser_model: isTranslateMode ? (translationParserModel || llmConfig.TRANSLATION_PARSER_MODEL) : undefined,
+          translation_model: isTranslateMode ? (translationModel || llmConfig.TRANSLATION_MODEL) : undefined,
+          translation_batch_size: isTranslateMode ? llmConfig.TRANSLATION_BATCH_SIZE : undefined,
+          translation_validator_model: isTranslateMode ? (translationValidatorModel || llmConfig.TRANSLATION_VALIDATOR_MODEL) : undefined,
         }),
       })
 
@@ -783,6 +838,91 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                       </select>
                     </div>
                   </div>
+
+                  {/* Translation Agent Model Selection */}
+                  {availableModels.length > 0 && (
+                    <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">בחר מודלים לכל סוכן תרגום</h3>
+                      <p className="text-xs text-gray-600 mb-4">
+                        בחר מודלים שונים לכל שלב בתהליך התרגום למיטוב עלות ואיכות
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Agent 1: Parser */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2">
+                            סוכן 1: מנתח 🧠
+                          </label>
+                          <select
+                            value={translationParserModel}
+                            onChange={(e) => setTranslationParserModel(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-[#5146E5] focus:ring-1 focus:ring-[#5146E5]"
+                            dir="rtl"
+                          >
+                            <option value="">מבוסס-כללים (מומלץ)</option>
+                            {availableModels.map((model) => (
+                              <option key={model} value={model}>
+                                {model}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1">מזהה מה לתרגם</p>
+                        </div>
+
+                        {/* Agent 2: Translator */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2">
+                            סוכן 2: מתרגם ⚡
+                          </label>
+                          <select
+                            value={translationModel}
+                            onChange={(e) => setTranslationModel(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-[#5146E5] focus:ring-1 focus:ring-[#5146E5]"
+                            dir="rtl"
+                          >
+                            <option value="">בחר מודל</option>
+                            {availableModels.map((model) => (
+                              <option key={model} value={model}>
+                                {model}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1">מבצע את התרגום (החשוב ביותר)</p>
+                        </div>
+
+                        {/* Agent 3: Validator */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2">
+                            סוכן 3: מאמת ✓
+                          </label>
+                          <select
+                            value={translationValidatorModel}
+                            onChange={(e) => setTranslationValidatorModel(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-[#5146E5] focus:ring-1 focus:ring-[#5146E5]"
+                            dir="rtl"
+                          >
+                            <option value="">בחר מודל</option>
+                            {availableModels.map((model) => (
+                              <option key={model} value={model}>
+                                {model}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1">בודק ומתקן</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 text-xs text-gray-600 bg-white p-2 rounded border border-blue-100">
+                        💡 <strong>טיפ:</strong> השתמש במודל הטוב ביותר שלך לסוכן 2 (המתרגם), ובמודלים מהירים וזולים לסוכנים 1 ו-3
+                      </div>
+                    </div>
+                  )}
+
+                  {availableModels.length === 0 && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+                      💡 כדי לבחור מודלים ספציפיים לכל סוכן, הגדר כתובת URL מותאמת אישית בהגדרות
+                    </div>
+                  )}
                 </div>
               )}
 

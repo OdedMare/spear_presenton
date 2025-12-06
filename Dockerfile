@@ -31,6 +31,7 @@ RUN pip install \
     aiohttp aiomysql aiosqlite asyncpg fastapi[standard] \
     pathvalidate pdfplumber chromadb sqlmodel \
     anthropic google-genai openai fastmcp dirtyjson \
+    deep-translator langdetect \
     && pip install docling --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Install ollama (optional: may fail silently if not ARM)

@@ -38,6 +38,7 @@ from services.content_chunker import (
     combine_chunked_results,
     estimate_structure_tokens
 )
+from services.translation_agents import translate_with_agents
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from utils.llm_provider import get_model
 from api.v1.ppt.endpoints.prompts import (
@@ -168,6 +169,14 @@ class RewriteRequest(BaseModel):
     source_language: Optional[str] = None  # Source language for translation mode
     target_language: Optional[str] = None  # Target language for translation mode
 
+    # Translation Agents Configuration
+    translation_use_agents: Optional[bool] = None
+    translation_parser_use_llm: Optional[bool] = None
+    translation_parser_model: Optional[str] = None
+    translation_model: Optional[str] = None
+    translation_batch_size: Optional[int] = None
+    translation_validator_model: Optional[str] = None
+
 
 class RewriteResponse(BaseModel):
     """Response model for placeholder extraction"""
@@ -241,6 +250,7 @@ async def generate_rewritten_content(request: RewriteRequest):
     - Automatically chunks large presentations
     - Tries full prompt first, falls back to lite prompt on failure
     - Processes chunks sequentially
+    - For TRANSLATE mode: Uses multi-agent system with configurable models
     """
     try:
         user_prompt = request.user_prompt
@@ -254,6 +264,77 @@ async def generate_rewritten_content(request: RewriteRequest):
         clean_structure = {
             "slides": placeholder_structure.get("slides", [])
         }
+
+        # ===== TRANSLATION MODE: Use Multi-Agent System =====
+        if mode == RewriteMode.TRANSLATE and source_language and target_language:
+            logger.info(f"Using multi-agent translation: {source_language} → {target_language}")
+
+            # Get agent configurations from request (with env var fallbacks)
+            use_agents = (
+                request.translation_use_agents
+                if request.translation_use_agents is not None
+                else os.getenv("TRANSLATION_USE_AGENTS", "true").lower() == "true"
+            )
+
+            if use_agents:
+                # Configure agents from request or environment variables
+                parser_config = {
+                    "use_llm": (
+                        request.translation_parser_use_llm
+                        if request.translation_parser_use_llm is not None
+                        else os.getenv("TRANSLATION_PARSER_USE_LLM", "false").lower() == "true"
+                    ),
+                    "model": (
+                        request.translation_parser_model
+                        if request.translation_parser_model
+                        else os.getenv("TRANSLATION_PARSER_MODEL", "gpt-4o-mini")
+                    )
+                }
+
+                translator_config = {
+                    "model": (
+                        request.translation_model
+                        if request.translation_model
+                        else os.getenv("TRANSLATION_MODEL", "gpt-4")
+                    ),
+                    "batch_size": (
+                        request.translation_batch_size
+                        if request.translation_batch_size is not None
+                        else int(os.getenv("TRANSLATION_BATCH_SIZE", "20"))
+                    )
+                }
+
+                validator_config = {
+                    "model": (
+                        request.translation_validator_model
+                        if request.translation_validator_model
+                        else os.getenv("TRANSLATION_VALIDATOR_MODEL", "gpt-4o-mini")
+                    )
+                }
+
+                logger.info(f"Agent Config - Parser: {parser_config['model']}, "
+                          f"Translator: {translator_config['model']}, "
+                          f"Validator: {validator_config['model']}")
+
+                # Use agent-based translation
+                rewritten_content = await translate_with_agents(
+                    placeholder_structure=clean_structure,
+                    source_language=source_language,
+                    target_language=target_language,
+                    parser_config=parser_config,
+                    translator_config=translator_config,
+                    validator_config=validator_config
+                )
+
+                logger.info("Multi-agent translation completed successfully")
+
+                return RewrittenContentResponse(
+                    rewritten_content=rewritten_content,
+                    message=f"Successfully translated {len(rewritten_content['slides'])} slides using multi-agent system"
+                )
+            else:
+                logger.info("Multi-agent system disabled, using legacy translation flow")
+                # Fall through to legacy translation below
 
         # Determine prompt mode from env (default to "auto" which means try full then lite)
         prompt_mode = os.getenv("CONTENT_REWRITE_PROMPT_MODE", "auto").lower()

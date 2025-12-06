@@ -22,6 +22,7 @@ import {
 import { IMAGE_PROVIDERS } from "@/utils/providerConstants";
 import { LLMConfig } from "@/types/llm_config";
 import TemplateModelConfig from "./TemplateModelConfig";
+import TranslationAgentsConfig from "./TranslationAgentsConfig";
 
 // Button state interface
 interface ButtonState {
@@ -330,6 +331,14 @@ export default function LLMProviderSelection({
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Translation Agents Configuration */}
+        <div className="mb-8 border-t border-gray-200 pt-8">
+          <TranslationAgentsConfig
+            llmConfig={llmConfig}
+            setLlmConfig={setLlmConfig}
+          />
         </div>
 
       </div>

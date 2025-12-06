@@ -36,6 +36,16 @@ export interface LLMConfig {
   EXTENDED_REASONING?: boolean;
   WEB_GROUNDING?: boolean;
 
+  // Translation Agents Configuration
+  TRANSLATION_USE_AGENTS?: boolean;
+  TRANSLATION_PARSER_USE_LLM?: boolean;
+  TRANSLATION_PARSER_MODEL?: string;
+  TRANSLATION_MODEL?: string;
+  TRANSLATION_BATCH_SIZE?: number;
+  TRANSLATION_VALIDATOR_MODEL?: string;
+  TRANSLATION_CUSTOM_URL?: string;
+  TRANSLATION_CUSTOM_API_KEY?: string;
+
   // Only used in UI settings
   USE_CUSTOM_URL?: boolean;
 }
