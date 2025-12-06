@@ -100,11 +100,11 @@ const ImageEditor = ({
         await PresentationGenerationApi.getPreviousGeneratedImages();
       setPreviousGeneratedImages(response);
     } catch (error: any) {
-      toast.error("Failed to get previous generated images. Please try again.");
+      toast.error("נכשל לקבל תמונות שנוצרו בעבר. אנא נסה שוב.");
       console.error("error in getting previous generated images", error);
       setError(
         error.message ||
-          "Failed to get previous generated images. Please try again."
+          "נכשל לקבל תמונות שנוצרו בעבר. אנא נסה שוב."
       );
     }
   };

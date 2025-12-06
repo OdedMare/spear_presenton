@@ -102,7 +102,7 @@ const MarketSizeSlideLayout: React.FC<MarketSizeSlideProps> = ({
         <div className="flex h-full px-16 pb-16">
           {/* Title and Map on the left */}
           <div className="flex flex-col items-center justify-center w-[48%] pr-8 h-full">
-            <div className="flex flex-col items-left justify-center h-full w-full">
+            <div className="flex flex-col items-left justify-center w-full max-w-[1280px] aspect-video mx-auto relative overflow-hidden rounded-md h-full">
               {/* Move the title down to align with the top of the market stats */}
               <h1
                 className="text-6xl font-bold text-blue-600 mb-8 leading-tight text-left"

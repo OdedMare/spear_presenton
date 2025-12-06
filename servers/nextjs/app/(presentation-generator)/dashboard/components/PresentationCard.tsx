@@ -43,14 +43,14 @@ export const PresentationCard = ({
     const response = await DashboardApi.deletePresentation(id);
 
     if (response) {
-      toast.success("Presentation deleted", {
-        description: "The presentation has been deleted successfully",
+      toast.success("המצגת נמחקה", {
+        description: "המצגת נמחקה בהצלחה",
       });
       if (onDeleted) {
         onDeleted(id);
       }
     } else {
-      toast.error("Error deleting presentation");
+      toast.error("שגיאה במחיקת המצגת");
     }
   };
   return (
@@ -78,7 +78,7 @@ export const PresentationCard = ({
                 className="flex items-center justify-between w-full px-2 py-1 hover:bg-gray-100"
                 onClick={handleDelete}
               >
-                <p>Delete</p>
+                <p>מחק</p>
                 <TrashIcon className="w-4 h-4 text-red-500" />
               </button>
             </PopoverContent>

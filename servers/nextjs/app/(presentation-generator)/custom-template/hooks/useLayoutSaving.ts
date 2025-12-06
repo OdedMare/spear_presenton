@@ -51,7 +51,7 @@ export const useLayoutSaving = (
 
         const data = await ApiResponseHandler.handleResponse(
           response,
-          `Failed to convert slide ${slide.slide_number} to React`
+          `נכשל להמיר שקופית ${slide.slide_number} ל-React`
         );
 
         console.log(`✅ Successfully converted slide ${slide.slide_number} to React (deterministic)`);
@@ -69,15 +69,15 @@ export const useLayoutSaving = (
 
         if (retryCount < maxRetries) {
           const waitTime = 5 * 1000; // 5 seconds between retries (fast - no VLM delays!)
-          toast.error(`Failed to convert slide ${slide.slide_number}. Retrying...`, {
-            description: `Attempt ${retryCount}/${maxRetries}. Error: ${error instanceof Error ? error.message : "An unexpected error occurred"}`,
+          toast.error(`נכשל להמיר שקופית ${slide.slide_number}. מנסה שוב...`, {
+            description: `ניסיון ${retryCount}/${maxRetries}. שגיאה: ${error instanceof Error ? error.message : "אירעה שגיאה לא צפויה"}`,
           });
 
           await delay(waitTime);
 
-          toast.info(`Retrying conversion for slide ${slide.slide_number}...`);
+          toast.info(`מנסה שוב להמיר שקופית ${slide.slide_number}...`);
         } else {
-          throw new Error(`Failed to convert slide ${slide.slide_number} after ${maxRetries} attempts: ${error instanceof Error ? error.message : "An unexpected error occurred"}`);
+          throw new Error(`נכשל להמיר שקופית ${slide.slide_number} אחרי ${maxRetries} ניסיונות: ${error instanceof Error ? error.message : "אירעה שגיאה לא צפויה"}`);
         }
       }
     }
@@ -85,7 +85,7 @@ export const useLayoutSaving = (
 
   const saveLayout = useCallback(async (layoutName: string, description: string): Promise<string | null> => {
     if (!slides.length) {
-      toast.error("No slides to save");
+      toast.error("אין שקופיות לשמירה");
       return null;
     }
 
@@ -105,7 +105,7 @@ export const useLayoutSaving = (
         const slide = slides[i];
 
         if (!slide.html) {
-          toast.error(`Slide ${slide.slide_number} has no HTML content`);
+          toast.error(`שקופית ${slide.slide_number} אין לה תוכן HTML`);
           continue;
         }
 
@@ -118,15 +118,15 @@ export const useLayoutSaving = (
 
           // Update progress
           toast.success(
-            `Converted slide ${slide.slide_number} to React component`
+            `שקופית ${slide.slide_number} הומרה לקומפוננטת React`
           );
         } catch (error) {
           console.error(`Error converting slide ${slide.slide_number}:`, error);
-          toast.error(`Failed to convert slide ${slide.slide_number} after all retries`, {
+          toast.error(`נכשל להמיר שקופית ${slide.slide_number} אחרי כל הניסיונות`, {
             description:
               error instanceof Error
                 ? error.message
-                : "An unexpected error occurred",
+                : "אירעה שגיאה לא צפויה",
           });
           // Continue with other slides even if one fails
         } finally {
@@ -136,7 +136,7 @@ export const useLayoutSaving = (
       }
 
       if (reactComponents.length === 0) {
-        toast.error("No slides were successfully converted");
+        toast.error("אף שקופית לא הומרה בהצלחה");
         return null;
       }
 
@@ -162,32 +162,32 @@ export const useLayoutSaving = (
 
       const data = await ApiResponseHandler.handleResponse(
         saveResponse,
-        "Failed to save layout components"
+        "נכשל לשמור קומפוננטות מבנה"
       );
 
       if (!data.success) {
-        toast.error("Failed to save layout components");
+        toast.error("נכשל לשמור קומפוננטות מבנה");
         return null;
       }
 
-      toast.success("Layout saved successfully");
+      toast.success("המבנה נשמר בהצלחה");
 
       // Mark all slides as saved (remove modified flag)
       slides.forEach((slide) => {
         slide.modified = false;
       });
 
-      toast.success(`Layout "${layoutName}" saved successfully`);
+      toast.success(`המבנה "${layoutName}" נשמר בהצלחה`);
       refetch();
       closeSaveModal();
       return presentationId;
     } catch (error) {
       console.error("Error saving layout:", error);
-      toast.error("Failed to save layout", {
+      toast.error("נכשל לשמור מבנה", {
         description:
           error instanceof Error
             ? error.message
-            : "An unexpected error occurred",
+            : "אירעה שגיאה לא צפויה",
       });
       return null;
     } finally {

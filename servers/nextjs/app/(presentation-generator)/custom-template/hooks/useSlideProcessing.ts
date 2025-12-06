@@ -39,7 +39,7 @@ export const useSlideProcessing = (
 
         const htmlData = await ApiResponseHandler.handleResponse(
           htmlResponse,
-          `Failed to render slide ${slide.slide_number} to HTML`
+          `נכשל לעבד שקופית ${slide.slide_number} ל-HTML`
         );
 
         console.log(`✅ Successfully processed slide ${slide.slide_number} deterministically`);
@@ -78,7 +78,7 @@ export const useSlideProcessing = (
       } catch (error) {
         console.error(`Error processing slide ${slide.slide_number}:`, error);
         const errorMessage =
-          error instanceof Error ? error.message : "Failed to render to HTML";
+          error instanceof Error ? error.message : "נכשל לעבד ל-HTML";
 
         // Update slide with error
         setSlides((prev) => {
@@ -117,7 +117,7 @@ export const useSlideProcessing = (
   // Process PPTX file to extract layout JSON (NO SCREENSHOTS, NO OCR, NO VLM)
   const processFile = useCallback(async () => {
     if (!selectedFile) {
-      toast.error("Please select a PPTX or POTX file first");
+      toast.error("אנא בחר קובץ PPTX או POTX תחילה");
       return;
     }
 
@@ -141,11 +141,11 @@ export const useSlideProcessing = (
 
       const slidesResponseData = await ApiResponseHandler.handleResponse(
         layoutResponse,
-        "Failed to process PPTX file"
+        "נכשל לעבד קובץ PPTX"
       );
 
       if (!slidesResponseData.success || !slidesResponseData.slides?.length) {
-        throw new Error("No slides found in the uploaded file");
+        throw new Error("לא נמצאו שקופיות בקובץ שהועלה");
       }
 
       // Extract fonts data
@@ -173,11 +173,11 @@ export const useSlideProcessing = (
         slidesResponseData.fonts.not_supported_fonts.length > 0;
 
       toast.success(
-        `🚀 Deterministic Layout Extraction Complete!`,
+        `🚀 חילוץ מבנה הושלם!`,
         {
           description: hasUnsupported
-            ? `Please upload unsupported fonts, then click Extract Template`
-            : `All fonts supported! Starting HTML generation (no VLM needed)...`
+            ? `אנא העלה גופנים לא נתמכים, ואז לחץ על חלץ תבנית`
+            : `כל הגופנים נתמכים! מתחיל יצירת HTML...`
         }
       );
 
@@ -189,8 +189,8 @@ export const useSlideProcessing = (
     } catch (error) {
       console.error("Error processing file:", error);
       const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error("Processing failed", {
+        error instanceof Error ? error.message : "אירעה שגיאה לא צפויה";
+      toast.error("העיבוד נכשל", {
         description: errorMessage,
       });
     } finally {

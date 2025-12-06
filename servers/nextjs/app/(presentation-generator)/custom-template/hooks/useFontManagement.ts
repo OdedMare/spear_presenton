@@ -54,7 +54,7 @@ export const useFontManagement = () => {
       // Check if font is already uploaded
       const existingFont = UploadedFonts.find((f) => f.fontName === fontName);
       if (existingFont) {
-        toast.info(`Font "${fontName}" is already uploaded`);
+        toast.info(`הגופן "${fontName}" כבר הועלה`);
         return existingFont.fontUrl;
       }
 
@@ -66,7 +66,7 @@ export const useFontManagement = () => {
 
       if (!validExtensions.includes(fileExtension)) {
         toast.error(
-          "Invalid font file type. Please upload .ttf, .otf, .woff, .woff2, or .eot files"
+          "סוג קובץ גופן לא תקין. אנא העלה קבצי .ttf, .otf, .woff, .woff2, או .eot"
         );
         return null;
       }
@@ -74,7 +74,7 @@ export const useFontManagement = () => {
       // Validate file size (10MB limit)
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
-        toast.error("Font file size must be less than 10MB");
+        toast.error("גודל קובץ הגופן חייב להיות פחות מ-10MB");
         return null;
       }
 
@@ -88,7 +88,7 @@ export const useFontManagement = () => {
         });
 
         if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
+          throw new Error(`ההעלאה נכשלה: ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -101,18 +101,18 @@ export const useFontManagement = () => {
           };
 
           setUploadedFonts((prev) => [...prev, newFont]);
-          toast.success(`Font "${fontName}" uploaded successfully`);
+          toast.success(`הגופן "${fontName}" הועלה בהצלחה`);
           return newFont.fontUrl;
         } else {
-          throw new Error(data.message || "Upload failed");
+          throw new Error(data.message || "ההעלאה נכשלה");
         }
       } catch (error) {
         console.error("Error uploading font:", error);
-        toast.error(`Failed to upload font "${fontName}"`, {
+        toast.error(`נכשל להעלות את הגופן "${fontName}"`, {
           description:
             error instanceof Error
               ? error.message
-              : "An unexpected error occurred",
+              : "אירעה שגיאה לא צפויה",
         });
         return null;
       }
@@ -131,7 +131,7 @@ export const useFontManagement = () => {
       styleElement.remove();
     }
 
-    toast.info("Font removed globally");
+    toast.info("הגופן הוסר בהצלחה");
   }, []);
 
   const getAllUnsupportedFonts = useCallback((): string[] => {

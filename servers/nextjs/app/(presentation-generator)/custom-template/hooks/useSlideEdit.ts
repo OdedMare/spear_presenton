@@ -88,7 +88,7 @@ export const useSlideEdit = (
       return;
 
     if (!prompt.trim()) {
-      alert("Please enter a prompt before saving.");
+      alert("אנא הזן הנחיה לפני שמירה.");
       return;
     }
 
@@ -148,7 +148,7 @@ export const useSlideEdit = (
       });
 
       if (!response.ok) {
-        throw new Error(`API call failed: ${response.statusText}`);
+        throw new Error(`קריאת API נכשלה: ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -178,8 +178,8 @@ export const useSlideEdit = (
     } catch (error) {
       console.error("Error updating slide:", error);
       alert(
-        `Error updating slide: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `שגיאה בעדכון שקופית: ${
+          error instanceof Error ? error.message : "שגיאה לא ידועה"
         }`
       );
     } finally {

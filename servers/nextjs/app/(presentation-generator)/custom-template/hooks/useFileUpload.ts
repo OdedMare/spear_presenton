@@ -14,14 +14,14 @@ export const useFileUpload = () => {
       const isPptx = lowerName.endsWith(".pptx") || lowerName.endsWith(".potx");
       const isPdf = lowerName.endsWith(".pdf");
       if (!isPptx && !isPdf) {
-        toast.error("Please select a valid PDF, PPTX, or POTX file");
+        toast.error("אנא בחר קובץ PDF, PPTX או POTX תקין");
         return;
       }
 
       // Validate file size (100MB limit)
       const maxSize = 100 * 1024 * 1024; // 100MB
       if (file.size > maxSize) {
-        toast.error("File size must be less than 100MB");
+        toast.error("גודל הקובץ חייב להיות פחות מ-100MB");
         return;
       }
 

@@ -46,7 +46,7 @@ const SlideContent = ({ slide, index, presentationId }: SlideContentProps) => {
     ) as HTMLInputElement;
     const value = element?.value;
     if (!value?.trim()) {
-      toast.error("Please enter a prompt before submitting");
+      toast.error("אנא הזן הנחיה לפני שליחה");
       return;
     }
     setIsUpdating(true);
@@ -60,12 +60,12 @@ const SlideContent = ({ slide, index, presentationId }: SlideContentProps) => {
 
       if (response) {
         dispatch(updateSlide({ index: slide.index, slide: response }));
-        toast.success("Slide updated successfully");
+        toast.success("השקופית עודכנה בהצלחה");
       }
     } catch (error: any) {
       console.error("Error in slide editing:", error);
-      toast.error("Error in slide editing.", {
-        description: error.message || "Error in slide editing.",
+      toast.error("שגיאה בעריכת השקופית.", {
+        description: error.message || "שגיאה בעריכת השקופית.",
       });
     } finally {
       setIsUpdating(false);
@@ -83,8 +83,8 @@ const SlideContent = ({ slide, index, presentationId }: SlideContentProps) => {
 
     } catch (error: any) {
       console.error("Error deleting slide:", error);
-      toast.error("Error deleting slide.", {
-        description: error.message || "Error deleting slide.",
+      toast.error("שגיאה במחיקת השקופית.", {
+        description: error.message || "שגיאה במחיקת השקופית.",
       });
     }
   };

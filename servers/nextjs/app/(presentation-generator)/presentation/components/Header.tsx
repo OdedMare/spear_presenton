@@ -91,9 +91,9 @@ const Header = ({
     } catch (error) {
       console.error("Export failed:", error);
       setShowLoader(false);
-      toast.error("Having trouble exporting!", {
+      toast.error("בעיה בייצוא!", {
         description:
-          "We are having trouble exporting your presentation. Please try again.",
+          "נתקלנו בבעיה בייצוא המצגת שלך. אנא נסה שוב.",
       });
     } finally {
       setShowLoader(false);
@@ -129,9 +129,9 @@ const Header = ({
 
     } catch (err) {
       console.error(err);
-      toast.error("Having trouble exporting!", {
+      toast.error("בעיה בייצוא!", {
         description:
-          "We are having trouble exporting your presentation. Please try again.",
+          "נתקלנו בבעיה בייצוא המצגת שלך. אנא נסה שוב.",
       });
     } finally {
       setShowLoader(false);

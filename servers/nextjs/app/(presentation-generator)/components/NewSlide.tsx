@@ -33,7 +33,7 @@ const NewSlide = ({
       setShowNewSlideSelection(false);
     } catch (error: any) {
       console.error(error);
-      toast.error("Error adding new slide");
+      toast.error("שגיאה בהוספת שקופית חדשה");
     }
   };
   const { getFullDataByTemplateID, loading } = useLayout();
@@ -43,7 +43,7 @@ const NewSlide = ({
     return (
       <div className="my-6 w-full bg-gray-50 p-8 max-w-[1280px]">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-semibold">Select a Slide Layout</h2>
+          <h2 className="text-2xl font-semibold">בחר פריסת שקופית</h2>
           <Trash2
             onClick={() => setShowNewSlideSelection(false)}
             className="text-gray-500 text-2xl cursor-pointer"
@@ -59,7 +59,7 @@ const NewSlide = ({
   return (
     <div className="my-6 w-full bg-gray-50 p-8 max-w-[1280px]">
       <div className="flex justify-between items-center  mb-8">
-        <h2 className="text-2xl font-semibold">Select a Slide Layout</h2>
+        <h2 className="text-2xl font-semibold">בחר פריסת שקופית</h2>
         <Trash2
           onClick={() => setShowNewSlideSelection(false)}
           className="text-gray-500 text-2xl cursor-pointer"

@@ -55,7 +55,7 @@ const IconsEditor = ({
       setIcons(data);
     } catch (error: any) {
       console.error("Error fetching icons:", error);
-      toast.error(error.message || "Failed to fetch icons. Please try again.");
+      toast.error(error.message || "נכשל לטעון אייקונים. אנא נסה שוב.");
       setIcons([]);
     } finally {
       setLoading(false);
@@ -95,7 +95,7 @@ const IconsEditor = ({
           onClick={(e) => e.stopPropagation()}
         >
           <SheetHeader>
-            <SheetTitle>Choose Icon</SheetTitle>
+            <SheetTitle>בחר אייקון</SheetTitle>
           </SheetHeader>
 
           <div className="mt-6 space-y-4">
@@ -110,7 +110,7 @@ const IconsEditor = ({
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
                 <Input
-                  placeholder="Search icons..."
+                  placeholder="חפש אייקונים..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
@@ -123,7 +123,7 @@ const IconsEditor = ({
                 className="w-full text-semibold text-[#51459e]"
                 onClick={(e) => e.stopPropagation()}
               >
-                Search
+                חפש
               </Button>
             </form>
 

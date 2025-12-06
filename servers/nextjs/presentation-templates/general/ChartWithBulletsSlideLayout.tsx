@@ -270,7 +270,7 @@ const ChartWithBulletsSlideLayout: React.FC<ChartWithBulletsSlideLayoutProps> = 
 
                         {/* Chart Container */}
                         <div  className="flex-1 rounded-lg shadow-sm border border-gray-100 p-4" style={{ background: 'var(--primary-accent-color,#F5F8FE)' }}>
-                            <ChartContainer config={chartConfig} className="h-full w-full">
+                            <ChartContainer config={chartConfig} className="w-full max-w-[1280px] aspect-video mx-auto relative overflow-hidden rounded-md h-full">
                                 {renderChart()}
                             </ChartContainer>
                         </div>
