@@ -62,7 +62,7 @@ const PresentationPage = ({ presentation_id }: { presentation_id: string }) => {
       setContentLoading(false);
     } catch (error) {
       setError(true);
-      toast.error("Failed to load presentation");
+      toast.error("הטעינה של המצגת נכשלה");
       console.error("Error fetching user slides:", error);
       setContentLoading(false);
     }
@@ -78,12 +78,12 @@ const PresentationPage = ({ presentation_id }: { presentation_id: string }) => {
             role="alert"
           >
             <AlertCircle className="w-16 h-16 mb-4 text-red-500" />
-            <strong className="font-bold text-4xl mb-2">Oops!</strong>
+            <strong className="font-bold text-4xl mb-2">אופס!</strong>
             <p className="block text-2xl py-2">
-              We encountered an issue loading your presentation.
+              נתקלנו בבעיה בטעינת המצגת שלך.
             </p>
             <p className="text-lg py-2">
-              Please check your internet connection or try again later.
+              אנא בדוק את חיבור האינטרנט שלך או נסה שוב מאוחר יותר.
             </p>
             <Button
               className="mt-4 bg-red-500 text-white hover:bg-red-600 focus:ring-4 focus:ring-red-300"
@@ -92,7 +92,7 @@ const PresentationPage = ({ presentation_id }: { presentation_id: string }) => {
                 window.location.reload();
               }}
             >
-              Retry
+              נסה שוב
             </Button>
           </div>
         </div>

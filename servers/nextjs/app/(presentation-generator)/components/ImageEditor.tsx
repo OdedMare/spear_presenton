@@ -67,7 +67,7 @@ const ImageEditor = ({
     (properties &&
       properties[imageIdx] &&
       properties[imageIdx].initialObjectFit) ||
-      "cover"
+    "cover"
   );
 
   // Refs
@@ -104,7 +104,7 @@ const ImageEditor = ({
       console.error("error in getting previous generated images", error);
       setError(
         error.message ||
-          "נכשל לקבל תמונות שנוצרו בעבר. אנא נסה שוב."
+        "נכשל לקבל תמונות שנוצרו בעבר. אנא נסה שוב."
       );
     }
   };
@@ -233,7 +233,7 @@ const ImageEditor = ({
       trackEvent(MixpanelEvent.ImageEditor_UploadImage_API_Call);
       const result = await ImagesApi.uploadImage(file);
       setUploadedImageUrl(result.path);
-    } catch (err:any) {
+    } catch (err: any) {
       setUploadError("Failed to upload image. Please try again.");
       toast.error(err.message || "Failed to upload image. Please try again.");
       console.log("Upload error:", err.message);
@@ -247,7 +247,7 @@ const ImageEditor = ({
       setUploadedImagesLoading(true);
       const result = await ImagesApi.getUploadedImages();
       setUploadedImages(result);
-    } catch (err:any) {
+    } catch (err: any) {
       toast.error(err.message || "Failed to get uploaded images. Please try again.");
       console.log("Get uploaded images error:", err.message);
     } finally {
@@ -265,7 +265,7 @@ const ImageEditor = ({
       const result = await ImagesApi.deleteImage(image_id);
       setUploadedImages(uploadedImages.filter((image) => image.id !== image_id));
       toast.success(result.message || "Image deleted successfully");
-    } catch (err:any) {
+    } catch (err: any) {
       toast.error(err.message || "Failed to delete image. Please try again.");
     }
   };
@@ -279,7 +279,7 @@ const ImageEditor = ({
           onClick={(e) => e.stopPropagation()}
         >
           <SheetHeader>
-            <SheetTitle>Update Image</SheetTitle>
+            <SheetTitle>עדכון תמונה</SheetTitle>
           </SheetHeader>
 
           <div className="mt-6">
@@ -299,16 +299,16 @@ const ImageEditor = ({
               <TabsContent value="generate" className="mt-4 space-y-4 overflow-y-auto hide-scrollbar h-[85vh]">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium mb-1">Current Prompt</h3>
+                    <h3 className="text-sm font-medium mb-1">הנחיה נוכחית</h3>
                     <p className="text-sm text-gray-500">{promptContent}</p>
                   </div>
 
                   <div>
                     <h3 className="text-base font-medium mb-2">
-                      Image Description
+                      תיאור תמונה
                     </h3>
                     <Textarea
-                      placeholder="Describe the image you want to generate..."
+                      placeholder="תאר את התמונה שברצונך ליצור..."
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
                       className="min-h-[100px]"
@@ -352,7 +352,7 @@ const ImageEditor = ({
                   {previousGeneratedImages.length > 0 && (
                     <div className="mt-4">
                       <h3 className="text-sm font-medium mb-2">
-                        Previous Generated Images
+                        תמונות שנוצרו בעבר
                       </h3>
                       <div className="grid grid-cols-2 gap-4  ">
                         {previousGeneratedImages.map((image) => (
@@ -425,7 +425,7 @@ const ImageEditor = ({
                   {(uploadedImageUrl || isUploading) && (
                     <div className="mt-4">
                       <h3 className="text-sm font-medium mb-2">
-                        Uploaded Image Preview
+                        תצוגה של תמונה
                       </h3>
                       <div className="aspect-[4/3] relative rounded-lg overflow-hidden border border-gray-200">
                         {isUploading ? (
@@ -433,7 +433,7 @@ const ImageEditor = ({
                             <div className="flex flex-col items-center">
                               <div className="w-8 h-8 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mb-2" />
                               <span className="text-sm text-gray-500">
-                                Processing...
+                                בטעינה...
                               </span>
                             </div>
                           </div>
@@ -463,7 +463,7 @@ const ImageEditor = ({
                     </div>
                   )}
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Uploaded Images:</h3>
+                    <h3 className="text-sm font-medium mb-2">תמונות שנוצרו בעבר:</h3>
                     <div className="grid grid-cols-2 gap-4">
                       {uploadedImagesLoading ? (
                         <div className="flex items-center justify-center">
@@ -478,10 +478,10 @@ const ImageEditor = ({
                               }
                               className="cursor-pointer group aspect-[4/3] rounded-lg overflow-hidden relative border border-gray-200"
                             >
-                              <Trash className="absolute group-hover:opacity-100 opacity-0 transition-opacity z-10 w-4 h-4 top-2 right-2 text-red-500" onClick={(e) =>{
+                              <Trash className="absolute group-hover:opacity-100 opacity-0 transition-opacity z-10 w-4 h-4 top-2 right-2 text-red-500" onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteImage(image.id)
-                              }}/>
+                              }} />
                               <img
                                 src={image.path}
                                 alt="Uploaded preview"
@@ -490,11 +490,11 @@ const ImageEditor = ({
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200" />
                               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <span className="bg-white/90 px-3 py-1 rounded-full text-xs font-medium">
-                                  Use
+                                  להשתמש ב
                                 </span>
                               </div>
                             </div>
-                          
+
                           </div>
                         ))
                       )}
@@ -504,7 +504,7 @@ const ImageEditor = ({
               </TabsContent>
               <TabsContent value="edit" className="mt-4 space-y-4">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-medium mb-2">Current Image</h3>
+                  <h3 className="text-sm font-medium mb-2">תמונה נוכחית</h3>
                   <div
                     onClick={(e) => {
                       if (isFocusPointMode) {
@@ -515,7 +515,7 @@ const ImageEditor = ({
                     className="aspect-[4/3] group  rounded-lg overflow-hidden relative border border-gray-200"
                   >
                     <p className="group-hover:opacity-100 opacity-0 transition-opacity absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm text-center font-medium bg-black/50 text-white px-2 py-1 rounded">
-                      Click to Change Focus Point
+                      לחץ על מנת לשנות את הפוקוס
                     </p>
                     {previewImages && (
                       <img
@@ -536,7 +536,7 @@ const ImageEditor = ({
                       <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                         <div className="text-white text-center p-2 bg-black/50 rounded">
                           <p className="text-sm font-medium pointer-events-none">
-                            Click anywhere to set focus point
+                            לחץ על מנת לשנות את הפוקוס
                           </p>
                           <button
                             className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
@@ -545,7 +545,7 @@ const ImageEditor = ({
                               toggleFocusPointMode();
                             }}
                           >
-                            Done
+                            סיום
                           </button>
                         </div>
 
@@ -570,13 +570,13 @@ const ImageEditor = ({
                   {/* Object Fit */}
                   {
                     <div>
-                      <h3 className="text-sm font-medium mb-2">Object Fit</h3>
+                      <h3 className="text-sm font-medium mb-2">התאמת אובייקט</h3>
                       <div className="flex gap-4">
                         <Button
                           variant="outline"
                           className={cn(
                             objectFit === "cover" &&
-                              "bg-blue-50 border-blue-500"
+                            "bg-blue-50 border-blue-500"
                           )}
                           onClick={() => handleFitChange("cover")}
                         >
@@ -586,7 +586,7 @@ const ImageEditor = ({
                           variant="outline"
                           className={cn(
                             objectFit === "contain" &&
-                              "bg-blue-50 border-blue-500"
+                            "bg-blue-50 border-blue-500"
                           )}
                           onClick={() => handleFitChange("contain")}
                         >
@@ -605,7 +605,7 @@ const ImageEditor = ({
                     </div>
                   }
                   {/* Focus Point */}
-                  {}
+                  { }
                 </div>
               </TabsContent>
             </Tabs>

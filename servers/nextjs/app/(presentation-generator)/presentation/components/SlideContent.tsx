@@ -223,7 +223,7 @@ const SlideContent = ({ slide, index, presentationId }: SlideContentProps) => {
                     >
                       <Textarea
                         id={`slide-${slide.index}-prompt`}
-                        placeholder="Enter your prompt here..."
+                        placeholder="הזן את ההנחיה שלך כאן..."
                         className="w-full min-h-[100px] max-h-[100px] p-2 text-sm border rounded-lg focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         disabled={isUpdating}
                         onKeyDown={(e) => {

@@ -147,7 +147,7 @@ const DocumentsPreviewPage: React.FC = () => {
         (fileItem: FileItem) => fileItem.file_path
       );
       trackEvent(MixpanelEvent.DocumentsPreview_Create_Presentation_API_Call);
-       const createResponse = await PresentationGenerationApi.createPresentation(
+      const createResponse = await PresentationGenerationApi.createPresentation(
         {
           content: config?.prompt ?? "",
           n_slides: config?.slides ? parseInt(config.slides) : null,
@@ -234,15 +234,14 @@ const DocumentsPreviewPage: React.FC = () => {
 
         {documentKeys.length > 0 && (
           <div className="mt-8">
-            <p className="text-xs mt-2 text-[#2E2E2E] opacity-70">DOCUMENTS</p>
+            <p className="text-xs mt-2 text-[#2E2E2E] opacity-70">מסמכים</p>
             <div className="flex flex-col gap-2 mt-6">
               {documentKeys.map((key: string) => (
                 <div
                   key={key}
                   onClick={() => updateSelectedDocument(key)}
-                  className={`${
-                    selectedDocument === key ? "border border-blue-500" : ""
-                  } flex p-2 rounded-sm gap-2 items-center cursor-pointer`}
+                  className={`${selectedDocument === key ? "border border-blue-500" : ""
+                    } flex p-2 rounded-sm gap-2 items-center cursor-pointer`}
                 >
                   <img
                     className="h-6 w-6 border border-gray-200"
@@ -295,7 +294,7 @@ const DocumentsPreviewPage: React.FC = () => {
             onClick={handleCreatePresentation}
             className="flex items-center gap-2 px-8 py-6 rounded-sm text-md bg-[#5146E5] hover:bg-[#5146E5]/90"
           >
-            <span className="text-white font-semibold">Next</span>
+            <span className="text-white font-semibold">הבא</span>
             <ChevronRight />
           </Button>
         </div>

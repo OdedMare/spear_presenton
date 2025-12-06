@@ -35,7 +35,7 @@ const Header = () => {
               role="menuitem"
             >
               <Sparkles className="w-5 h-5" />
-              <span className="text-sm font-medium font-inter">שכתוב AI</span>
+              <span className="text-sm font-medium font-inter">שכתוב תוכן עם בינה מלאכותית</span>
             </Link>
             <Link
               href="/translate"
@@ -45,24 +45,13 @@ const Header = () => {
               role="menuitem"
             >
               <Languages className="w-5 h-5" />
-              <span className="text-sm font-medium font-inter">תרגום AI</span>
+              <span className="text-sm font-medium font-inter">תרגום עם בינה מלאכותית</span>
             </Link>
             <Link
               href="/custom-template"
               prefetch={false}
               onClick={() => trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/custom-template" })}
               className="flex items-center gap-2 px-3 py-2 text-white hover:bg-primary/80 rounded-md transition-colors outline-none relative"
-              role="menuitem"
-            >
-              <FilePlus2 className="w-5 h-5" />
-              <span className="text-sm font-medium font-inter">יצירת תבנית</span>
-              <span className="absolute -top-1 -right-1 bg-yellow-400 text-xs px-1.5 py-0.5 rounded-full text-gray-900 font-bold">בקרוב</span>
-            </Link>
-            <Link
-              href="/template-preview"
-              prefetch={false}
-              onClick={() => trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/template-preview" })}
-              className="flex items-center gap-2 px-3 py-2 text-white hover:bg-primary/80 rounded-md transition-colors outline-none"
               role="menuitem"
             >
               <Layout className="w-5 h-5" />

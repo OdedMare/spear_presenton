@@ -76,7 +76,7 @@ export const PresentationGrid = ({
       </div>
       <div className="text-center">
         <h3 className="font-semibold text-gray-700 group-hover:text-gray-900 mb-1">
-          שכתוב תוכן עם AI
+          שכתוב תוכן בעזרת בינה מלאכותית
         </h3>
         <p className="text-sm text-gray-500 group-hover:text-gray-600 px-4">
           שמור על עיצוב המצגת, שכתב את התוכן עם AI

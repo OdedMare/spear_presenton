@@ -10,89 +10,88 @@ import React, { useState, useEffect, useRef } from "react";
 const helpQuestions = [
   {
     id: 1,
-    category: "Images",
-    question: "How do I change an image?",
+    category: "תמונות",
+    question: "כיצד אוכל לשנות תמונה?",
     answer:
-      "Click on any image to reveal the image toolbar. You'll see options to Edit, Adjust position, and change how the image fits within its container. The Edit option allows you to replace or modify the current image.",
+      "לחץ על כל תמונה כדי לחשוף את סרגל הכלים של התמונה. תראה אפשרויות לערוך, להתאים מיקום ולשנות את אופן התאמת התמונה בתוך המיכל שלה. אפשרות העריכה מאפשרת לך להחליף או לשנות את התמונה הנוכחית.",
   },
   {
     id: 2,
-    category: "Images",
-    question: "Can I generate new images with AI?",
+    category: "תמונות",
+    question: "האם אוכל ליצור תמונות חדשות באמצעות בינה מלאכותית?",
     answer:
-      "Yes! Click on any image and select the Edit option from the toolbar. In the side panel that appears, you'll find the AI Generate tab. Enter your prompt describing the image you want, and our AI will generate an image based on your description.",
+      "כן! לחץ על כל תמונה ובחר באפשרות 'ערוך' מסרגל הכלים. בחלונית הצדדית שתופיע, תמצא את לשונית 'יצירת AI'. הזן את ההנחיה שלך המתארת את התמונה שאתה רוצה, והבינה המלאכותית שלנו תיצור תמונה בהתאם לתיאור שלך.",
   },
   {
     id: 3,
-    category: "Images",
-    question: "How do I upload my own images?",
+    category: "תמונות",
+    question: "כיצד אוכל להעלות תמונות משלי?",
     answer:
-      "Click on any image, then select Edit from the toolbar. In the side panel, click on the Upload tab at the top. You can browse your files to select one. Once uploaded, you can apply it to your design.",
+      "לחץ על כל תמונה, ולאחר מכן בחר 'ערוך' מסרגל הכלים. בחלונית הצדדית, לחץ על לשונית 'העלאה' למעלה. תוכל לדפדף בקבצים שלך כדי לבחור אחד. לאחר ההעלאה, תוכל להחיל אותו על העיצוב שלך.",
   },
   {
     id: 11,
-    category: "AI Prompts",
-    question: "Can I change slide layout through prompt?",
+    category: "הנחיות AI",
+    question: "האם אוכל לשנות את פריסת השקופית באמצעות הנחיה?",
     answer:
-      "Yes you can! Click on the WandSparkles icon on the top left of each slide and it will give you a prompt input box. Describe your layout requirements and the AI will change the slide layout accordingly.",
+      "כן, אתה יכול! לחץ על אייקון WandSparkles בפינה השמאלית העליונה של כל שקופית ויופיע לך תיבת קלט להנחיה. תאר את דרישות הפריסה שלך והבינה המלאכותית תשנה את פריסת השקופית בהתאם.",
   },
   {
     id: 12,
-    category: "AI Prompts",
-    question: "Can I change slide image through prompt?",
+    category: "הנחיות AI",
+    question: "האם אוכל לשנות את תמונת השקופית באמצעות הנחיה?",
     answer:
-      "Yes you can! Click on the WandSparkles icon on the top left of each slide and it will give you a prompt input box. Describe the image you want and the AI will update the slide image based on your requirements.",
+      "כן, אתה יכול! לחץ על אייקון WandSparkles בפינה השמאלית העליונה של כל שקופית ויופיע לך תיבת קלט להנחיה. תאר את התמונה שאתה רוצה והבינה המלאכותית תעדכן את תמונת השקופית בהתאם לדרישותיך.",
   },
 
   {
     id: 14,
-    category: "AI Prompts",
-    question: "Can I change content through prompt?",
+    category: "הנחיות AI",
+    question: "האם אוכל לשנות תוכן באמצעות הנחיה?",
     answer:
-      "Yes you can! Click on the WandSparkles icon on the top left of each slide and it will give you a prompt input box. Describe what content you want and the AI will update the slide's text and content based on your description.",
+      "כן, אתה יכול! לחץ על אייקון WandSparkles בפינה השמאלית העליונה של כל שקופית ויופיע לך תיבת קלט להנחיה. תאר איזה תוכן אתה רוצה והבינה המלאכותית תעדכן את הטקסט והתוכן של השקופית בהתאם לתיאור שלך.",
   },
   {
     id: 4,
-    category: "Text",
-    question: "How can I format and highlight text?",
+    category: "טקסט",
+    question: "כיצד אוכל לעצב ולהדגיש טקסט?",
     answer:
-      "Select any text to see the formatting toolbar appear. You'll have options for Bold, Italic, Underline, Strikethrough,and more.",
+      "בחר כל טקסט כדי שסרגל הכלים לעיצוב יופיע. יהיו לך אפשרויות להדגשה, הטיה, קו תחתון, קו חוצה ועוד.",
   },
   {
     id: 5,
-    category: "Icons",
-    question: "How do I change icons?",
+    category: "אייקונים",
+    question: "כיצד אוכל לשנות אייקונים?",
     answer:
-      "Click on any existing icon to modify it. In the icon selector panel, you can browse icos or use the search function to find specific icons. We offer thousands of icons in various styles.",
+      "לחץ על כל אייקון קיים כדי לשנות אותו. בחלונית בורר האייקונים, תוכל לדפדף באייקונים או להשתמש בפונקציית החיפוש כדי למצוא אייקונים ספציפיים. אנו מציעים אלפי אייקונים במגוון סגנונות.",
   },
   {
     id: 16,
-    category: "Layout",
-    question: "Can I change the position of slide?",
-    answer:
-      "Of course, On side panel you can drag the slide and place wherever you want.",
+    category: "פריסה",
+    question: "האם אוכל לשנות את מיקום השקופית?",
+    answer: "כמובן, בחלונית הצדדית תוכל לגרור את השקופית ולמקם אותה היכן שתרצה.",
   },
   {
     id: 15,
-    category: "Layout",
-    question: "Can I add new slide between the slide?",
+    category: "פריסה",
+    question: "האם אוכל להוסיף שקופית חדשה בין שקופיות?",
     answer:
-      "Yes you can just click on the plus icon below each slide.It will display the all the layouts and choose required one.",
+      "כן, אתה יכול פשוט ללחוץ על אייקון הפלוס מתחת לכל שקופית. הוא יציג את כל הפריסות ותוכל לבחור את הפריסה הנדרשת.",
   },
   {
     id: 6,
-    category: "Layout",
-    question: "Can I add more sections to my slides?",
+    category: "פריסה",
+    question: "האם אוכל להוסיף עוד חלקים לשקופיות שלי?",
     answer:
-      "Absolutely! Hover near the bottom of any text box or content block, and you'll see a + icon appear. Click this button to add a new section below the current one. You can also use the Insert menu to add specific section types.",
+      "בהחלט! רחף ליד החלק התחתון של כל תיבת טקסט או בלוק תוכן, ותראה אייקון + מופיע. לחץ על כפתור זה כדי להוסיף חלק חדש מתחת לנוכחי. תוכל גם להשתמש בתפריט 'הוספה' כדי להוסיף סוגי חלקים ספציפיים.",
   },
 
   {
     id: 8,
-    category: "Export",
-    question: "How do I download or export my presentation?",
+    category: "ייצוא",
+    question: "כיצד אוכל להוריד או לייצא את המצגת שלי?",
     answer:
-      "Click the Export button in the top right menu. You can choose to download as PDF, PowerPoint.",
+      "לחץ על כפתור 'ייצוא' בתפריט הימני העליון. תוכל לבחור להוריד כקובץ PDF, PowerPoint.",
   },
 ];
 
@@ -101,7 +100,7 @@ const Help = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredQuestions, setFilteredQuestions] = useState(helpQuestions);
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("הכל");
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Extract unique categories and create "All" category list
@@ -109,7 +108,7 @@ const Help = () => {
     const uniqueCategories = Array.from(
       new Set(helpQuestions.map((q) => q.category))
     );
-    setCategories(["All", ...uniqueCategories]);
+    setCategories(["הכל", ...uniqueCategories]);
   }, []);
 
   // Filter questions based on search query and selected category
@@ -117,7 +116,7 @@ const Help = () => {
     let results = helpQuestions;
 
     // Filter by category if not "All"
-    if (selectedCategory !== "All") {
+    if (selectedCategory !== "הכל") {
       results = results.filter((q) => q.category === selectedCategory);
     }
 
@@ -136,11 +135,11 @@ const Help = () => {
 
   // Close modal when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: any) => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         modalRef.current &&
-        !modalRef.current.contains(event.target) &&
-        !event.target.closest(".help-button")
+        !modalRef.current.contains(event.target as Node) &&
+        !(event.target as HTMLElement).closest(".help-button")
       ) {
         setIsOpen(false);
       }
@@ -170,7 +169,7 @@ const Help = () => {
       <button
         onClick={handleOpenClose}
         className="help-button hidden fixed bottom-6 right-6 h-12 w-12 z-50 bg-emerald-600 hover:bg-emerald-700 rounded-full md:flex justify-center items-center cursor-pointer shadow-lg transition-all duration-300 hover:shadow-xl"
-        aria-label="Help Center"
+        aria-label="מרכז עזרה"
       >
         {isOpen ? (
           <X className="text-white h-5 w-5" />
@@ -187,7 +186,7 @@ const Help = () => {
         <div className="bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
           {/* Header */}
           <div className="bg-emerald-600 text-white px-6 py-4 flex justify-between items-center">
-            <h2 className="text-lg font-medium">Help Center</h2>
+            <h2 className="text-lg font-medium">מרכז עזרה</h2>
             <button
               onClick={() => setIsOpen(false)}
               className="hover:bg-emerald-700 p-1 rounded"
@@ -201,7 +200,7 @@ const Help = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search help topics..."
+                placeholder="חפש נושאי עזרה..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -217,8 +216,8 @@ const Help = () => {
                 key={category}
                 onClick={() => setSelectedCategory(category)}
                 className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === category
-                    ? "bg-emerald-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
               >
                 {category}
@@ -256,55 +255,21 @@ const Help = () => {
               </Accordion>
             ) : (
               <div className="py-8 text-center text-gray-500">
-                <p>No results found for "{searchQuery}"</p>
+                <p>לא נמצאו תוצאות עבור "{searchQuery}"</p>
                 <button
                   onClick={() => {
                     setSearchQuery("");
-                    setSelectedCategory("All");
+                    setSelectedCategory("הכל");
                   }}
                   className="mt-2 text-emerald-600 hover:underline text-sm"
                 >
-                  Clear search
+                  נקה חיפוש
                 </button>
               </div>
             )}
           </div>
-
-          {/* Footer */}
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 text-xs text-gray-500 text-center">
-            Still need help?{" "}
-            <a href="/contact" className="text-emerald-600 hover:underline">
-              Contact Support
-            </a>
-          </div>
         </div>
       </div>
-
-      {/* Custom AccordionTrigger implementation (since shadcn's might not be available) */}
-      {!AccordionTrigger && (
-        <style jsx>{`
-          .accordion-trigger {
-            display: flex;
-            width: 100%;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            text-align: left;
-            transition: all 0.2s;
-          }
-          .accordion-trigger:hover {
-            background-color: rgba(0, 0, 0, 0.02);
-          }
-          .accordion-content {
-            overflow: hidden;
-            height: 0;
-            transition: height 0.2s ease;
-          }
-          .accordion-content[data-state="open"] {
-            height: auto;
-          }
-        `}</style>
-      )}
     </>
   );
 };

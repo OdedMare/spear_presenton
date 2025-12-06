@@ -50,8 +50,8 @@ const OutlinePage: React.FC = () => {
         <div className="flex-grow overflow-y-hidden w-[1200px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="grid w-[50%] mx-auto my-4 grid-cols-2">
-              <TabsTrigger value={TABS.OUTLINE}>Outline & Content</TabsTrigger>
-              <TabsTrigger value={TABS.LAYOUTS}>Select Template</TabsTrigger>
+              <TabsTrigger value={TABS.OUTLINE}>מתווה ותוכן</TabsTrigger>
+              <TabsTrigger value={TABS.LAYOUTS}>בחר תבנית</TabsTrigger>
             </TabsList>
 
             <div className="flex-grow w-full mx-auto">

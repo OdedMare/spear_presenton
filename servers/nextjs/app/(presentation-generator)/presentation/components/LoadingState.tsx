@@ -4,11 +4,16 @@ import React, { useState, useEffect } from 'react';
 const LoadingState = () => {
     const [currentTipIndex, setCurrentTipIndex] = useState(0);
     const tips = [
-        "We're crafting your presentation with AI magic ✨",
-        "Analyzing your content for perfect slides 📊",
-        "Organizing information for maximum impact 🎯",
-        "Adding visual elements to engage your audience 🎨",
-        "Almost there! Putting final touches ⚡️"
+        "מכינים לכם מצגת עם קסם של בינה מלאכותית ✨",
+        "מנתחים את התוכן שלכם לשקפים מושלמים 📊",
+        "מסדרים את המידע להשפעה מקסימלית 🎯",
+        "מוסיפים אלמנטים ויזואליים כדי לרתק את הקהל 🎨",
+        "כמעט שם! נוגעים נגיעות אחרונות ⚡️",
+        "הבינה המלאכותית שלנו שותה קפה ומסדרת את השקפים ☕",
+        "בודקים שאין שקופיות עם תמונות של חתולים בטעות... אלא אם ביקשתם 😼",
+        "מנסים לא להכניס יותר מדי קליפארט משנות ה-90 💾",
+        "האלגוריתמים שלנו רוקדים סלסה בזמן שהם יוצרים את המצגת 💃",
+        "רק עוד רגע, אנחנו מלטשים את הפיקסלים האחרונים! ✨"
     ];
 
     useEffect(() => {
@@ -17,7 +22,7 @@ const LoadingState = () => {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [tips.length]); // Added tips.length to dependency array for completeness
 
     return (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mx-auto w-[500px] flex flex-col items-center justify-center p-8">
@@ -25,7 +30,7 @@ const LoadingState = () => {
                 <div className="bg-white rounded-xl p-6 w-full">
                     <div className="flex items-center justify-center space-x-4 ">
 
-                        <h2 className="text-2xl font-semibold text-gray-800">Creating Your Presentation</h2>
+                        <h2 className="text-2xl font-semibold text-gray-800">יוצרים את המצגת שלך</h2>
                     </div>
                     <div className="w-full max-w-md bg-white/80 backdrop-blur-sm rounded-xl shadow-sm p-6 mb-4">
                         <div className="min-h-[120px] flex items-center justify-center">
@@ -46,4 +51,4 @@ const LoadingState = () => {
     );
 };
 
-export default LoadingState; 
+export default LoadingState;

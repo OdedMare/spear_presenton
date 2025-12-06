@@ -81,7 +81,7 @@ const IconsEditor = ({
       onClose?.();
     }, 300); // Match the Sheet animation duration
   };
-  
+
 
   return (
     <div className="icons-editor-container">
@@ -157,8 +157,8 @@ const IconsEditor = ({
               ) : (
                 <div className="flex flex-col items-center justify-center w-full h-[60vh] text-center text-gray-500 space-y-4">
                   <Search className="w-12 h-12 text-gray-400" />
-                  <p className="text-sm">No icons found for your search.</p>
-                  <p className="text-xs">Try refining your search query.</p>
+                  <p className="text-sm">לא נמצאו אייקונים</p>
+                  <p className="text-xs">נסה להגדיר את חיפושך מחדש</p>
                 </div>
               )}
             </div>

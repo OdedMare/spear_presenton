@@ -14,7 +14,6 @@ import { setLayoutLoading } from "@/store/slices/presentationGeneration";
 
 import * as Babel from "@babel/standalone";
 import * as Recharts from "recharts";
-import * as d3 from 'd3';
 
 import { getHeader } from "../services/api/header";
 export interface LayoutInfo {

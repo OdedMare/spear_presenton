@@ -34,8 +34,6 @@ RUN pip install \
     deep-translator langdetect \
     && pip install docling --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Install ollama (optional: may fail silently if not ARM)
-RUN curl -fsSL https://ollama.com/install.sh | bash - || true
 
 # Install dependencies for Next.js
 WORKDIR /app/servers/nextjs

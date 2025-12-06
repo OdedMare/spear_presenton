@@ -166,7 +166,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = ({
     <div className="space-y-8 mb-4">
       {/* In Built Templates */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">In Built Templates</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">תבניות מובנות</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {inBuiltTemplates.map((template) => (
             <TemplateLayouts
@@ -182,7 +182,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = ({
       {/* Custom AI Templates */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-900">Custom AI Templates</h3>
+          <h3 className="text-lg font-semibold text-gray-900">תבניות AI מותאמות אישית</h3>
         </div>
         {customTemplates.length === 0 ? (
           <div className="text-sm text-gray-600 py-2">

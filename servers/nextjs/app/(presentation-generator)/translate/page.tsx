@@ -13,7 +13,7 @@ export default function TranslatePage() {
       <Header />
       <div className="flex flex-col items-center justify-center py-8">
         <h1 className="text-3xl font-semibold font-instrument_sans">
-          תרגום מצגת עם AI
+          תרגום בעזרת בינה מלאכותית
         </h1>
       </div>
       <ContentRewritePage defaultMode="translate" />

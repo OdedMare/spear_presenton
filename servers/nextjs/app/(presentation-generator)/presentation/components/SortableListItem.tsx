@@ -57,7 +57,7 @@ export function SortableListItem({ slide, index, selectedSlide, onSlideClick }: 
                 }`}
         >
             <span className="font-medium slide-title">Slide {index + 1}</span>
-          
+
         </div>
     );
 } 

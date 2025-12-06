@@ -8,15 +8,15 @@ export const APIKeyWarning: React.FC = () => {
       <div className="flex items-center justify-center aspect-video mx-auto px-6">
         <div className="text-center space-y-2 my-6 bg-white p-10 rounded-lg shadow-lg">
           <h1 className="text-xl font-bold text-gray-900">
-            Configure your custom AI connection to enable template creation.
+            הגדר את חיבור ה-AI המותאם אישית שלך כדי לאפשר יצירת תבניות.
           </h1>
           <h1 className="text-xl font-bold text-gray-900">
-            Provide a Custom LLM URL, Model, and API Key (if required) in Settings or
-            via environment variables.
+            ספק כתובת URL מותאמת אישית של LLM, מודל ומפתח API (אם נדרש) בהגדרות או
+            באמצעות משתני סביבה.
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            The template generator now runs solely on your configured custom model.
-            Update your credentials to continue.
+            מחולל התבניות פועל כעת אך ורק על המודל המותאם אישית שהוגדר על ידך.
+            עדכן את האישורים שלך כדי להמשיך.
           </p>
         </div>
       </div>

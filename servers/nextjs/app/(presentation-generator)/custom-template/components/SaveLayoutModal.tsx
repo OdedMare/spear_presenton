@@ -74,7 +74,7 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
               id="layout-name"
               value={layoutName}
               onChange={(e) => setLayoutName(e.target.value)}
-              placeholder="Enter template name..."
+              placeholder="הזן שם תבנית..."
               disabled={isSaving}
               className="w-full"
             />
@@ -87,7 +87,7 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter a description for your template..."
+              placeholder="הזן תיאור לתבנית זו..."
               disabled={isSaving}
               className="w-full resize-none"
               rows={3}

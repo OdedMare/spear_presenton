@@ -45,7 +45,7 @@ export function OutlineItem({
         }
     }, [outlines.length]);
 
-    const handleSlideChange = (newOutline:any) => {
+    const handleSlideChange = (newOutline: any) => {
         if (isStreaming) return;
         const newData = outlines?.map((each, idx) => {
             if (idx === index - 1) {

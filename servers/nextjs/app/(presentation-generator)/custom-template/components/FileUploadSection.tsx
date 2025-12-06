@@ -36,17 +36,17 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="w-5 h-5" />
-          Upload PDF or PPTX/POTX File
+          העלה קובץ PDF או PPTX/POTX
         </CardTitle>
         <CardDescription>
-          Select a PDF or PowerPoint file (.pdf, .pptx, or .potx) to process. Maximum file size: 100MB
+          בחר קובץ PDF או PowerPoint (.pdf, .pptx, או .potx) לעיבוד. גודל קובץ מקסימלי: 100MB
         </CardDescription>
         {slides.length > 0 && (
           <div className="flex items-center justify-end gap-2">
             {slides.some((s) => s.processing) && (
               <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
             )}
-            {completedSlides}/{slides.length} slides completed
+            {completedSlides}/{slides.length} שקפים הושלמו
           </div>
         )}
       </CardHeader>
@@ -56,7 +56,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <Label htmlFor="file-upload" className="cursor-pointer">
               <span className="text-lg font-medium text-gray-700">
-                Click to upload a PDF or PPTX/POTX file
+                לחץ להעלאת קובץ PDF או PPTX/POTX
               </span>
               <input
                 id="file-upload"
@@ -67,7 +67,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
               />
             </Label>
             <p className="text-sm text-gray-500 mt-2">
-              Drag and drop your file here or click to browse
+              גרור ושחרר את הקובץ שלך כאן או לחץ כדי לדפדף
             </p>
           </div>
         ) : (
@@ -104,14 +104,14 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isProcessingPptx
-              ? "Extracting Slides..."
+              ? "מחזיר שקפים..."
               : !selectedFile
-              ? "Select a PDF or PPTX/POTX file"
-              : "Process File"}
+                ? "בחר קובץ PDF או PPTX/POTX"
+                : "עבד קובץ"}
           </Button>
           {isProcessingPptx && <Timer duration={90} />}
         </div>
       </CardContent>
     </Card>
   );
-}; 
+};
