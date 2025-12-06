@@ -3,7 +3,7 @@ import ContentRewritePage from '../content-rewrite/components/ContentRewritePage
 import Header from '../dashboard/components/Header'
 
 export const metadata = {
-  title: 'AI Translation - Presenton',
+  title: 'AI Translation - SpearPresenton',
   description: 'Translate presentation content while keeping your design',
 }
 

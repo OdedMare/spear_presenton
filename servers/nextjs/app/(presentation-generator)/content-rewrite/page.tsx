@@ -3,7 +3,7 @@ import ContentRewritePage from './components/ContentRewritePage'
 import Header from '../dashboard/components/Header'
 
 export const metadata = {
-  title: 'Content Rewrite - Presenton',
+  title: 'Content Rewrite - SpearPresenton',
   description: 'Rewrite presentation content while keeping your design',
 }
 

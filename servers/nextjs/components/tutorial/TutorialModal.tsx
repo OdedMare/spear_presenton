@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronLeft, ChevronRight, Sparkles, FileText, Wand2 } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Sparkles, FileText, Wand2, Languages, Users, CheckCircle } from 'lucide-react'
 import { useTutorial } from './TutorialProvider'
 import { Button } from '@/components/ui/button'
 
@@ -69,12 +69,40 @@ const createSteps: TutorialStep[] = [
     },
 ]
 
+const translateSteps: TutorialStep[] = [
+    {
+        title: 'העלאת מצגת',
+        description: 'התחל בהעלאת קובץ PowerPoint (.pptx) שברצונך לתרגם. המערכת תחלץ את כל התוכן תוך שמירה על העיצוב.',
+        icon: <FileText className="w-8 h-8" />,
+    },
+    {
+        title: 'סוכן מבנה - ניתוח חכם',
+        description: 'הסוכן הראשון מנתח את מבנה המצגת ומזהה הקשרים בין שקופיות. הוא מבין כותרות, תתי-כותרות ותוכן עיקרי.',
+        icon: <Users className="w-8 h-8" />,
+    },
+    {
+        title: 'סוכן תרגום - דיוק גבוה',
+        description: 'הסוכן השני מתרגם את התוכן בצורה מדויקת תוך שמירה על הקשר המקצועי והטון. תומך בעברית, אנגלית, ערבית ועוד.',
+        icon: <Languages className="w-8 h-8" />,
+    },
+    {
+        title: 'סוכן הרכבה - שמירה על עיצוב',
+        description: 'הסוכן השלישי בונה מחדש את המצגת עם התוכן המתורגם, כולל תמיכה ב-RTL לעברית וערבית.',
+        icon: <Sparkles className="w-8 h-8" />,
+    },
+    {
+        title: 'אימות והורדה',
+        description: 'המערכת מאמתת שכל התוכן תורגם נכון, ואתה יכול להוריד את המצגת המתורגמת במלואה!',
+        icon: <CheckCircle className="w-8 h-8" />,
+    },
+]
+
 export function TutorialModal() {
     const { isActive, currentStep, tutorialPath, nextStep, previousStep, skipTutorial, completeTutorial } = useTutorial()
 
     if (!isActive || !tutorialPath) return null
 
-    const steps = tutorialPath === 'rewrite' ? rewriteSteps : createSteps
+    const steps = tutorialPath === 'rewrite' ? rewriteSteps : tutorialPath === 'translate' ? translateSteps : createSteps
     const currentStepData = steps[currentStep]
     const isLastStep = currentStep === steps.length - 1
 
@@ -104,7 +132,7 @@ export function TutorialModal() {
                             <div className="bg-gradient-to-r from-[#9034EA] to-[#5146E5] px-6 py-4 text-white">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-semibold font-instrument_sans">
-                                        {tutorialPath === 'rewrite' ? 'הדרכה - שכתוב תוכן' : 'הדרכה - יצירת מצגת'}
+                                        {tutorialPath === 'rewrite' ? 'הדרכה - שכתוב תוכן' : tutorialPath === 'translate' ? 'הדרכה - תרגום מצגת' : 'הדרכה - יצירת מצגת'}
                                     </h2>
                                     <button
                                         onClick={skipTutorial}

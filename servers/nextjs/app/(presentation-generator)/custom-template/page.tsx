@@ -20,6 +20,11 @@ const CustomTemplatePage = () => {
   const router = useRouter();
   const { refetch } = useLayout();
 
+  // Password authentication state
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [passwordInput, setPasswordInput] = React.useState("");
+  const [authError, setAuthError] = React.useState(false);
+
   // Custom hooks for different concerns
   const { selectedFile, handleFileSelect, removeFile } = useFileUpload();
   const { slides, setSlides, completedSlides } = useCustomLayout();
@@ -37,6 +42,16 @@ const CustomTemplatePage = () => {
     refetch,
     setSlides
   );
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === "oded2002" || passwordInput === "spear1") {
+      setIsAuthenticated(true);
+      setAuthError(false);
+    } else {
+      setAuthError(true);
+    }
+  };
 
   const handleSaveTemplate = async (layoutName: string, description: string): Promise<string | null> => {
     trackEvent(MixpanelEvent.CustomTemplate_Save_Templates_API_Call);
@@ -78,6 +93,44 @@ const CustomTemplatePage = () => {
   }, []);
 
   // NO MORE API KEY CHECKS - Deterministic pipeline doesn't need VLM!
+
+  // Password protection screen
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100" dir="rtl">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 max-w-md flex flex-col items-center justify-center min-h-[80vh]">
+          <div className="bg-white p-8 rounded-xl shadow-lg w-full">
+            <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">יצירת תבנית מותאמת - מוגן בסיסמה</h2>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${
+                    authError
+                      ? "border-red-500 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-blue-200 focus:border-blue-500"
+                  }`}
+                  placeholder="הכנס סיסמה"
+                  autoFocus
+                />
+                {authError && <p className="text-red-500 text-sm mt-1">סיסמה שגויה</p>}
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                כניסה
+              </button>
+            </form>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">

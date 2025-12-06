@@ -9,7 +9,7 @@ export function TutorialButton() {
     const { startTutorial } = useTutorial()
     const [isOpen, setIsOpen] = useState(false)
 
-    const handleStartTutorial = (path: 'rewrite' | 'create') => {
+    const handleStartTutorial = (path: 'rewrite' | 'create' | 'translate') => {
         startTutorial(path)
         setIsOpen(false)
     }
@@ -53,6 +53,16 @@ export function TutorialButton() {
                             <div className="font-medium text-gray-900">הדרכה - יצירת מצגת</div>
                             <div className="text-xs text-gray-500 mt-1">
                                 למד כיצד ליצור מצגת מאפס
+                            </div>
+                        </div>
+                        <div className="border-t border-gray-100" />
+                        <div
+                            onClick={() => handleStartTutorial('translate')}
+                            className="px-4 py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                        >
+                            <div className="font-medium text-gray-900">הדרכה - תרגום מצגת</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                                למד כיצד לתרגם מצגת עם 3 סוכני AI
                             </div>
                         </div>
                     </div>

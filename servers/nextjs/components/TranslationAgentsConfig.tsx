@@ -10,8 +10,7 @@ interface TranslationAgentsConfigProps {
 }
 
 const BATCH_SIZE_OPTIONS = [
-  { value: 10, label: "10 - איכות מקסימלית (איטי יותר)" },
-  { value: 15, label: "15 - איכות גבוהה" },
+  { value: 10, label: "10 - איכותי יותר" },
   { value: 20, label: "20 - מאוזן (מומלץ)" },
   { value: 30, label: "30 - מהיר יותר" },
   { value: 50, label: "50 - הכי מהיר (עשוי להפחית איכות)" },
@@ -265,7 +264,8 @@ export default function TranslationAgentsConfig({
                   className="w-4 h-4 text-[#5146E5] border-gray-300 rounded focus:ring-[#5146E5]"
                 />
                 <span className="text-sm text-gray-700">
-1                </span>
+                  השתמש ב-LLM לניתוח (מבוסס-כללים מהיר יותר וחינמי)
+                </span>
               </label>
             </div>
 

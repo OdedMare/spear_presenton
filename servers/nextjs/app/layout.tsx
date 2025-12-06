@@ -35,12 +35,13 @@ const roboto = Roboto({
 
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://presenton.ai"),
-  title: "Presenton - Open Source AI presentation generator",
+  metadataBase: new URL("https://spearpresenton.ai"),
+  title: "SpearPresenton - AI-Powered Presentation Generator",
   description:
-    "Open-source AI presentation generator with custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export. A free Gamma alternative.",
+    "SpearPresenton - Advanced AI presentation generator with multi-agent translation, custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export.",
   keywords: [
     "AI presentation generator",
+    "SpearPresenton",
     "data storytelling",
     "data visualization tool",
     "AI data presentation",
@@ -48,33 +49,34 @@ export const metadata: Metadata = {
     "data to presentation",
     "interactive presentations",
     "professional slides",
+    "AI translation",
   ],
   openGraph: {
-    title: "Presenton - Open Source AI presentation generator",
+    title: "SpearPresenton - AI-Powered Presentation Generator",
     description:
-      "Open-source AI presentation generator with custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export. A free Gamma alternative.",
-    url: "https://presenton.ai",
-    siteName: "Presenton",
+      "SpearPresenton - Advanced AI presentation generator with multi-agent translation, custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export.",
+    url: "https://spearpresenton.ai",
+    siteName: "SpearPresenton",
     images: [
       {
-        url: "https://presenton.ai/presenton-feature-graphics.png",
+        url: "https://spearpresenton.ai/spearpresenton-feature-graphics.png",
         width: 1200,
         height: 630,
-        alt: "Presenton Logo",
+        alt: "SpearPresenton Logo",
       },
     ],
     type: "website",
     locale: "en_US",
   },
   alternates: {
-    canonical: "https://presenton.ai",
+    canonical: "https://spearpresenton.ai",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Presenton - Open Source AI presentation generator",
+    title: "SpearPresenton - AI-Powered Presentation Generator",
     description:
-      "Open-source AI presentation generator with custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export. A free Gamma alternative.",
-    images: ["https://presenton.ai/presenton-feature-graphics.png"],
+      "SpearPresenton - Advanced AI presentation generator with multi-agent translation, custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export.",
+    images: ["https://spearpresenton.ai/spearpresenton-feature-graphics.png"],
   },
 };
 

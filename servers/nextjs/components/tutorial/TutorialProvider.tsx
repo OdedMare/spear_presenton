@@ -5,8 +5,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 interface TutorialContextType {
     isActive: boolean
     currentStep: number
-    tutorialPath: 'rewrite' | 'create' | null
-    startTutorial: (path: 'rewrite' | 'create') => void
+    tutorialPath: 'rewrite' | 'create' | 'translate' | null
+    startTutorial: (path: 'rewrite' | 'create' | 'translate') => void
     nextStep: () => void
     previousStep: () => void
     skipTutorial: () => void
@@ -19,7 +19,7 @@ const TutorialContext = createContext<TutorialContextType | undefined>(undefined
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
     const [isActive, setIsActive] = useState(false)
     const [currentStep, setCurrentStep] = useState(0)
-    const [tutorialPath, setTutorialPath] = useState<'rewrite' | 'create' | null>(null)
+    const [tutorialPath, setTutorialPath] = useState<'rewrite' | 'create' | 'translate' | null>(null)
     const [hasSeenTutorial, setHasSeenTutorial] = useState(true)
 
     useEffect(() => {
@@ -28,7 +28,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
         setHasSeenTutorial(seen === 'true')
     }, [])
 
-    const startTutorial = (path: 'rewrite' | 'create') => {
+    const startTutorial = (path: 'rewrite' | 'create' | 'translate') => {
         setTutorialPath(path)
         setCurrentStep(0)
         setIsActive(true)

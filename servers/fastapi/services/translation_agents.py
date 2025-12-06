@@ -297,8 +297,7 @@ Remember:
         try:
             response_text = await self.llm_client.generate(
                 model=self.model,
-                messages=messages,
-                temperature=0.3  # Lower temperature for consistent translation
+                messages=messages
             )
 
             # Parse response

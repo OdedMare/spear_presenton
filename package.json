@@ -1,6 +1,6 @@
 {
-  "name": "presenton",
+  "name": "spearpresenton",
   "version": "1.0.0",
   "type": "module",
-  "description": "Open-source AI presentation generator"
+  "description": "SpearPresenton - AI-powered presentation generator"
 }

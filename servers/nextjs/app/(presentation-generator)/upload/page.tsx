@@ -5,11 +5,11 @@ import Header from "@/app/(presentation-generator)/dashboard/components/Header";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Presenton | Open Source AI presentation generator",
+  title: "SpearPresenton | AI-Powered Presentation Generator",
   description:
-    "Open-source AI presentation generator with custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export. A free Gamma alternative.",
+    "SpearPresenton - Advanced AI presentation generator with custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export.",
   alternates: {
-    canonical: "https://presenton.ai/create",
+    canonical: "https://spearpresenton.ai/create",
   },
   keywords: [
     "presentation generator",

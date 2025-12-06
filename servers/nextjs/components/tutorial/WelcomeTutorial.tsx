@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, Wand2, HelpCircle } from 'lucide-react'
+import { FileText, Wand2, HelpCircle, Languages } from 'lucide-react'
 import { useTutorial } from './TutorialProvider'
 import { Button } from '@/components/ui/button'
 
@@ -22,7 +22,7 @@ export function WelcomeTutorial() {
 
     if (!showWelcome || hasSeenTutorial) return null
 
-    const handleStartTutorial = (path: 'rewrite' | 'create') => {
+    const handleStartTutorial = (path: 'rewrite' | 'create' | 'translate') => {
         setShowWelcome(false)
         startTutorial(path)
     }
@@ -58,7 +58,7 @@ export function WelcomeTutorial() {
                         </div>
                     </motion.div>
                     <h1 className="text-4xl font-bold font-instrument_sans mb-3">
-                        ברוכים הבאים ל-Spear Presenton!
+                        ברוכים הבאים ל-SpearPresenton!
                     </h1>
                     <p className="text-xl text-white/90 max-w-2xl mx-auto">
                         צור מצגות מרהיבות עם בינה מלאכותית תוך דקות
@@ -71,7 +71,7 @@ export function WelcomeTutorial() {
                         בחר כיצד תרצה להתחיל:
                     </p>
 
-                    <div className="grid md:grid-cols-2 gap-6 mb-8 w-full max-w-4xl">
+                    <div className="grid md:grid-cols-3 gap-6 mb-8 w-full max-w-6xl">
                         {/* Rewrite Content Card */}
                         <motion.button
                             whileHover={{ scale: 1.02 }}
@@ -121,6 +121,35 @@ export function WelcomeTutorial() {
 
                                 <p className="text-gray-600 leading-relaxed mb-4">
                                     צור מצגת שלמה מאפס באמצעות בינה מלאכותית. פשוט תאר מה אתה צריך.
+                                </p>
+
+                                <div className="flex items-center text-[#5146E5] font-medium">
+                                    <HelpCircle className="w-4 h-4 mr-2" />
+                                    למד כיצד זה עובד
+                                </div>
+                            </div>
+                        </motion.button>
+
+                        {/* Translate Presentation Card */}
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleStartTutorial('translate')}
+                            className="group relative overflow-hidden rounded-xl border-2 border-gray-200 hover:border-[#5146E5] p-8 text-right transition-all bg-white hover:shadow-lg"
+                        >
+                            <div className="absolute top-0 left-0 w-32 h-32 bg-[#E9E8F8] rounded-full -ml-16 -mt-16 group-hover:scale-150 transition-transform" />
+
+                            <div className="relative">
+                                <div className="w-14 h-14 rounded-full bg-[#E9E8F8] flex items-center justify-center text-[#5146E5] mb-4">
+                                    <Languages className="w-7 h-7" />
+                                </div>
+
+                                <h3 className="text-2xl font-semibold text-gray-900 mb-3">
+                                    תרגום מצגת
+                                </h3>
+
+                                <p className="text-gray-600 leading-relaxed mb-4">
+                                    תרגם מצגת עם 3 סוכני AI חכמים. שמור על העיצוב, תוכן מקצועי ותמיכה ב-RTL.
                                 </p>
 
                                 <div className="flex items-center text-[#5146E5] font-medium">
