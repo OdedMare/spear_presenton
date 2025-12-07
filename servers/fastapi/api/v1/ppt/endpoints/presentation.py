@@ -416,7 +416,7 @@ async def export_presentation_as_pptx(
     )
     pptx_creator.save(pptx_path)
 
-    return pptx_path
+    return f"/api/v1/ppt/files/download/{os.path.basename(pptx_path)}"
 
 
 @PRESENTATION_ROUTER.post("/export", response_model=PresentationPathAndEditPath)

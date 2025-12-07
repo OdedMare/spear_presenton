@@ -2,6 +2,8 @@ from http.client import HTTPException
 import os
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Body, File, UploadFile
+from fastapi.responses import FileResponse
+from utils.asset_directory_utils import get_exports_directory
 
 from constants.documents import UPLOAD_ACCEPTED_FILE_TYPES
 from models.decomposed_file_info import DecomposedFileInfo
@@ -83,5 +85,30 @@ async def update_files(
 ):
     with open(file_path, "wb") as f:
         f.write(await file.read())
+
+@FILES_ROUTER.get("/download/{filename}")
+async def download_file(filename: str):
+    # 1. Check exports directory (where PDF/PPTX exports are saved)
+    exports_dir = get_exports_directory()
+    file_path = os.path.join(exports_dir, filename)
+
+    if os.path.exists(file_path):
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type='application/octet-stream'
+        )
+
+    # 2. Check temp directory (where translations or intermediate files might be)
+    # Using base_dir directly from the service
+    temp_path = os.path.join(TEMP_FILE_SERVICE.base_dir, filename)
+    if os.path.exists(temp_path):
+        return FileResponse(
+            path=temp_path,
+            filename=filename,
+            media_type='application/octet-stream'
+        )
+
+    raise HTTPException(404, f"File not found: {filename}")
 
     return {"message": "File updated successfully"}

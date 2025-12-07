@@ -99,7 +99,7 @@ async function getBrowserAndPage(id: string): Promise<[Browser, Page]> {
   await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
   page.setDefaultNavigationTimeout(300000);
   page.setDefaultTimeout(300000);
-  await page.goto(`http://localhost/pdf-maker?id=${id}`, {
+  await page.goto(`http://localhost:3000/pdf-maker?id=${id}`, {
     waitUntil: "networkidle0",
     timeout: 300000,
   });
@@ -465,35 +465,35 @@ async function getAllChildElementsAttributes({
   const filteredResults =
     depth === 0
       ? allResults.filter(({ attributes }) => {
-          const hasBackground =
-            attributes.background && attributes.background.color;
-          const hasBorder = attributes.border && attributes.border.color;
-          const hasShadow = attributes.shadow && attributes.shadow.color;
-          const hasText =
-            attributes.innerText && attributes.innerText.trim().length > 0;
-          const hasImage = attributes.imageSrc;
-          const isSvg = attributes.tagName === "svg";
-          const isCanvas = attributes.tagName === "canvas";
-          const isTable = attributes.tagName === "table";
-          const hasGradient = attributes.hasGradient;
+        const hasBackground =
+          attributes.background && attributes.background.color;
+        const hasBorder = attributes.border && attributes.border.color;
+        const hasShadow = attributes.shadow && attributes.shadow.color;
+        const hasText =
+          attributes.innerText && attributes.innerText.trim().length > 0;
+        const hasImage = attributes.imageSrc;
+        const isSvg = attributes.tagName === "svg";
+        const isCanvas = attributes.tagName === "canvas";
+        const isTable = attributes.tagName === "table";
+        const hasGradient = attributes.hasGradient;
 
-          const occupiesRoot =
-            attributes.position &&
-            attributes.position.left === 0 &&
-            attributes.position.top === 0 &&
-            attributes.position.width === rootRect!.width &&
-            attributes.position.height === rootRect!.height;
+        const occupiesRoot =
+          attributes.position &&
+          attributes.position.left === 0 &&
+          attributes.position.top === 0 &&
+          attributes.position.width === rootRect!.width &&
+          attributes.position.height === rootRect!.height;
 
-          const hasVisualProperties =
-            hasBackground || hasBorder || hasShadow || hasText || hasGradient;
-          const hasSpecialContent = hasImage || isSvg || isCanvas || isTable || hasGradient;
+        const hasVisualProperties =
+          hasBackground || hasBorder || hasShadow || hasText || hasGradient;
+        const hasSpecialContent = hasImage || isSvg || isCanvas || isTable || hasGradient;
 
-          // Allow background-only elements that occupy root (for template backgrounds)
-          // but exclude elements that ONLY have text and occupy root (wrapper divs)
-          const isBackgroundOnlyRoot = occupiesRoot && (hasBackground || hasGradient) && !hasText && !hasBorder && !hasShadow;
+        // Allow background-only elements that occupy root (for template backgrounds)
+        // but exclude elements that ONLY have text and occupy root (wrapper divs)
+        const isBackgroundOnlyRoot = occupiesRoot && (hasBackground || hasGradient) && !hasText && !hasBorder && !hasShadow;
 
-          return (hasVisualProperties && !occupiesRoot) || hasSpecialContent || isBackgroundOnlyRoot;
-        })
+        return (hasVisualProperties && !occupiesRoot) || hasSpecialContent || isBackgroundOnlyRoot;
+      })
       : allResults;
 
   if (depth === 0) {
@@ -1210,8 +1210,8 @@ async function getElementAttributes(
           el.className && typeof el.className === "string"
             ? el.className
             : el.className
-            ? el.className.toString()
-            : undefined,
+              ? el.className.toString()
+              : undefined,
         innerText: innerText,
         opacity: elementOpacity,
         background: background,
