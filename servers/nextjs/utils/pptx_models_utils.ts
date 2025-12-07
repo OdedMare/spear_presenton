@@ -201,7 +201,8 @@ function convertToAutoShapeBox(element: ElementAttributes): PptxAutoShapeBoxMode
     position,
     text_wrap: element.textWrap ?? true,
     border_radius: borderRadius || undefined,
-    paragraphs
+    paragraphs,
+    opacity: element.opacity
   };
 }
 

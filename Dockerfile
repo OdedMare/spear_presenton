@@ -1,8 +1,8 @@
 FROM python:3.11-slim-bookworm
 
 # Install system dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    nginx \
     curl \
     libreoffice \
     fontconfig \
@@ -49,11 +49,15 @@ WORKDIR /app
 COPY servers/fastapi/ ./servers/fastapi/
 COPY start.js LICENSE NOTICE ./
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Create directories and set permissions for OpenShift compatibility
+# OpenShift runs containers with a random UID but as part of the root group (GID 0).
+# Directories must be writable by group 0.
+RUN mkdir -p /app_data /tmp/presenton && \
+    chown -R 1001:0 /app_data /tmp/presenton /app && \
+    chmod -R g+rwx /app_data /tmp/presenton /app
 
-# Expose port
-EXPOSE 80
+# Expose port (Next.js default)
+EXPOSE 3000
 
 # Start the servers
 CMD ["node", "/app/start.js"]

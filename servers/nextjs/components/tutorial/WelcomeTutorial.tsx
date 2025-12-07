@@ -5,10 +5,12 @@ import { motion } from 'framer-motion'
 import { FileText, Wand2, HelpCircle, Languages } from 'lucide-react'
 import { useTutorial } from './TutorialProvider'
 import { Button } from '@/components/ui/button'
+import { usePathname } from 'next/navigation'
 
 export function WelcomeTutorial() {
     const { hasSeenTutorial, startTutorial, skipTutorial } = useTutorial()
     const [showWelcome, setShowWelcome] = React.useState(false)
+    const pathname = usePathname()
 
     useEffect(() => {
         // Show welcome screen for first-time users after a short delay
@@ -19,6 +21,9 @@ export function WelcomeTutorial() {
             return () => clearTimeout(timer)
         }
     }, [hasSeenTutorial])
+
+    // Don't show tutorial on PDF maker page (used by Puppeteer for PDF export)
+    if (pathname === '/pdf-maker') return null
 
     if (!showWelcome || hasSeenTutorial) return null
 

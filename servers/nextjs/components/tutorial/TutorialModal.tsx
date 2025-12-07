@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Sparkles, FileText, Wand2, Languages, Users, CheckCircle } from 'lucide-react'
 import { useTutorial } from './TutorialProvider'
 import { Button } from '@/components/ui/button'
+import { usePathname } from 'next/navigation'
 
 interface TutorialStep {
     title: string
@@ -99,6 +100,10 @@ const translateSteps: TutorialStep[] = [
 
 export function TutorialModal() {
     const { isActive, currentStep, tutorialPath, nextStep, previousStep, skipTutorial, completeTutorial } = useTutorial()
+    const pathname = usePathname()
+
+    // Don't show tutorial on PDF maker page (used by Puppeteer for PDF export)
+    if (pathname === '/pdf-maker') return null
 
     if (!isActive || !tutorialPath) return null
 

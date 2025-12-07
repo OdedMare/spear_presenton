@@ -26,6 +26,7 @@ interface GetAllChildElementsAttributesArgs {
   inheritedBorderRadius?: number[];
   inheritedZIndex?: number;
   inheritedOpacity?: number;
+  insideNonScreenshottedGradient?: boolean;
   screenshotsDir: string;
 }
 
@@ -278,6 +279,7 @@ async function getAllChildElementsAttributes({
   inheritedBorderRadius,
   inheritedZIndex,
   inheritedOpacity,
+  insideNonScreenshottedGradient = false,
   screenshotsDir,
 }: GetAllChildElementsAttributesArgs): Promise<SlideAttributesResult> {
   if (!rootRect) {
@@ -377,10 +379,14 @@ async function getAllChildElementsAttributes({
       }
     }
 
+    // Track whether we'll be inside a non-screenshotted gradient for child elements
+    let willBeInsideNonScreenshottedGradient = insideNonScreenshottedGradient;
+
     if (
       attributes.tagName === "svg" ||
       attributes.tagName === "canvas" ||
-      attributes.tagName === "table"
+      attributes.tagName === "table" ||
+      (attributes.hasGradient && !insideNonScreenshottedGradient)
     ) {
       attributes.should_screenshot = true;
       attributes.element = childElementHandle;
@@ -388,9 +394,32 @@ async function getAllChildElementsAttributes({
 
     allResults.push({ attributes, depth });
 
-    // If the element is a canvas, or table, we don't need to go deeper
-    if (attributes.should_screenshot && attributes.tagName !== "svg") {
+    // If the element is a canvas, table, or has gradient, we don't need to go deeper
+    // (except for SVG which we still want to traverse)
+    if (attributes.should_screenshot && attributes.tagName !== "svg" && !attributes.hasGradient) {
       continue;
+    }
+
+    // For gradient elements, we need to decide whether to screenshot or traverse deeper
+    // Screenshot if: no text content anywhere in the element (purely decorative)
+    // Traverse if: has any text content (direct or in children)
+    if (attributes.hasGradient && !insideNonScreenshottedGradient) {
+      // Check if element or any descendants have text content
+      const hasAnyText = await childElementHandle.evaluate((el) => {
+        const text = el.textContent || '';
+        return text.trim().length > 0;
+      });
+
+      if (hasAnyText) {
+        // Has text content - unmark for screenshot and traverse normally
+        // This allows text to be extracted as text, not as an image
+        // Mark that children should not be screenshotted for gradient
+        attributes.should_screenshot = false;
+        willBeInsideNonScreenshottedGradient = true;
+      } else {
+        // No text content anywhere - this is purely decorative, screenshot it and don't go deeper
+        continue;
+      }
     }
 
     const childResults = await getAllChildElementsAttributes({
@@ -402,6 +431,7 @@ async function getAllChildElementsAttributes({
       inheritedBorderRadius: attributes.borderRadius || inheritedBorderRadius,
       inheritedZIndex: attributes.zIndex || inheritedZIndex,
       inheritedOpacity: attributes.opacity || inheritedOpacity,
+      insideNonScreenshottedGradient: willBeInsideNonScreenshottedGradient,
       screenshotsDir,
     });
     allResults.push(
@@ -445,6 +475,7 @@ async function getAllChildElementsAttributes({
           const isSvg = attributes.tagName === "svg";
           const isCanvas = attributes.tagName === "canvas";
           const isTable = attributes.tagName === "table";
+          const hasGradient = attributes.hasGradient;
 
           const occupiesRoot =
             attributes.position &&
@@ -454,10 +485,14 @@ async function getAllChildElementsAttributes({
             attributes.position.height === rootRect!.height;
 
           const hasVisualProperties =
-            hasBackground || hasBorder || hasShadow || hasText;
-          const hasSpecialContent = hasImage || isSvg || isCanvas || isTable;
+            hasBackground || hasBorder || hasShadow || hasText || hasGradient;
+          const hasSpecialContent = hasImage || isSvg || isCanvas || isTable || hasGradient;
 
-          return (hasVisualProperties && !occupiesRoot) || hasSpecialContent;
+          // Allow background-only elements that occupy root (for template backgrounds)
+          // but exclude elements that ONLY have text and occupy root (wrapper divs)
+          const isBackgroundOnlyRoot = occupiesRoot && (hasBackground || hasGradient) && !hasText && !hasBorder && !hasShadow;
+
+          return (hasVisualProperties && !occupiesRoot) || hasSpecialContent || isBackgroundOnlyRoot;
         })
       : allResults;
 
@@ -629,6 +664,15 @@ async function getElementAttributes(
       }
 
       return undefined;
+    }
+
+    function hasGradientBackground(computedStyles: CSSStyleDeclaration): boolean {
+      const backgroundImage = computedStyles.backgroundImage;
+      if (!backgroundImage || backgroundImage === "none") {
+        return false;
+      }
+      // Check for linear-gradient, radial-gradient, conic-gradient, etc.
+      return /gradient\(/.test(backgroundImage);
     }
 
     function parseBorder(computedStyles: CSSStyleDeclaration) {
@@ -1156,6 +1200,9 @@ async function getElementAttributes(
       const opacity = parseFloat(computedStyles.opacity);
       const elementOpacity = isNaN(opacity) ? undefined : opacity;
 
+      // Check if element has gradient background
+      const hasGradient = hasGradientBackground(computedStyles);
+
       return {
         tagName: tagName,
         id: el.id,
@@ -1188,6 +1235,7 @@ async function getElementAttributes(
         should_screenshot: false,
         element: undefined,
         filters: filters,
+        hasGradient: hasGradient,
       };
     }
 

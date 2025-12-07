@@ -258,13 +258,19 @@ class PptxPresentationCreator:
         self.apply_shadow_to_shape(autoshape, autoshape_box_model.shadow)
         self.apply_border_radius_to_shape(autoshape, autoshape_box_model.border_radius)
 
+        # Apply opacity if specified
+        if autoshape_box_model.opacity is not None and autoshape_box_model.opacity < 1.0:
+            self.set_fill_opacity(autoshape.fill, autoshape_box_model.opacity)
+
         if autoshape_box_model.paragraphs:
             self.add_paragraphs(textbox, autoshape_box_model.paragraphs)
 
     def add_textbox(self, slide: Slide, textbox_model: PptxTextBoxModel):
         position = textbox_model.position
         textbox_shape = slide.shapes.add_textbox(*position.to_pt_list())
-        textbox_shape.width += Pt(2)
+        # Add extra width and height to prevent text from being cut off in PowerPoint
+        textbox_shape.width += Pt(10)
+        textbox_shape.height += Pt(5)
 
         textbox = textbox_shape.text_frame
         textbox.word_wrap = textbox_model.text_wrap

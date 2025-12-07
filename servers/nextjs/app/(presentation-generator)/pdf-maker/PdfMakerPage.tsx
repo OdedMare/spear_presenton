@@ -37,7 +37,7 @@ const PresentationPage = ({ presentation_id }: { presentation_id: string }) => {
     }
   }, [presentationData, loading]);
   useEffect(() => {
-    if (presentationData?.slides[0].layout.includes("custom")) {
+    if (presentationData?.slides && presentationData.slides.length > 0) {
       const existingScript = document.querySelector(
         'script[src*="tailwindcss.com"]'
       );

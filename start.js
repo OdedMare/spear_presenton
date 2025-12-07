@@ -184,25 +184,7 @@ const startServers = async () => {
   process.exit(exitCode);
 };
 
-// Start nginx service
-const startNginx = () => {
-  const nginxProcess = spawn("service", ["nginx", "start"], {
-    stdio: "inherit",
-    env: process.env,
-  });
 
-  nginxProcess.on("error", (err) => {
-    console.error("Nginx process failed to start:", err);
-  });
-
-  nginxProcess.on("exit", (code) => {
-    if (code === 0) {
-      console.log("Nginx started successfully");
-    } else {
-      console.error(`Nginx failed to start with exit code: ${code}`);
-    }
-  });
-};
 
 const main = async () => {
   if (isDev) {
@@ -214,7 +196,7 @@ const main = async () => {
   }
 
   startServers();
-  startNginx();
+
 };
 
 main();

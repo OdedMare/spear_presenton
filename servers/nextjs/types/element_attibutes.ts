@@ -73,6 +73,7 @@ export interface ElementAttributes {
     sepia?: number;
     opacity?: number;
   };
+  hasGradient?: boolean;
 }
 
 export interface SlideAttributesResult {

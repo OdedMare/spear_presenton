@@ -64,7 +64,11 @@ class TempFileService:
             os.rmdir(dir_path)
 
     def cleanup_base_dir(self):
-        self.cleanup_temp_dir(self.base_dir)
+        # Only clean contents, do not remove the base directory itself
+        # This avoids permission errors on OpenShift/K8s where the directory
+        # might be owned by root (from Dockerfile) but the process runs as a random user.
+        if os.path.exists(self.base_dir):
+            self.delete_dir_files(self.base_dir)
 
 
 TEMP_FILE_SERVICE = TempFileService()

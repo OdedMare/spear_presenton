@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TutorialProvider } from "@/components/tutorial/TutorialProvider";
 import { TutorialModal } from "@/components/tutorial/TutorialModal";
 import { WelcomeTutorial } from "@/components/tutorial/WelcomeTutorial";
+import { BetaWarningBanner } from "@/components/BetaWarningBanner";
 
 const inter = localFont({
   src: [
@@ -95,6 +96,7 @@ export default function RootLayout({
           <MixpanelInitializer>
             <LayoutProvider>
               <TutorialProvider>
+                <BetaWarningBanner />
                 {children}
                 <TutorialModal />
                 <WelcomeTutorial />

@@ -300,6 +300,7 @@ export interface PptxAutoShapeBoxModel extends PptxShapeModel {
   text_wrap: boolean;
   border_radius?: number;
   paragraphs?: PptxParagraphModel[];
+  opacity?: number;
 }
 
 export interface PptxPictureBoxModel extends PptxShapeModel {

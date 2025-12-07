@@ -130,6 +130,7 @@ class PptxAutoShapeBoxModel(PptxShapeModel):
     text_wrap: bool = True
     border_radius: Optional[int] = None
     paragraphs: Optional[List[PptxParagraphModel]] = None
+    opacity: Optional[float] = None
 
 
 class PptxPictureBoxModel(PptxShapeModel):
