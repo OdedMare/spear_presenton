@@ -21,6 +21,7 @@ oc login https://api.your-cluster.com:6443 --token=YOUR_TOKEN
 oc login https://api.your-cluster.com:6443 -u your-username -p your-password
 ```
 
+
 ### Step 2: Create a New Project
 
 ```bash
@@ -202,6 +203,11 @@ metadata:
   name: presenton
   labels:
     app: presenton
+  annotations:
+    # Increase timeout for long-running requests (streaming, generation)
+    haproxy.router.openshift.io/timeout: 30m
+    # Disable buffering for SSE streaming
+    haproxy.router.openshift.io/disable_cookies: "true"
 spec:
   to:
     kind: Service
@@ -218,6 +224,11 @@ metadata:
   name: presenton-api
   labels:
     app: presenton
+  annotations:
+    # CRITICAL: Increase timeout for streaming and long-running requests
+    haproxy.router.openshift.io/timeout: 30m
+    # CRITICAL: Disable buffering for Server-Sent Events (SSE) streaming
+    haproxy.router.openshift.io/disable_cookies: "true"
 spec:
   path: /api
   to:

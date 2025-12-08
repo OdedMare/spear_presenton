@@ -2,7 +2,11 @@
 const nextConfig = {
   reactStrictMode: false,
   distDir: ".next-build",
-  
+
+  // Increase timeout for long-running API requests (translation, generation)
+  experimental: {
+    proxyTimeout: 600000, // 10 minutes for translation and generation requests
+  },
 
   // Rewrites for development - proxy frontend requests to FastAPI backend
   async rewrites() {

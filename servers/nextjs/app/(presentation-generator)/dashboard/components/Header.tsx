@@ -28,6 +28,16 @@ const Header = () => {
           <div className="flex items-center gap-3">
             <TutorialButton />
             <Link
+              href="/upload"
+              prefetch={false}
+              onClick={() => trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/upload" })}
+              className="flex items-center gap-2 px-3 py-2 text-white hover:bg-primary/80 rounded-md transition-colors outline-none"
+              role="menuitem"
+            >
+              <FilePlus2 className="w-5 h-5" />
+              <span className="text-sm font-medium font-inter">יצירת מצגת בעזרת בינה מלאכותית</span>
+            </Link>
+            <Link
               href="/content-rewrite"
               prefetch={false}
               onClick={() => trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/content-rewrite" })}

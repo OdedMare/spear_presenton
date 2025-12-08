@@ -21,7 +21,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 WORKDIR /app
 
 # Set environment variables
-ENV APP_DATA_DIRECTORY=/app_data
+ENV APP_DATA_DIRECTORY=/tmp/app_data
 ENV TEMP_DIRECTORY=/tmp/presenton
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
@@ -52,12 +52,15 @@ COPY start.js LICENSE NOTICE ./
 # Create directories and set permissions for OpenShift compatibility
 # OpenShift runs containers with a random UID but as part of the root group (GID 0).
 # Directories must be writable by group 0.
-RUN mkdir -p /app_data /tmp/presenton && \
-    chown -R 1001:0 /app_data /tmp/presenton /app && \
-    chmod -R g+rwx /app_data /tmp/presenton /app
+RUN mkdir -p /tmp/app_data /tmp/presenton && \
+    chown -R 1001:0 /tmp/app_data /tmp/presenton /app && \
+    chmod -R g+rwx /tmp/app_data /tmp/presenton /app
 
-# Expose port (Next.js default)
-EXPOSE 3000
+# Switch to non-root user for OpenShift compatibility
+USER 1001
+
+# Expose ports for Next.js, FastAPI, and Nginx
+EXPOSE 3000 8000 8080
 
 # Start the servers
 CMD ["node", "/app/start.js"]

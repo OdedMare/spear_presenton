@@ -27,7 +27,9 @@ const fastapiPort = 8000;
 const nextjsPort = 3000;
 const appmcpPort = 8001;
 
-const userConfigPath = join(process.env.APP_DATA_DIRECTORY, "userConfig.json");
+// Set default APP_DATA_DIRECTORY if not provided (for local development)
+const appDataDirectory = process.env.APP_DATA_DIRECTORY || join(__dirname, "app_data");
+const userConfigPath = join(appDataDirectory, "userConfig.json");
 const userDataDir = dirname(userConfigPath);
 
 // Create user_data directory if it doesn't exist
@@ -62,6 +64,9 @@ const setupNodeModules = () => {
   });
 };
 
+// Ensure APP_DATA_DIRECTORY and TEMP_DIRECTORY are set for all child processes
+process.env.APP_DATA_DIRECTORY = appDataDirectory;
+process.env.TEMP_DIRECTORY = process.env.TEMP_DIRECTORY || join(__dirname, "temp");
 process.env.USER_CONFIG_PATH = userConfigPath;
 
 //? UserConfig is only setup if API Keys can be changed
@@ -173,11 +178,22 @@ const startServers = async () => {
     console.error("Ollama process failed to start:", err);
   });
 
+  const nginxProcess = spawn("nginx", ["-g", "daemon off;"], {
+    cwd: "/",
+    stdio: "inherit",
+    env: process.env,
+  });
+
+  nginxProcess.on("error", (err) => {
+    console.error("Nginx process failed to start:", err);
+  });
+
   // Keep the Node process alive until both servers exit
   const exitCode = await Promise.race([
     new Promise((resolve) => fastApiProcess.on("exit", resolve)),
     new Promise((resolve) => nextjsProcess.on("exit", resolve)),
     new Promise((resolve) => ollamaProcess.on("exit", resolve)),
+    new Promise((resolve) => nginxProcess.on("exit", resolve)),
   ]);
 
   console.log(`One of the processes exited. Exit code: ${exitCode}`);
