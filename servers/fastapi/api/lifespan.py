@@ -4,11 +4,12 @@ import os
 from fastapi import FastAPI
 
 from services.database import create_db_and_tables
-from utils.get_env import get_app_data_directory_env
+from utils.get_env import get_app_data_directory_env, get_can_change_keys_env
 from utils.model_availability import (
     check_llm_and_image_provider_api_or_model_availability,
 )
 from utils.safe_init import safe_init
+from utils.user_config import update_env_with_user_config
 
 
 @safe_init(message="Warning: Database unavailable, continuing without migrations")
@@ -25,10 +26,15 @@ async def initialize_models_and_providers():
 async def app_lifespan(_: FastAPI):
     """
     Lifespan context manager for FastAPI application.
-    Initializes the application data directory and checks LLM model availability.
+    Initializes the application data directory, loads user config, and checks LLM model availability.
 
     """
     os.makedirs(get_app_data_directory_env(), exist_ok=True)
+
+    # Load user configuration at startup
+    if get_can_change_keys_env() != "false":
+        update_env_with_user_config()
+
     await initialize_database()
     await initialize_models_and_providers()
     yield

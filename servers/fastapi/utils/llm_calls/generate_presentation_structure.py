@@ -7,6 +7,7 @@ from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_provider import get_model
 from utils.get_dynamic_models import get_presentation_structure_model_with_n_slides
 from models.presentation_structure_model import PresentationStructureModel
+from utils.model_capabilities import is_small_model
 
 
 def get_messages(
@@ -14,7 +15,42 @@ def get_messages(
     n_slides: int,
     data: str,
     instructions: Optional[str] = None,
+    model: Optional[str] = None,
 ):
+    """
+    Get messages for structure generation.
+
+    For small models, returns simplified prompt focused on layout selection.
+    For large models, returns full design philosophy prompt.
+    """
+    # Simplified prompt for small models
+    if model and is_small_model(model):
+        return [
+            LLMSystemMessage(
+                content=f"""
+You are a presentation designer. Select the best layout for each slide.
+
+{presentation_layout.to_string()}
+
+{"# User Instructions: " + instructions if instructions else ""}
+
+Key Rules:
+1. Match layout to content purpose
+2. Opening/closing slides → Title layouts
+3. Data/metrics → Chart layouts
+4. Comparisons → Side-by-side layouts
+5. Create visual variety
+6. Select layout index for all {n_slides} slides
+
+Choose layouts that make the presentation engaging and clear.
+                """,
+            ),
+            LLMUserMessage(
+                content=f"{data}",
+            ),
+        ]
+
+    # Full prompt for large models
     return [
         LLMSystemMessage(
             content=f"""
@@ -30,7 +66,7 @@ def get_messages(
                 # Layout Selection Guidelines
                 1. **Content-driven choices**: Let the slide's purpose guide layout selection
                 - Opening/closing → Title layouts
-                - Processes/workflows → Visual process layouts  
+                - Processes/workflows → Visual process layouts
                 - Comparisons/contrasts → Side-by-side layouts
                 - Data/metrics → Chart/graph layouts
                 - Concepts/ideas → Image + text layouts
@@ -69,7 +105,29 @@ def get_messages_for_slides_markdown(
     n_slides: int,
     data: str,
     instructions: Optional[str] = None,
+    model: Optional[str] = None,
 ):
+    """Get messages for markdown-based structure generation."""
+    # Simplified prompt for small models
+    if model and is_small_model(model):
+        return [
+            LLMSystemMessage(
+                content=f"""
+You are a presentation designer. Select layouts that match slide content.
+
+{"# User Instructions: " + instructions if instructions else ""}
+
+{presentation_layout.to_string()}
+
+Select layout index for each of the {n_slides} slides.
+                """,
+            ),
+            LLMUserMessage(
+                content=f"{data}",
+            ),
+        ]
+
+    # Full prompt for large models
     return [
         LLMSystemMessage(
             content=f"""
@@ -117,6 +175,7 @@ async def generate_presentation_structure(
                     len(presentation_outline.slides),
                     presentation_outline.to_string(),
                     instructions,
+                    model,  # Pass model for adaptive prompt selection
                 )
                 if using_slides_markdown
                 else get_messages(
@@ -124,6 +183,7 @@ async def generate_presentation_structure(
                     len(presentation_outline.slides),
                     presentation_outline.to_string(),
                     instructions,
+                    model,  # Pass model for adaptive prompt selection
                 )
             ),
             response_format=response_model.model_json_schema(),

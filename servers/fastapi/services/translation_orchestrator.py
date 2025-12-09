@@ -21,6 +21,7 @@ import asyncio
 from typing import Dict, Any, Optional, Tuple
 from enum import Enum
 from dataclasses import dataclass
+from contextlib import contextmanager
 
 from services.translation_tools import (
     extract_placeholders,
@@ -42,6 +43,53 @@ from services.translation_agents import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def translation_env_override():
+    """
+    Context manager to temporarily override LLM environment variables
+    with translation-specific settings if they are configured.
+
+    This allows translation agents to use a different LLM endpoint
+    than the main presentation generation pipeline.
+    """
+    # Store original values
+    original_url = os.getenv("CUSTOM_LLM_URL")
+    original_api_key = os.getenv("CUSTOM_LLM_API_KEY")
+    original_provider = os.getenv("LLM")
+
+    # Get translation-specific settings
+    translation_url = os.getenv("TRANSLATION_CUSTOM_URL")
+    translation_api_key = os.getenv("TRANSLATION_CUSTOM_API_KEY")
+
+    # If translation-specific URL is set, temporarily override
+    if translation_url:
+        logger.info(f"Using translation-specific custom URL: {translation_url}")
+        os.environ["CUSTOM_LLM_URL"] = translation_url
+        if translation_api_key:
+            os.environ["CUSTOM_LLM_API_KEY"] = translation_api_key
+        # Force custom provider for translation
+        os.environ["LLM"] = "custom"
+
+    try:
+        yield
+    finally:
+        # Restore original values
+        if original_url:
+            os.environ["CUSTOM_LLM_URL"] = original_url
+        elif "CUSTOM_LLM_URL" in os.environ and translation_url:
+            del os.environ["CUSTOM_LLM_URL"]
+
+        if original_api_key:
+            os.environ["CUSTOM_LLM_API_KEY"] = original_api_key
+        elif "CUSTOM_LLM_API_KEY" in os.environ and translation_url:
+            del os.environ["CUSTOM_LLM_API_KEY"]
+
+        if original_provider:
+            os.environ["LLM"] = original_provider
+        elif "LLM" in os.environ and translation_url:
+            del os.environ["LLM"]
 
 
 class TranslationStage(str, Enum):
@@ -302,6 +350,32 @@ async def translate_presentation_with_agents(
     logger.info(f"Languages: {source_language} -> {target_language}")
     logger.info(f"Max Retries: {max_retries}")
     logger.info(f"=" * 80)
+
+    # Use translation-specific environment configuration if set
+    with translation_env_override():
+        return await _execute_translation_pipeline(
+            placeholder_structure,
+            source_language,
+            target_language,
+            presentation_id,
+            max_retries,
+            parser_config,
+            translator_config,
+            validator_config
+        )
+
+
+async def _execute_translation_pipeline(
+    placeholder_structure: Dict[str, Any],
+    source_language: str,
+    target_language: str,
+    presentation_id: str,
+    max_retries: int,
+    parser_config: Dict[str, Any],
+    translator_config: Dict[str, Any],
+    validator_config: Dict[str, Any]
+) -> Tuple[Optional[TranslationResult], Optional[TranslationError]]:
+    """Internal function that executes the translation pipeline."""
 
     # Stage 1: Structure Agent
     logger.info(f"\n{'=' * 80}")

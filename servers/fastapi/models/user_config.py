@@ -41,3 +41,16 @@ class UserConfig(BaseModel):
 
     # Web Search
     WEB_GROUNDING: Optional[bool] = None
+
+    # Model Capabilities
+    FORCE_ADAPTIVE_MODE: Optional[bool] = None
+
+    # Translation Agents Configuration
+    TRANSLATION_USE_AGENTS: Optional[bool] = None
+    TRANSLATION_PARSER_USE_LLM: Optional[bool] = None
+    TRANSLATION_PARSER_MODEL: Optional[str] = None
+    TRANSLATION_MODEL: Optional[str] = None
+    TRANSLATION_BATCH_SIZE: Optional[int] = None
+    TRANSLATION_VALIDATOR_MODEL: Optional[str] = None
+    TRANSLATION_CUSTOM_URL: Optional[str] = None
+    TRANSLATION_CUSTOM_API_KEY: Optional[str] = None

@@ -153,6 +153,7 @@ export default function LLMProviderSelection({
               customModel={llmConfig.CUSTOM_MODEL || ""}
               toolCalls={llmConfig.TOOL_CALLS || false}
               disableThinking={llmConfig.DISABLE_THINKING || false}
+              forceAdaptiveMode={llmConfig.FORCE_ADAPTIVE_MODE || false}
               onInputChange={input_field_changed}
             />
           </TabsContent>

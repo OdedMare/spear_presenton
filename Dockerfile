@@ -31,7 +31,7 @@ RUN pip install \
     aiohttp aiomysql aiosqlite asyncpg fastapi[standard] \
     pathvalidate pdfplumber chromadb sqlmodel \
     anthropic google-genai openai fastmcp dirtyjson \
-    deep-translator langdetect \
+    deep-translator langdetect json-repair \
     && pip install docling --extra-index-url https://download.pytorch.org/whl/cpu
 
 

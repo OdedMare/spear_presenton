@@ -35,6 +35,7 @@ export interface LLMConfig {
   DISABLE_THINKING?: boolean;
   EXTENDED_REASONING?: boolean;
   WEB_GROUNDING?: boolean;
+  FORCE_ADAPTIVE_MODE?: boolean;
 
   // Translation Agents Configuration
   TRANSLATION_USE_AGENTS?: boolean;

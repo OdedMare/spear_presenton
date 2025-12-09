@@ -191,6 +191,7 @@ def extract_group_shapes(group_el: etree._Element, slide_num: int, element_index
     """
     Extract text from shapes inside a group (grpSp).
 
+    Recursively handles nested groups and extracts each text-bearing shape individually.
     Returns list of element dicts for each shape with text in the group.
     """
     elements = []
@@ -198,6 +199,7 @@ def extract_group_shapes(group_el: etree._Element, slide_num: int, element_index
 
     for child in group_el:
         tag_name = etree.QName(child.tag).localname
+
         if tag_name == "sp":  # Shape in group
             text, para_count = extract_text_from_element(child, "p")
             if text:
@@ -212,6 +214,15 @@ def extract_group_shapes(group_el: etree._Element, slide_num: int, element_index
                     "originalLength": len(text),
                     **constraints
                 })
+                group_index += 1
+
+        elif tag_name == "grpSp":  # Nested group
+            # Recursively extract from nested group
+            nested_elements = extract_group_shapes(child, slide_num, element_index)
+            # Renumber the nested elements to continue the sequence
+            for nested_el in nested_elements:
+                nested_el["id"] = f"slide{slide_num}_group{element_index}_shape{group_index}"
+                elements.append(nested_el)
                 group_index += 1
 
     return elements

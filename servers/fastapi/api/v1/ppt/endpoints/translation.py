@@ -116,9 +116,9 @@ async def translate_presentation(
     target_language: str = Form(..., description="Target language (e.g., 'he', 'english', 'en')"),
     presentation_id: Optional[str] = Form(None, description="Optional unique ID"),
     use_llm_parser: bool = Form(False, description="Use LLM for parsing (default: rule-based)"),
-    parser_model: Optional[str] = Form(None, description="Model for parser agent (default: gpt-4o-mini)"),
-    translator_model: Optional[str] = Form(None, description="Model for translator (default: gpt-4)"),
-    validator_model: Optional[str] = Form(None, description="Model for validator (default: gpt-4o-mini)"),
+    parser_model: Optional[str] = Form(None, description="Model for parser agent (optional, uses TRANSLATION_PARSER_MODEL env var)"),
+    translator_model: Optional[str] = Form(None, description="Model for translator (required, uses TRANSLATION_MODEL env var)"),
+    validator_model: Optional[str] = Form(None, description="Model for validator (optional, uses TRANSLATION_VALIDATOR_MODEL env var)"),
     batch_size: int = Form(20, description="Translation batch size (default: 20)"),
     max_retries: int = Form(1, description="Max retries per agent (default: 1)"),
 ):
@@ -308,9 +308,9 @@ async def translation_health_check():
 
     config = {
         "parser_use_llm": os.getenv("TRANSLATION_PARSER_USE_LLM", "false"),
-        "parser_model": os.getenv("TRANSLATION_PARSER_MODEL", "gpt-4o-mini"),
-        "translator_model": os.getenv("TRANSLATION_MODEL", "gpt-4"),
-        "validator_model": os.getenv("TRANSLATION_VALIDATOR_MODEL", "gpt-4o-mini"),
+        "parser_model": os.getenv("TRANSLATION_PARSER_MODEL", "not configured"),
+        "translator_model": os.getenv("TRANSLATION_MODEL", "not configured"),
+        "validator_model": os.getenv("TRANSLATION_VALIDATOR_MODEL", "not configured"),
         "batch_size": os.getenv("TRANSLATION_BATCH_SIZE", "20"),
     }
 

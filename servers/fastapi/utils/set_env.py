@@ -67,3 +67,39 @@ def set_extended_reasoning_env(value):
 
 def set_web_grounding_env(value):
     os.environ["WEB_GROUNDING"] = value
+
+
+def set_force_adaptive_mode_env(value):
+    os.environ["FORCE_ADAPTIVE_MODE"] = value
+
+
+def set_translation_use_agents_env(value):
+    os.environ["TRANSLATION_USE_AGENTS"] = value
+
+
+def set_translation_parser_use_llm_env(value):
+    os.environ["TRANSLATION_PARSER_USE_LLM"] = value
+
+
+def set_translation_parser_model_env(value):
+    os.environ["TRANSLATION_PARSER_MODEL"] = value
+
+
+def set_translation_model_env(value):
+    os.environ["TRANSLATION_MODEL"] = value
+
+
+def set_translation_batch_size_env(value):
+    os.environ["TRANSLATION_BATCH_SIZE"] = value
+
+
+def set_translation_validator_model_env(value):
+    os.environ["TRANSLATION_VALIDATOR_MODEL"] = value
+
+
+def set_translation_custom_url_env(value):
+    os.environ["TRANSLATION_CUSTOM_URL"] = value
+
+
+def set_translation_custom_api_key_env(value):
+    os.environ["TRANSLATION_CUSTOM_API_KEY"] = value

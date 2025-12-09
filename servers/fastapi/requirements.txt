@@ -21,3 +21,4 @@ sqlmodel>=0.0.24
 greenlet>=3.0.2
 deep-translator>=1.11.4
 langdetect>=1.0.9
+json-repair>=0.1.0

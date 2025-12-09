@@ -67,10 +67,36 @@ export async function POST(request: Request) {
       userConfig.WEB_GROUNDING === undefined
         ? existingConfig.WEB_GROUNDING
         : userConfig.WEB_GROUNDING,
+    FORCE_ADAPTIVE_MODE:
+      userConfig.FORCE_ADAPTIVE_MODE === undefined
+        ? existingConfig.FORCE_ADAPTIVE_MODE
+        : userConfig.FORCE_ADAPTIVE_MODE,
     USE_CUSTOM_URL:
       userConfig.USE_CUSTOM_URL === undefined
         ? existingConfig.USE_CUSTOM_URL
         : userConfig.USE_CUSTOM_URL,
+    TRANSLATION_USE_AGENTS:
+      userConfig.TRANSLATION_USE_AGENTS === undefined
+        ? existingConfig.TRANSLATION_USE_AGENTS
+        : userConfig.TRANSLATION_USE_AGENTS,
+    TRANSLATION_PARSER_USE_LLM:
+      userConfig.TRANSLATION_PARSER_USE_LLM === undefined
+        ? existingConfig.TRANSLATION_PARSER_USE_LLM
+        : userConfig.TRANSLATION_PARSER_USE_LLM,
+    TRANSLATION_PARSER_MODEL:
+      userConfig.TRANSLATION_PARSER_MODEL || existingConfig.TRANSLATION_PARSER_MODEL,
+    TRANSLATION_MODEL:
+      userConfig.TRANSLATION_MODEL || existingConfig.TRANSLATION_MODEL,
+    TRANSLATION_BATCH_SIZE:
+      userConfig.TRANSLATION_BATCH_SIZE === undefined
+        ? existingConfig.TRANSLATION_BATCH_SIZE
+        : userConfig.TRANSLATION_BATCH_SIZE,
+    TRANSLATION_VALIDATOR_MODEL:
+      userConfig.TRANSLATION_VALIDATOR_MODEL || existingConfig.TRANSLATION_VALIDATOR_MODEL,
+    TRANSLATION_CUSTOM_URL:
+      userConfig.TRANSLATION_CUSTOM_URL || existingConfig.TRANSLATION_CUSTOM_URL,
+    TRANSLATION_CUSTOM_API_KEY:
+      userConfig.TRANSLATION_CUSTOM_API_KEY || existingConfig.TRANSLATION_CUSTOM_API_KEY,
   };
   fs.writeFileSync(userConfigPath, JSON.stringify(mergedConfig));
   return NextResponse.json(mergedConfig);

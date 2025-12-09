@@ -1,5 +1,6 @@
 import dirtyjson
 import json
+import logging
 from typing import AsyncGenerator, List, Optional
 from fastapi import HTTPException
 from openai import AsyncOpenAI
@@ -35,6 +36,16 @@ from utils.parsers import parse_bool_or_none
 from utils.schema_utils import (
     ensure_strict_json_schema,
 )
+from utils.model_capabilities import (
+    is_small_model,
+    get_prompt_mode,
+    should_use_strict_json,
+    get_max_retries,
+)
+from utils.json_repair import parse_llm_json
+from utils.llm_retry import retry_with_backoff, retry_with_fallback
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
@@ -42,6 +53,23 @@ class LLMClient:
         self.llm_provider = get_llm_provider()
         self._client = self._get_client()
         self.tool_calls_handler = LLMToolCallsHandler(self)
+
+    # ? Model capability detection
+    def is_small_model(self, model: str) -> bool:
+        """Check if model is a small/weak model needing simplified prompts."""
+        return is_small_model(model)
+
+    def get_adaptive_strict_mode(self, model: str) -> bool:
+        """
+        Determine if strict JSON validation should be used based on model capability.
+
+        Small models work better with relaxed validation.
+        """
+        return should_use_strict_json(model)
+
+    def get_adaptive_max_retries(self, model: str) -> int:
+        """Get appropriate number of retries based on model capability."""
+        return get_max_retries(model)
 
     # ? Use tool calls
     def use_tool_calls_for_structured_output(self) -> bool:
@@ -374,7 +402,23 @@ class LLMClient:
                 )
         if content:
             if depth == 0:
-                return dict(dirtyjson.loads(content))
+                # Try relaxed JSON parsing for better small model support
+                try:
+                    # First try standard JSON parsing
+                    return dict(dirtyjson.loads(content))
+                except Exception as e:
+                    logger.warning(f"Standard JSON parsing failed: {e}. Attempting repair...")
+                    try:
+                        # Use advanced JSON repair strategies
+                        repaired = parse_llm_json(content, strict=False, repair=True)
+                        if isinstance(repaired, dict):
+                            return repaired
+                        else:
+                            raise ValueError(f"Repaired JSON is not a dict: {type(repaired)}")
+                    except Exception as repair_error:
+                        logger.error(f"JSON repair also failed: {repair_error}")
+                        # Re-raise original error
+                        raise e
             return content
         return None
 
@@ -407,33 +451,93 @@ class LLMClient:
         tools: Optional[List[type[LLMTool] | LLMDynamicTool]] = None,
         max_tokens: Optional[int] = None,
     ) -> dict:
+        """
+        Generate structured output with adaptive retry logic and relaxed validation.
+
+        For small models:
+        - Automatically adjusts strict mode based on model capability
+        - Uses more retry attempts with exponential backoff
+        - Falls back to relaxed JSON parsing if strict parsing fails
+        """
         parsed_tools = self.tool_calls_handler.parse_tools(tools)
 
-        content = None
-        match self.llm_provider:
-            case LLMProvider.OPENAI:
-                content = await self._generate_openai_structured(
-                    model=model,
-                    messages=messages,
-                    response_format=response_format,
-                    strict=strict,
-                    tools=parsed_tools,
-                    max_tokens=max_tokens,
-                )
-            case LLMProvider.CUSTOM:
-                content = await self._generate_custom_structured(
-                    model=model,
-                    messages=messages,
-                    response_format=response_format,
-                    strict=strict,
-                    max_tokens=max_tokens,
-                )
-        if content is None:
-            raise HTTPException(
-                status_code=400,
-                detail="LLM did not return any content",
+        # Adapt strict mode based on model capability
+        adaptive_strict = strict and self.get_adaptive_strict_mode(model)
+        is_small = self.is_small_model(model)
+        max_retries = self.get_adaptive_max_retries(model)
+
+        if is_small:
+            logger.info(
+                f"Small model detected: {model}. "
+                f"Using adaptive mode: strict={adaptive_strict}, retries={max_retries}"
             )
-        return content
+
+        # Define primary generation function
+        async def generate_with_strict():
+            match self.llm_provider:
+                case LLMProvider.OPENAI:
+                    return await self._generate_openai_structured(
+                        model=model,
+                        messages=messages,
+                        response_format=response_format,
+                        strict=adaptive_strict,
+                        tools=parsed_tools,
+                        max_tokens=max_tokens,
+                    )
+                case LLMProvider.CUSTOM:
+                    return await self._generate_custom_structured(
+                        model=model,
+                        messages=messages,
+                        response_format=response_format,
+                        strict=adaptive_strict,
+                        max_tokens=max_tokens,
+                    )
+
+        # Define fallback function with relaxed validation
+        async def generate_with_relaxed():
+            logger.info("Falling back to relaxed JSON validation")
+            match self.llm_provider:
+                case LLMProvider.OPENAI:
+                    return await self._generate_openai_structured(
+                        model=model,
+                        messages=messages,
+                        response_format=response_format,
+                        strict=False,
+                        tools=parsed_tools,
+                        max_tokens=max_tokens,
+                    )
+                case LLMProvider.CUSTOM:
+                    return await self._generate_custom_structured(
+                        model=model,
+                        messages=messages,
+                        response_format=response_format,
+                        strict=False,
+                        max_tokens=max_tokens,
+                    )
+
+        try:
+            # Try with retry logic and fallback
+            content = await retry_with_fallback(
+                primary_func=generate_with_strict,
+                fallback_func=generate_with_relaxed if adaptive_strict else None,
+                max_retries=max_retries,
+                is_small_model=is_small,
+            )
+
+            if content is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="LLM did not return any content",
+                )
+
+            return content
+
+        except Exception as e:
+            logger.error(f"Structured generation failed after all retries: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to generate structured output: {str(e)}",
+            )
 
     # ? Stream Unstructured Content
     async def _stream_openai(

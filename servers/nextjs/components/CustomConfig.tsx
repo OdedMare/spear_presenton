@@ -21,6 +21,7 @@ interface CustomConfigProps {
   customModel: string;
   toolCalls: boolean;
   disableThinking: boolean;
+  forceAdaptiveMode: boolean;
   onInputChange: (value: string | boolean, field: string) => void;
 }
 
@@ -30,6 +31,7 @@ export default function CustomConfig({
   customModel,
   toolCalls,
   disableThinking,
+  forceAdaptiveMode,
   onInputChange,
 }: CustomConfigProps) {
   const [customModels, setCustomModels] = useState<string[]>([]);
@@ -259,6 +261,22 @@ export default function CustomConfig({
         <p className="mt-2 text-sm text-gray-500 flex items-center gap-2">
           <span className="block w-1 h-1 rounded-full bg-gray-400"></span>
           אם מופעל, החשיבה תבוטל.
+        </p>
+      </div>
+      {/* Force Adaptive Mode Toggle */}
+      <div>
+        <div className="flex items-center justify-between mb-4 bg-purple-50 p-2 rounded-sm">
+          <label className="text-sm font-medium text-gray-700">
+            הפעל מצב אדפטיבי
+          </label>
+          <Switch
+            checked={forceAdaptiveMode}
+            onCheckedChange={(checked) => onInputChange(checked, "force_adaptive_mode")}
+          />
+        </div>
+        <p className="mt-2 text-sm text-gray-500 flex items-center gap-2">
+          <span className="block w-1 h-1 rounded-full bg-gray-400"></span>
+          אם מופעל, המערכת תשתמש בהנחיות פשוטות ואימות משופר גם עבור מודלים גדולים.
         </p>
       </div>
     </div >

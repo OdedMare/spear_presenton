@@ -101,3 +101,39 @@ def get_extended_reasoning_env():
 
 def get_web_grounding_env():
     return os.getenv("WEB_GROUNDING")
+
+
+def get_force_adaptive_mode_env():
+    return os.getenv("FORCE_ADAPTIVE_MODE")
+
+
+def get_translation_use_agents_env():
+    return os.getenv("TRANSLATION_USE_AGENTS")
+
+
+def get_translation_parser_use_llm_env():
+    return os.getenv("TRANSLATION_PARSER_USE_LLM")
+
+
+def get_translation_parser_model_env():
+    return os.getenv("TRANSLATION_PARSER_MODEL")
+
+
+def get_translation_model_env():
+    return os.getenv("TRANSLATION_MODEL")
+
+
+def get_translation_batch_size_env():
+    return os.getenv("TRANSLATION_BATCH_SIZE")
+
+
+def get_translation_validator_model_env():
+    return os.getenv("TRANSLATION_VALIDATOR_MODEL")
+
+
+def get_translation_custom_url_env():
+    return os.getenv("TRANSLATION_CUSTOM_URL")
+
+
+def get_translation_custom_api_key_env():
+    return os.getenv("TRANSLATION_CUSTOM_API_KEY")
