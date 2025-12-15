@@ -97,6 +97,21 @@ export async function POST(request: Request) {
       userConfig.TRANSLATION_CUSTOM_URL || existingConfig.TRANSLATION_CUSTOM_URL,
     TRANSLATION_CUSTOM_API_KEY:
       userConfig.TRANSLATION_CUSTOM_API_KEY || existingConfig.TRANSLATION_CUSTOM_API_KEY,
+    // Elasticsearch Logging Configuration
+    ELASTICSEARCH_URL:
+      userConfig.ELASTICSEARCH_URL || existingConfig.ELASTICSEARCH_URL,
+    ELASTICSEARCH_USER:
+      userConfig.ELASTICSEARCH_USER || existingConfig.ELASTICSEARCH_USER,
+    ELASTICSEARCH_PASSWORD:
+      userConfig.ELASTICSEARCH_PASSWORD || existingConfig.ELASTICSEARCH_PASSWORD,
+    ELASTICSEARCH_INDEX_PREFIX:
+      userConfig.ELASTICSEARCH_INDEX_PREFIX || existingConfig.ELASTICSEARCH_INDEX_PREFIX,
+    LOG_LEVEL:
+      userConfig.LOG_LEVEL || existingConfig.LOG_LEVEL,
+    DISABLE_SSL_VERIFY:
+      userConfig.DISABLE_SSL_VERIFY === undefined
+        ? existingConfig.DISABLE_SSL_VERIFY
+        : userConfig.DISABLE_SSL_VERIFY,
   };
   fs.writeFileSync(userConfigPath, JSON.stringify(mergedConfig));
   return NextResponse.json(mergedConfig);

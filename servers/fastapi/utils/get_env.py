@@ -137,3 +137,28 @@ def get_translation_custom_url_env():
 
 def get_translation_custom_api_key_env():
     return os.getenv("TRANSLATION_CUSTOM_API_KEY")
+
+
+# Elasticsearch Logging Configuration
+def get_elasticsearch_url_env():
+    return os.getenv("ELASTICSEARCH_URL")
+
+
+def get_elasticsearch_user_env():
+    return os.getenv("ELASTICSEARCH_USER")
+
+
+def get_elasticsearch_password_env():
+    return os.getenv("ELASTICSEARCH_PASSWORD")
+
+
+def get_elasticsearch_index_prefix_env():
+    return os.getenv("ELASTICSEARCH_INDEX_PREFIX")
+
+
+def get_log_level_env():
+    return os.getenv("LOG_LEVEL")
+
+
+def get_disable_ssl_verify_env():
+    return os.getenv("DISABLE_SSL_VERIFY")

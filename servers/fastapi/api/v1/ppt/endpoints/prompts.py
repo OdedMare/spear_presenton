@@ -987,8 +987,10 @@ RULES:
 6. Translate coherently - related elements should flow together
 7. For short text (titles, labels): be concise
 8. For long text (body, notes): preserve paragraph structure
-9. NEVER truncate with "..." or cut off mid-word - always complete sentences and words
-10. If text doesn't fit maxLength, rephrase more concisely instead of truncating
+9. ABSOLUTELY NEVER use "..." or "…" (ellipsis) to truncate text - this is STRICTLY FORBIDDEN
+10. If text doesn't fit length constraints, rephrase to be more concise while keeping the COMPLETE thought
+11. All translations must have COMPLETE sentences and words - no mid-sentence or mid-word truncation
+12. Use shorter synonyms or more concise phrasing instead of truncating
 
 INPUT: JSON with all text elements from presentation
 OUTPUT: Same JSON structure with translated text

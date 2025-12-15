@@ -103,3 +103,28 @@ def set_translation_custom_url_env(value):
 
 def set_translation_custom_api_key_env(value):
     os.environ["TRANSLATION_CUSTOM_API_KEY"] = value
+
+
+# Elasticsearch Logging Configuration
+def set_elasticsearch_url_env(value):
+    os.environ["ELASTICSEARCH_URL"] = value
+
+
+def set_elasticsearch_user_env(value):
+    os.environ["ELASTICSEARCH_USER"] = value
+
+
+def set_elasticsearch_password_env(value):
+    os.environ["ELASTICSEARCH_PASSWORD"] = value
+
+
+def set_elasticsearch_index_prefix_env(value):
+    os.environ["ELASTICSEARCH_INDEX_PREFIX"] = value
+
+
+def set_log_level_env(value):
+    os.environ["LOG_LEVEL"] = value
+
+
+def set_disable_ssl_verify_env(value):
+    os.environ["DISABLE_SSL_VERIFY"] = value

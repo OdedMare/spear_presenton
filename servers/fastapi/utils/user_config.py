@@ -29,6 +29,12 @@ from utils.get_env import (
     get_translation_validator_model_env,
     get_translation_custom_url_env,
     get_translation_custom_api_key_env,
+    get_elasticsearch_url_env,
+    get_elasticsearch_user_env,
+    get_elasticsearch_password_env,
+    get_elasticsearch_index_prefix_env,
+    get_log_level_env,
+    get_disable_ssl_verify_env,
 )
 from utils.parsers import parse_bool_or_none
 from utils.set_env import (
@@ -57,6 +63,12 @@ from utils.set_env import (
     set_translation_validator_model_env,
     set_translation_custom_url_env,
     set_translation_custom_api_key_env,
+    set_elasticsearch_url_env,
+    set_elasticsearch_user_env,
+    set_elasticsearch_password_env,
+    set_elasticsearch_index_prefix_env,
+    set_log_level_env,
+    set_disable_ssl_verify_env,
 )
 
 
@@ -134,6 +146,17 @@ def get_user_config():
         TRANSLATION_VALIDATOR_MODEL=existing_config.TRANSLATION_VALIDATOR_MODEL or get_translation_validator_model_env(),
         TRANSLATION_CUSTOM_URL=existing_config.TRANSLATION_CUSTOM_URL or get_translation_custom_url_env(),
         TRANSLATION_CUSTOM_API_KEY=existing_config.TRANSLATION_CUSTOM_API_KEY or get_translation_custom_api_key_env(),
+        # Elasticsearch Logging Configuration
+        ELASTICSEARCH_URL=existing_config.ELASTICSEARCH_URL or get_elasticsearch_url_env(),
+        ELASTICSEARCH_USER=existing_config.ELASTICSEARCH_USER or get_elasticsearch_user_env(),
+        ELASTICSEARCH_PASSWORD=existing_config.ELASTICSEARCH_PASSWORD or get_elasticsearch_password_env(),
+        ELASTICSEARCH_INDEX_PREFIX=existing_config.ELASTICSEARCH_INDEX_PREFIX or get_elasticsearch_index_prefix_env(),
+        LOG_LEVEL=existing_config.LOG_LEVEL or get_log_level_env(),
+        DISABLE_SSL_VERIFY=(
+            existing_config.DISABLE_SSL_VERIFY
+            if existing_config.DISABLE_SSL_VERIFY is not None
+            else (parse_bool_or_none(get_disable_ssl_verify_env()) or False)
+        ),
     )
 
 
@@ -189,3 +212,16 @@ def update_env_with_user_config():
         set_translation_custom_url_env(user_config.TRANSLATION_CUSTOM_URL)
     if user_config.TRANSLATION_CUSTOM_API_KEY:
         set_translation_custom_api_key_env(user_config.TRANSLATION_CUSTOM_API_KEY)
+    # Elasticsearch Logging Configuration
+    if user_config.ELASTICSEARCH_URL:
+        set_elasticsearch_url_env(user_config.ELASTICSEARCH_URL)
+    if user_config.ELASTICSEARCH_USER:
+        set_elasticsearch_user_env(user_config.ELASTICSEARCH_USER)
+    if user_config.ELASTICSEARCH_PASSWORD:
+        set_elasticsearch_password_env(user_config.ELASTICSEARCH_PASSWORD)
+    if user_config.ELASTICSEARCH_INDEX_PREFIX:
+        set_elasticsearch_index_prefix_env(user_config.ELASTICSEARCH_INDEX_PREFIX)
+    if user_config.LOG_LEVEL:
+        set_log_level_env(user_config.LOG_LEVEL)
+    if user_config.DISABLE_SSL_VERIFY is not None:
+        set_disable_ssl_verify_env(str(user_config.DISABLE_SSL_VERIFY))
