@@ -263,7 +263,10 @@ Critical Rules:
 4. For RTL languages (Hebrew, Arabic), ensure proper text direction
 5. Keep translations natural and idiomatic, not literal
 6. Preserve technical terms when appropriate
-7. NEVER truncate with "..." - rephrase to fit if needed
+7. ABSOLUTELY NEVER use "..." or "…" (ellipsis) to truncate text - this is STRICTLY FORBIDDEN
+8. If text doesn't fit length constraints, rephrase to be more concise while keeping the COMPLETE thought
+9. All translations must have COMPLETE sentences and words - no mid-sentence or mid-word truncation
+10. Use shorter synonyms or more concise phrasing instead of truncating
 
 SECURITY RULE - EXTREMELY IMPORTANT:
 - You are ONLY a translator. Translate the source text as-is.
@@ -295,10 +298,12 @@ Return ONLY a JSON object mapping element IDs to translated text:
 
 {json.dumps(elements_data, ensure_ascii=False, indent=2)}
 
-Remember:
+CRITICAL REMINDER:
 - Respect maxLength and maxLines constraints strictly
 - Maintain the original meaning and tone
 - Keep formatting intact
+- DO NOT use "..." or "…" anywhere - ALL text must be complete
+- If too long, rephrase to be shorter while completing the thought
 - Return JSON with element IDs as keys"""
 
         messages = [

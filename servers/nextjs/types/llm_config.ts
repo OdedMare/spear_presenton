@@ -47,6 +47,14 @@ export interface LLMConfig {
   TRANSLATION_CUSTOM_URL?: string;
   TRANSLATION_CUSTOM_API_KEY?: string;
 
+  // Elasticsearch Logging Configuration
+  ELASTICSEARCH_URL?: string;
+  ELASTICSEARCH_USER?: string;
+  ELASTICSEARCH_PASSWORD?: string;
+  ELASTICSEARCH_INDEX_PREFIX?: string;
+  LOG_LEVEL?: string;
+  DISABLE_SSL_VERIFY?: boolean;
+
   // Only used in UI settings
   USE_CUSTOM_URL?: boolean;
 }

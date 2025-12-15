@@ -23,6 +23,7 @@ import { IMAGE_PROVIDERS } from "@/utils/providerConstants";
 import { LLMConfig } from "@/types/llm_config";
 import TemplateModelConfig from "./TemplateModelConfig";
 import TranslationAgentsConfig from "./TranslationAgentsConfig";
+import ElasticsearchConfig from "./ElasticsearchConfig";
 
 
 // Button state interface
@@ -338,6 +339,14 @@ export default function LLMProviderSelection({
         {/* Translation Agents Configuration */}
         <div className="mt-10 p-6 border border-gray-200 rounded-2xl bg-white shadow-sm">
           <TranslationAgentsConfig
+            llmConfig={llmConfig}
+            setLlmConfig={setLlmConfig}
+          />
+        </div>
+
+        {/* Elasticsearch Logging Configuration */}
+        <div className="mt-10 p-6 border border-gray-200 rounded-2xl bg-white shadow-sm">
+          <ElasticsearchConfig
             llmConfig={llmConfig}
             setLlmConfig={setLlmConfig}
           />

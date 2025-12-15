@@ -281,8 +281,10 @@ STRICT RULES:
 	•	Maintain proportional text length
 	•	Respect maxLength and maxLines constraints
 	•	Preserve design integrity - no overflow, no clipping, no distortion
-	•	NEVER truncate with "..." or cut off mid-word - complete all sentences and words properly
-	•	If text doesn't fit, rephrase to be more concise instead of truncating
+	•	ABSOLUTELY NEVER use "..." or "…" (ellipsis) to truncate text - this is STRICTLY FORBIDDEN
+	•	If text doesn't fit length constraints, rephrase to be more concise while keeping the COMPLETE thought
+	•	All text must have COMPLETE sentences and words - no mid-sentence or mid-word truncation
+	•	Use shorter synonyms or more concise phrasing instead of truncating
 
 ═══════════════════════════════════════════════════════════════════════════════
 INPUT STRUCTURE
@@ -781,8 +783,10 @@ RULES:
 4. Keep text proportional to the original.
 5. No markdown, no explanations. ONLY JSON.
 6. If original text was empty (""), keep it empty - DO NOT add placeholder text, "null", or "empty".
-7. NEVER truncate with "..." or cut off mid-word - always complete sentences and words properly.
-8. If text doesn't fit, rephrase more concisely instead of truncating.
+7. ABSOLUTELY NEVER use "..." or "…" (ellipsis) to truncate text - this is STRICTLY FORBIDDEN.
+8. If text doesn't fit length constraints, rephrase to be more concise while keeping the COMPLETE thought.
+9. All text must have COMPLETE sentences and words - no mid-sentence or mid-word truncation.
+10. Use shorter synonyms or more concise phrasing instead of truncating.
 
 INPUT STRUCTURE:
 {
@@ -823,8 +827,10 @@ RULES:
 6. Do NOT create new tables, charts, or SmartArt.
 7. Maintain the design style of the original.
 8. If original text was empty (""), keep it empty - DO NOT add placeholder text, "null", or "empty".
-9. NEVER truncate with "..." or cut off mid-word - always complete sentences and words.
-10. If text doesn't fit, rephrase more concisely instead of truncating.
+9. ABSOLUTELY NEVER use "..." or "…" (ellipsis) to truncate text - this is STRICTLY FORBIDDEN.
+10. If text doesn't fit length constraints, rephrase to be more concise while keeping the COMPLETE thought.
+11. All text must have COMPLETE sentences and words - no mid-sentence or mid-word truncation.
+12. Use shorter synonyms or more concise phrasing instead of truncating.
 
 OUTPUT FORMAT:
 {
@@ -896,8 +902,10 @@ STRICT RULES:
 	•	Maintain proportional text length
 	•	Respect maxLength and maxLines constraints
 	•	Preserve design integrity - no overflow, no clipping, no distortion
-	•	NEVER truncate with "..." or cut off mid-word - complete all sentences and words properly
-	•	If text doesn't fit, rephrase to be more concise instead of truncating
+	•	ABSOLUTELY NEVER use "..." or "…" (ellipsis) to truncate text - this is STRICTLY FORBIDDEN
+	•	If text doesn't fit length constraints, rephrase to be more concise while keeping the COMPLETE thought
+	•	All text must have COMPLETE sentences and words - no mid-sentence or mid-word truncation
+	•	Use shorter synonyms or more concise phrasing instead of truncating
 
 ═══════════════════════════════════════════════════════════════════════════════
 INPUT STRUCTURE

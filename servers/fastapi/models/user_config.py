@@ -54,3 +54,11 @@ class UserConfig(BaseModel):
     TRANSLATION_VALIDATOR_MODEL: Optional[str] = None
     TRANSLATION_CUSTOM_URL: Optional[str] = None
     TRANSLATION_CUSTOM_API_KEY: Optional[str] = None
+
+    # Elasticsearch Logging Configuration
+    ELASTICSEARCH_URL: Optional[str] = None
+    ELASTICSEARCH_USER: Optional[str] = None
+    ELASTICSEARCH_PASSWORD: Optional[str] = None
+    ELASTICSEARCH_INDEX_PREFIX: Optional[str] = None
+    LOG_LEVEL: Optional[str] = None
+    DISABLE_SSL_VERIFY: Optional[bool] = None
