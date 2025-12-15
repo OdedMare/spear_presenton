@@ -57,7 +57,7 @@ export function ConfigurationInitializer({ children }: { children: React.ReactNo
         } else {
           setIsLoading(false);
         }
-      } else if (route !== '/') {
+      } else if (route !== '/' && route !== '/login') {
         router.push('/');
         setLoadingToFalseAfterNavigatingTo('/');
       } else {

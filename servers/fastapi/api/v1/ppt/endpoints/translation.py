@@ -19,7 +19,7 @@ import os
 import uuid
 import logging
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -31,8 +31,9 @@ from services.translation_orchestrator import (
     TranslationError,
 )
 from services.temp_file_service import TempFileService
-
-logger = logging.getLogger(__name__)
+from api.middlewares import get_current_user
+from models.sql.user import User
+from utils.logger import logger
 
 router = APIRouter()
 
@@ -121,6 +122,7 @@ async def translate_presentation(
     validator_model: Optional[str] = Form(None, description="Model for validator (optional, uses TRANSLATION_VALIDATOR_MODEL env var)"),
     batch_size: int = Form(20, description="Translation batch size (default: 20)"),
     max_retries: int = Form(1, description="Max retries per agent (default: 1)"),
+    current_user: User | None = Depends(get_current_user),
 ):
     """
     Translate a presentation from source language to target language.
@@ -136,14 +138,19 @@ async def translate_presentation(
     """
     temp_file_service = TempFileService()
     presentation_id = presentation_id or str(uuid.uuid4())
+    user_id = current_user.id if current_user else None
+    username = current_user.username if current_user else None
 
     try:
-        logger.info(f"=" * 80)
-        logger.info(f"Translation Request Received")
-        logger.info(f"Presentation ID: {presentation_id}")
-        logger.info(f"Source: {source_language} -> Target: {target_language}")
-        logger.info(f"File: {file.filename}")
-        logger.info(f"=" * 80)
+        logger.info(f"Translation Request Received", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "presentation_id": presentation_id,
+            "source_language": source_language,
+            "target_language": target_language,
+            "filename": file.filename,
+            "event_type": "translation_started",
+        }})
 
         # Validate file type
         if not file.filename.endswith('.pptx'):
@@ -153,17 +160,39 @@ async def translate_presentation(
             )
 
         # Save uploaded file
-        logger.info(f"Saving uploaded file: {file.filename}")
+        logger.info(f"Saving uploaded file: {file.filename}", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "presentation_id": presentation_id,
+            "filename": file.filename,
+            "event_type": "translation_file_upload",
+        }})
         input_path = temp_file_service.save_upload_file(file, f"{presentation_id}_input.pptx")
-        logger.info(f"Saved to: {input_path}")
 
         # Step 1: Extract placeholders
-        logger.info(f"Extracting placeholders from PPTX...")
+        logger.info(f"Extracting placeholders from PPTX", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "presentation_id": presentation_id,
+            "event_type": "translation_extracting_placeholders",
+        }})
         placeholder_structure = extract_all_placeholders(input_path)
-        logger.info(f"Extracted structure with {len(placeholder_structure.get('slides', []))} slides")
+        slide_count = len(placeholder_structure.get('slides', []))
+        logger.info(f"Extracted structure with {slide_count} slides", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "presentation_id": presentation_id,
+            "slide_count": slide_count,
+            "event_type": "translation_placeholders_extracted",
+        }})
 
         # Step 2: Run multi-agent translation pipeline
-        logger.info(f"Starting multi-agent translation pipeline...")
+        logger.info(f"Starting multi-agent translation pipeline", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "presentation_id": presentation_id,
+            "event_type": "translation_pipeline_starting",
+        }})
 
         parser_config = {
             "use_llm": use_llm_parser,
@@ -192,7 +221,14 @@ async def translate_presentation(
 
         # Check for errors
         if error is not None:
-            logger.error(f"Translation failed at stage '{error.stage}': {error.message}")
+            logger.error(f"Translation failed at stage '{error.stage}': {error.message}", extra={"extra_fields": {
+                "user_id": user_id,
+                "username": username,
+                "presentation_id": presentation_id,
+                "stage": error.stage,
+                "error_message": error.message,
+                "event_type": "translation_failed",
+            }})
             return TranslateErrorResponse(
                 status="error",
                 stage=error.stage,
@@ -201,7 +237,12 @@ async def translate_presentation(
             )
 
         # Step 3: Inject translations back into PPTX
-        logger.info(f"Injecting translations into PPTX...")
+        logger.info(f"Injecting translations into PPTX", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "presentation_id": presentation_id,
+            "event_type": "translation_injecting",
+        }})
         output_filename = f"{presentation_id}_translated.pptx"
         output_path = temp_file_service.get_temp_path(output_filename)
 
@@ -210,8 +251,6 @@ async def translate_presentation(
             rewritten_content=result.output_structure,
             output_pptx_path=output_path
         )
-
-        logger.info(f"Translation complete! Output: {output_path}")
 
         # Generate download URL
         download_url = f"/api/v1/ppt/files/download/{output_filename}"
@@ -225,18 +264,27 @@ async def translate_presentation(
             stats=result.stats or {}
         )
 
-        logger.info(f"=" * 80)
-        logger.info(f"Translation Success!")
-        logger.info(f"Download URL: {download_url}")
-        logger.info(f"Stats: {result.stats}")
-        logger.info(f"=" * 80)
+        logger.info(f"Translation Success!", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "presentation_id": presentation_id,
+            "download_url": download_url,
+            "stats": result.stats,
+            "event_type": "translation_completed",
+        }})
 
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error during translation: {e}", exc_info=True)
+        logger.error(f"Unexpected error during translation: {e}", exc_info=True, extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "presentation_id": presentation_id,
+            "error": str(e),
+            "event_type": "translation_error",
+        }})
         return TranslateErrorResponse(
             status="error",
             stage="unknown",

@@ -12,6 +12,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
 import { logger, logPptxExport, logError } from "@/utils/logger";
+import { getUserContextFromToken } from "@/utils/userContext";
 
 interface GetAllChildElementsAttributesArgs {
   element: ElementHandle<Element>;
@@ -37,12 +38,25 @@ export async function GET(request: NextRequest) {
   let page: Page | null = null;
   let presentationId = '';
 
+  // Extract user context
+  const authHeader = request.headers.get('authorization');
+  const userContext = await getUserContextFromToken(authHeader);
+
   try {
+
     const id = await getPresentationId(request);
     presentationId = id;
 
-    logPptxExport(id, 'started');
-    logger.info(`Starting PPTX export for presentation ${id}`);
+    logPptxExport(id, 'started', undefined, {
+      user_id: userContext.userId,
+      username: userContext.username,
+    });
+    logger.info(`Starting PPTX export for presentation ${id}`, {
+      event_type: 'pptx_export_started',
+      presentation_id: id,
+      user_id: userContext.userId,
+      username: userContext.username,
+    });
 
     [browser, page] = await getBrowserAndPage(id);
     const screenshotsDir = getScreenshotsDir();
@@ -63,17 +77,34 @@ export async function GET(request: NextRequest) {
     await closeBrowserAndPage(browser, page);
 
     const duration = Date.now() - startTime;
-    logPptxExport(id, 'completed', duration, { slide_count: slides.length });
-    logger.info(`PPTX export completed for ${id} in ${duration}ms`);
+    logPptxExport(id, 'completed', duration, {
+      slide_count: slides.length,
+      user_id: userContext.userId,
+      username: userContext.username,
+    });
+    logger.info(`PPTX export completed for ${id} in ${duration}ms`, {
+      event_type: 'pptx_export_completed',
+      presentation_id: id,
+      duration,
+      slide_count: slides.length,
+      user_id: userContext.userId,
+      username: userContext.username,
+    });
 
     return NextResponse.json(presentation_pptx_model);
   } catch (error: any) {
     const duration = Date.now() - startTime;
     logPptxExport(presentationId || 'unknown', 'failed', duration, {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      user_id: userContext?.userId,
+      username: userContext?.username,
     });
-    logError(error, 'PPTX Export', { presentation_id: presentationId });
+    logError(error, 'PPTX Export', {
+      presentation_id: presentationId,
+      user_id: userContext?.userId,
+      username: userContext?.username,
+    });
 
     await closeBrowserAndPage(browser, page);
     if (error instanceof ApiError) {
@@ -142,9 +173,9 @@ async function closeBrowserAndPage(browser: Browser | null, page: Page | null) {
 function getScreenshotsDir() {
   const tempDir = process.env.TEMP_DIRECTORY;
   if (!tempDir) {
-    console.warn(
-      "TEMP_DIRECTORY environment variable not set, skipping screenshot"
-    );
+    logger.warn("TEMP_DIRECTORY environment variable not set, skipping screenshot", {
+      event_type: 'pptx_temp_directory_missing',
+    });
     throw new ApiError("TEMP_DIRECTORY environment variable not set");
   }
   const screenshotsDir = path.join(tempDir, "screenshots");

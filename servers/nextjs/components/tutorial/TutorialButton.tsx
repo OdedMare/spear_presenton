@@ -62,7 +62,7 @@ export function TutorialButton() {
                         >
                             <div className="font-medium text-gray-900">הדרכה - תרגום מצגת</div>
                             <div className="text-xs text-gray-500 mt-1">
-                                למד כיצד לתרגם מצגת עם 3 סוכני AI
+                                למד כיצד לתרגם מצגת בעזרת בינה מלאכותית
                             </div>
                         </div>
                     </div>

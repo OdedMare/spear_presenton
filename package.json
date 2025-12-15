@@ -2,5 +2,8 @@
   "name": "spearpresenton",
   "version": "1.0.0",
   "type": "module",
-  "description": "SpearPresenton - AI-powered presentation generator"
+  "description": "SpearPresenton - AI-powered presentation generator",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
 }

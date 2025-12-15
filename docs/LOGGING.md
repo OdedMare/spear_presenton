@@ -10,6 +10,7 @@ The application includes a custom logger that:
 - Supports both Python (FastAPI) and TypeScript (Next.js)
 - Automatically creates daily indices in Elasticsearch
 - Includes structured logging for key events (API requests, PDF/PPTX exports, errors)
+- **Includes user context (user_id, username) in all logs for traceability**
 
 ## Environment Variables
 
@@ -51,28 +52,50 @@ ENVIRONMENT: "production"
 
 ```python
 from utils.logger import logger, log_api_request, log_error
+from api.middlewares import get_current_user
+from fastapi import Depends
 
-# Basic logging
-logger.info("Application started")
-logger.error("An error occurred")
-logger.debug("Debug information", extra={"user_id": 123})
+# In API endpoints - extract user context
+@router.post("/some-endpoint")
+async def my_endpoint(
+    current_user: User | None = Depends(get_current_user),
+):
+    # Extract user context
+    user_id = current_user.id if current_user else None
+    username = current_user.username if current_user else None
 
-# Structured logging for API requests
-log_api_request(
-    method="POST",
-    path="/api/v1/ppt/generate",
-    status_code=200,
-    duration_ms=1250.5,
-    user_id="123"
-)
+    # Basic logging with user context
+    logger.info("Processing request", extra={"extra_fields": {
+        "user_id": user_id,
+        "username": username,
+        "event_type": "request_processing",
+        "presentation_id": "abc123"
+    }})
 
-# Error logging with context
-try:
-    # some code
-    pass
-except Exception as e:
-    log_error(e, "Failed to generate presentation", presentation_id="abc123")
+    # Structured logging for API requests
+    log_api_request(
+        method="POST",
+        path="/api/v1/ppt/generate",
+        status_code=200,
+        duration_ms=1250.5,
+        user_id=user_id,
+        username=username
+    )
+
+    # Error logging with context
+    try:
+        # some code
+        pass
+    except Exception as e:
+        logger.error(f"Failed to generate: {e}", exc_info=True, extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "event_type": "generation_error",
+            "presentation_id": "abc123"
+        }})
 ```
+
+**Important**: Always include `user_id` and `username` in the `extra_fields` dict for all logs. If authentication is disabled (`REQUIRE_AUTH=false`), both values will be `None`.
 
 ### TypeScript (Next.js)
 
@@ -111,12 +134,31 @@ All logs sent to Elasticsearch have this structure:
   "message": "PDF Export completed",
   "environment": "production",
   "service": "presenton",
+  "module": "route",
+  "function": "export_pdf",
+  "line": 42,
+  "process_id": 1234,
+  "thread_id": 5678,
   "event_type": "pdf_export",
+  "user_id": 123,
+  "username": "oded",
   "presentation_id": "abc123",
   "duration_ms": 5000,
   "filename": "presentation.pdf"
 }
 ```
+
+### Required User Context Fields
+
+**Every log entry must include:**
+- `user_id`: User identifier (integer or `null`)
+- `username`: Username string (or `null`)
+
+These fields enable:
+- Tracking user activity across the application
+- Debugging user-specific issues
+- Usage analytics and auditing
+- User session tracing
 
 ### Special Event Types
 
@@ -254,6 +296,36 @@ spec:
 
 ## Querying Logs in Elasticsearch
 
+### Find all logs for a specific user
+
+```bash
+curl -X GET "http://localhost:9200/presenton-logs-*/_search" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": {
+      "term": {
+        "user_id": 123
+      }
+    },
+    "size": 100,
+    "sort": [{"@timestamp": "desc"}]
+  }'
+```
+
+### Find logs by username
+
+```bash
+curl -X GET "http://localhost:9200/presenton-logs-*/_search" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": {
+      "term": {
+        "username.keyword": "oded"
+      }
+    }
+  }'
+```
+
 ### Find all errors in last 24 hours
 
 ```json
@@ -264,6 +336,22 @@ GET presenton-logs-*/_search
       "must": [
         { "match": { "level": "ERROR" } },
         { "range": { "@timestamp": { "gte": "now-24h" } } }
+      ]
+    }
+  }
+}
+```
+
+### Find errors for a specific user
+
+```json
+GET presenton-logs-*/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        { "term": { "level": "ERROR" } },
+        { "term": { "user_id": 123 } }
       ]
     }
   }
@@ -351,6 +439,61 @@ Set `DISABLE_SSL_VERIFY=true` if using self-signed certificates.
 ### Performance impact
 
 If Elasticsearch is slow or unavailable, it shouldn't affect application performance because logging is async and errors are caught. However, you can increase timeout or disable ES logging if needed.
+
+## Testing Elasticsearch Connection
+
+### Via UI (Recommended)
+
+1. Navigate to **Settings** page in the application
+2. Scroll to **Elasticsearch Configuration** section
+3. Enter your Elasticsearch URL (e.g., `http://localhost:9200`)
+4. Optionally enter username and password if authentication is required
+5. Click **"בדוק חיבור"** (Test Connection) button
+6. Wait for result:
+   - ✅ **Success**: Shows green checkmark with cluster name and version
+   - ❌ **Error**: Shows bilingual error message explaining the issue
+
+### Via CLI
+
+```bash
+# Test basic connection
+curl http://localhost:9200
+
+# Expected response
+{
+  "name": "...",
+  "cluster_name": "docker-cluster",
+  "version": {
+    "number": "8.11.0",
+    ...
+  },
+  "tagline": "You Know, for Search"
+}
+```
+
+### Common Connection Errors
+
+The test connection feature provides detailed bilingual (Hebrew/English) error messages:
+
+1. **Authentication Failed (401)**
+   - Hebrew: "שגיאת אימות: שם משתמש או סיסמה שגויים"
+   - English: "Authentication failed: Invalid username or password"
+
+2. **Forbidden (403)**
+   - Hebrew: "גישה נדחתה: אין לך הרשאות מתאימות"
+   - English: "Access forbidden: Insufficient permissions"
+
+3. **Not Found (404)**
+   - Hebrew: "לא נמצא: ה-URL אינו קיים"
+   - English: "Not found: Invalid URL"
+
+4. **Connection Refused**
+   - Hebrew: "החיבור נדחה: השרת לא מקבל חיבורים"
+   - English: "Connection refused: Server not accepting connections"
+
+5. **SSL Certificate Error**
+   - Hebrew: "שגיאת SSL: נסה להפעיל 'השבת אימות SSL'"
+   - English: "SSL certificate error: Try enabling 'Disable SSL Verify'"
 
 ## Security Notes
 

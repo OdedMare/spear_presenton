@@ -26,7 +26,7 @@ import json
 import logging
 from urllib.parse import quote
 from typing import Dict, Any, Optional, List
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -50,8 +50,9 @@ from api.v1.ppt.endpoints.prompts import (
     CONTENT_TRANSLATE_LITE_SYSTEM_PROMPT
 )
 from enum import Enum
-
-logger = logging.getLogger(__name__)
+from api.middlewares import get_current_user
+from models.sql.user import User
+from utils.logger import logger
 
 router = APIRouter()
 
@@ -271,7 +272,8 @@ class RewrittenContentResponse(BaseModel):
 
 @router.post("/extract-placeholders", response_model=RewriteResponse)
 async def extract_placeholders(
-    file: UploadFile = File(..., description="PPTX file to extract text elements from")
+    file: UploadFile = File(..., description="PPTX file to extract text elements from"),
+    current_user: User | None = Depends(get_current_user),
 ):
     """
     Extract ALL text elements from an uploaded PPTX file with IDs and constraints.
@@ -282,6 +284,9 @@ async def extract_placeholders(
 
     Returns the element structure that the LLM will use to generate new content.
     """
+    user_id = current_user.id if current_user else None
+    username = current_user.username if current_user else None
+
     try:
         # Save uploaded file temporarily
         upload_dir = os.getenv("APP_DATA_DIRECTORY", "/app/app_data") + "/temp_uploads"
@@ -295,7 +300,13 @@ async def extract_placeholders(
             content = await file.read()
             f.write(content)
 
-        logger.info(f"Extracting placeholders from uploaded file: {file.filename}")
+        logger.info(f"Extracting placeholders from uploaded file: {file.filename}", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "file_id": file_id,
+            "filename": file.filename,
+            "event_type": "content_rewrite_extract_started",
+        }})
 
         # Extract placeholder structure
         placeholder_structure = extract_all_placeholders(temp_path)
@@ -305,17 +316,29 @@ async def extract_placeholders(
         placeholder_structure["_temp_file_path"] = temp_path
         placeholder_structure["_original_filename"] = file.filename
 
-        logger.info(
-            f"Extracted {len(placeholder_structure['slides'])} slides from {file.filename}"
-        )
+        slide_count = len(placeholder_structure['slides'])
+        logger.info(f"Extracted {slide_count} slides from {file.filename}", extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "file_id": file_id,
+            "filename": file.filename,
+            "slide_count": slide_count,
+            "event_type": "content_rewrite_extract_completed",
+        }})
 
         return RewriteResponse(
             placeholder_structure=placeholder_structure,
-            message=f"Successfully extracted placeholders from {len(placeholder_structure['slides'])} slides"
+            message=f"Successfully extracted placeholders from {slide_count} slides"
         )
 
     except Exception as e:
-        logger.error(f"Error extracting placeholders: {e}", exc_info=True)
+        logger.error(f"Error extracting placeholders: {e}", exc_info=True, extra={"extra_fields": {
+            "user_id": user_id,
+            "username": username,
+            "filename": file.filename,
+            "error": str(e),
+            "event_type": "content_rewrite_extract_error",
+        }})
         raise HTTPException(status_code=500, detail=f"Failed to extract placeholders: {str(e)}")
 
 
@@ -329,7 +352,7 @@ async def generate_rewritten_content(request: RewriteRequest):
     - Automatically chunks large presentations
     - Tries full prompt first, falls back to lite prompt on failure
     - Processes chunks sequentially
-    - For TRANSLATE mode: Uses multi-agent system with configurable models
+    - For TRANSLATE mode: Uses multi-agent sy stem with configurable models
     """
     try:
         user_prompt = request.user_prompt

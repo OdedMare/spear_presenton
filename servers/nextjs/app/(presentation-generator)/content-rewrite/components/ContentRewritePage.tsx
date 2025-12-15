@@ -55,6 +55,12 @@ const LANGUAGE_OPTIONS = [
   { value: 'russian', label: 'Русский (Russian)', rtl: false },
   { value: 'chinese', label: '中文 (Chinese)', rtl: false },
   { value: 'japanese', label: '日本語 (Japanese)', rtl: false },
+  { value: 'italian', label: 'Italiano (Italian)', rtl: false },
+  { value: 'portuguese', label: 'Português (Portuguese)', rtl: false },
+  { value: 'dutch', label: 'Nederlands (Dutch)', rtl: false },
+  { value: 'korean', label: '한국어 (Korean)', rtl: false },
+  { value: 'turkish', label: 'Türkçe (Turkish)', rtl: false },
+  { value: 'polish', label: 'Polski (Polish)', rtl: false },
 ]
 
 type LoadingStage =
@@ -617,9 +623,21 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                 <h2 className="text-xl font-semibold font-instrument_sans">העלה את המצגת שלך</h2>
               </div>
 
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-600 mb-4">
                 העלה קובץ PowerPoint (.pptx) עם העיצוב שברצונך לשמור
               </p>
+
+              {/* Warning about grouped objects */}
+              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-semibold mb-1">שים לב:</p>
+                  <p>
+                    אובייקטים מקובצים (Grouped Objects) וצורות מורכבות עלולים שלא לעבור תרגום או שכתוב כהלכה.
+                    מומלץ לבטל קיבוץ של אובייקטים לפני העלאת המצגת לקבלת תוצאות מיטביות.
+                  </p>
+                </div>
+              </div>
 
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-[#5146E5] transition-colors">
                 <input
@@ -713,52 +731,52 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
 
               {/* Main Mode Toggle: Rewrite vs Translate - Only show on rewrite page */}
               {defaultMode !== 'translate' && (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">בחר מצב</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setIsTranslateMode(false)}
-                    className={`p-4 rounded-lg border-2 transition-all text-right ${!isTranslateMode
-                      ? 'border-[#5146E5] bg-[#E9E8F8]'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${!isTranslateMode ? 'border-[#5146E5]' : 'border-gray-300'
-                        }`}>
-                        {!isTranslateMode && (
-                          <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
-                        )}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">בחר מצב</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setIsTranslateMode(false)}
+                      className={`p-4 rounded-lg border-2 transition-all text-right ${!isTranslateMode
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${!isTranslateMode ? 'border-[#5146E5]' : 'border-gray-300'
+                          }`}>
+                          {!isTranslateMode && (
+                            <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
+                          )}
+                        </div>
+                        <span className="font-semibold text-gray-900">שכתוב תוכן</span>
                       </div>
-                      <span className="font-semibold text-gray-900">שכתוב תוכן</span>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      יצירת תוכן חדש לחלוטין על בסיס ההנחיה שלך
-                    </p>
-                  </button>
+                      <p className="text-sm text-gray-600">
+                        יצירת תוכן חדש לחלוטין על בסיס ההנחיה שלך
+                      </p>
+                    </button>
 
-                  <button
-                    onClick={() => setIsTranslateMode(true)}
-                    className={`p-4 rounded-lg border-2 transition-all text-right ${isTranslateMode
-                      ? 'border-[#5146E5] bg-[#E9E8F8]'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isTranslateMode ? 'border-[#5146E5]' : 'border-gray-300'
-                        }`}>
-                        {isTranslateMode && (
-                          <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
-                        )}
+                    <button
+                      onClick={() => setIsTranslateMode(true)}
+                      className={`p-4 rounded-lg border-2 transition-all text-right ${isTranslateMode
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isTranslateMode ? 'border-[#5146E5]' : 'border-gray-300'
+                          }`}>
+                          {isTranslateMode && (
+                            <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
+                          )}
+                        </div>
+                        <span className="font-semibold text-gray-900">תרגום תוכן</span>
                       </div>
-                      <span className="font-semibold text-gray-900">תרגום תוכן</span>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      תרגום מדויק של כל התוכן בין שפות שונות
-                    </p>
-                  </button>
+                      <p className="text-sm text-gray-600">
+                        תרגום מדויק של כל התוכן בין שפות שונות
+                      </p>
+                    </button>
+                  </div>
                 </div>
-              </div>
               )}
 
               {/* Translation Language Selectors */}
@@ -801,31 +819,33 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
               )}
 
               {/* Rewrite Mode Selector - Only show if NOT in translate mode */}
+              {/* Flexible mode is hidden as grouped objects don't work well */}
               {!isTranslateMode && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-3">מצב שכתוב</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setRewriteMode('strict')}
-                    className={`p-4 rounded-lg border-2 transition-all text-right ${rewriteMode === 'strict'
-                      ? 'border-[#5146E5] bg-[#E9E8F8]'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${rewriteMode === 'strict' ? 'border-[#5146E5]' : 'border-gray-300'
-                        }`}>
-                        {rewriteMode === 'strict' && (
-                          <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
-                        )}
+                  <div className="grid grid-cols-1 gap-4">
+                    <button
+                      onClick={() => setRewriteMode('strict')}
+                      className={`p-4 rounded-lg border-2 transition-all text-right ${rewriteMode === 'strict'
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${rewriteMode === 'strict' ? 'border-[#5146E5]' : 'border-gray-300'
+                          }`}>
+                          {rewriteMode === 'strict' && (
+                            <div className="w-2 h-2 rounded-full bg-[#5146E5]"></div>
+                          )}
+                        </div>
+                        <span className="font-semibold text-gray-900">מצב קפדני</span>
                       </div>
-                      <span className="font-semibold text-gray-900">מצב קפדני</span>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      שומר על מבנה מדויק - משכתב רק טקסט באלמנטים קיימים. מושלם לשמירה על פריסות מדויקות.
-                    </p>
-                  </button>
+                      <p className="text-sm text-gray-600">
+                        שומר על מבנה מדויק - משכתב רק טקסט באלמנטים קיימים. מושלם לשמירה על פריסות מדויקות.
+                      </p>
+                    </button>
 
+                    {/* Flexible mode is temporarily hidden - uncomment when grouped objects support is improved
                   <button
                     onClick={() => setRewriteMode('flexible')}
                     className={`p-4 rounded-lg border-2 transition-all text-right relative ${rewriteMode === 'flexible'
@@ -846,54 +866,55 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                       מתאים מבנה לפי הצורך - יכול להציע שקפים חדשים, טבלאות, ותרשימים. מתאים נקודות תבליט ותזרים תוכן תוך שמירה על העיצוב הכללי.
                     </p>
                   </button>
+                  */}
+                  </div>
                 </div>
-              </div>
               )}
 
               {/* Language Selector - Only show if NOT in translate mode */}
               {!isTranslateMode && (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">שפת פלט</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setLanguage('english')}
-                    className={`p-3 rounded-lg border-2 transition-all text-right ${language === 'english'
-                      ? 'border-[#5146E5] bg-[#E9E8F8]'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${language === 'english' ? 'border-[#5146E5]' : 'border-gray-300'
-                        }`}>
-                        {language === 'english' && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#5146E5]"></div>
-                        )}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">שפת פלט</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setLanguage('english')}
+                      className={`p-3 rounded-lg border-2 transition-all text-right ${language === 'english'
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${language === 'english' ? 'border-[#5146E5]' : 'border-gray-300'
+                          }`}>
+                          {language === 'english' && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#5146E5]"></div>
+                          )}
+                        </div>
+                        <span className="font-medium text-gray-900">English</span>
                       </div>
-                      <span className="font-medium text-gray-900">English</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1 mr-5">טקסט משמאל לימין</p>
-                  </button>
+                      <p className="text-xs text-gray-500 mt-1 mr-5">טקסט משמאל לימין</p>
+                    </button>
 
-                  <button
-                    onClick={() => setLanguage('hebrew')}
-                    className={`p-3 rounded-lg border-2 transition-all text-right ${language === 'hebrew'
-                      ? 'border-[#5146E5] bg-[#E9E8F8]'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${language === 'hebrew' ? 'border-[#5146E5]' : 'border-gray-300'
-                        }`}>
-                        {language === 'hebrew' && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#5146E5]"></div>
-                        )}
+                    <button
+                      onClick={() => setLanguage('hebrew')}
+                      className={`p-3 rounded-lg border-2 transition-all text-right ${language === 'hebrew'
+                        ? 'border-[#5146E5] bg-[#E9E8F8]'
+                        : 'border-gray-300 bg-white hover:border-gray-400'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${language === 'hebrew' ? 'border-[#5146E5]' : 'border-gray-300'
+                          }`}>
+                          {language === 'hebrew' && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#5146E5]"></div>
+                          )}
+                        </div>
+                        <span className="font-medium text-gray-900">עברית (Hebrew)</span>
                       </div>
-                      <span className="font-medium text-gray-900">עברית (Hebrew)</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1 mr-5">תצוגה מימין לשמאל</p>
-                  </button>
+                      <p className="text-xs text-gray-500 mt-1 mr-5">תצוגה מימין לשמאל</p>
+                    </button>
+                  </div>
                 </div>
-              </div>
               )}
 
               {/* Slide Count for Flexible Mode */}

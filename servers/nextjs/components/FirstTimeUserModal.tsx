@@ -64,10 +64,10 @@ export default function FirstTimeUserModal({ isOpen, onClose }: FirstTimeUserMod
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-t-lg">
           <h2 className="text-2xl font-bold text-white text-center">
-            ברוכים הבאים ל-Presenton! 🎉
+            ברוכים הבאים לפרזנטון - המקום בוא תפסיק לעבוד קשה על מצגות ! 🎉
           </h2>
           <p className="text-white/90 text-center mt-2">
-            ליצירת מצגות מדהימות עם AI
+            ליצירת מצגות מדהימות עם בינה מלאכותית
           </p>
         </div>
 
@@ -107,10 +107,9 @@ export default function FirstTimeUserModal({ isOpen, onClose }: FirstTimeUserMod
                 מה תוכלו לעשות:
               </h3>
               <ul className="space-y-1 text-sm text-blue-800 text-right">
-                <li>✨ ליצור מצגות מקצועיות עם AI</li>
-                <li>🎨 לערוך ולעצב את המצגות שלכם</li>
-                <li>📤 לייצא ל-PDF או PPTX</li>
+                <li>✨ ליצור מצגות מקצועיות עם בינה מלאכותית</li>
                 <li>🌐 לתרגם מצגות בקלות</li>
+                <li> לשכתב את המצגת כאהבת נפשכם</li>
               </ul>
             </div>
 

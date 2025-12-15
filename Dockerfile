@@ -65,6 +65,11 @@ RUN npm run build
 # Copy FastAPI
 WORKDIR /app
 COPY servers/fastapi/ ./servers/fastapi/
+
+# Install root dependencies for start.js
+COPY package.json package-lock.json ./
+RUN npm ci
+
 COPY start.js LICENSE NOTICE ./
 
 # Copy nginx configuration (must be done before switching to non-root user)

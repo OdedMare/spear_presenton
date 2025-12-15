@@ -197,20 +197,24 @@ class Agent2Translator:
         contexts: Dict[str, TranslationContext],
         source_language: str,
         target_language: str,
-        batch_size: int = 20
+        batch_size: int = 20,
+        max_concurrency: int = 5
     ) -> Dict[str, str]:
         """
-        Translate elements in batches with context awareness.
+        Translate elements in batches with context awareness and parallel execution.
 
         Args:
             contexts: Dict of element_id -> TranslationContext
             source_language: Source language name
             target_language: Target language name
             batch_size: Elements per batch
+            max_concurrency: Maximum number of concurrent batch requests
 
         Returns:
             Dict mapping element_id to translated text
         """
+        import asyncio
+
         translations = {}
 
         # Filter to only translatable elements
@@ -227,18 +231,38 @@ class Agent2Translator:
 
         # Batch translatable elements
         items = list(translatable.items())
-        total_batches = (len(items) + batch_size - 1) // batch_size
+        batches = []
+        for i in range(0, len(items), batch_size):
+            batches.append(items[i:i + batch_size])
 
-        for batch_idx in range(0, len(items), batch_size):
-            batch = items[batch_idx:batch_idx + batch_size]
-            batch_num = (batch_idx // batch_size) + 1
+        total_batches = len(batches)
+        if total_batches == 0:
+            return translations
 
-            logger.info(f"Translator Agent: Processing batch {batch_num}/{total_batches} ({len(batch)} elements)")
+        logger.info(f"Translator Agent: Starting parallel translation of {total_batches} batches ({len(items)} elements)")
 
-            batch_translations = await self._translate_batch(
-                batch, source_language, target_language
-            )
-            translations.update(batch_translations)
+        # Semaphore to limit concurrency
+        semaphore = asyncio.Semaphore(max_concurrency)
+
+        async def process_batch(batch_idx, batch_items):
+            async with semaphore:
+                logger.info(f"Translator Agent: Processing batch {batch_idx + 1}/{total_batches}")
+                return await self._translate_batch(
+                    batch_items, source_language, target_language
+                )
+
+        # Create tasks
+        tasks = [
+            process_batch(i, batch)
+            for i, batch in enumerate(batches)
+        ]
+
+        # Execute concurrently
+        results = await asyncio.gather(*tasks)
+
+        # Merge results
+        for batch_result in results:
+            translations.update(batch_result)
 
         logger.info(f"Translator Agent: Completed {len(translations)} translations")
         return translations

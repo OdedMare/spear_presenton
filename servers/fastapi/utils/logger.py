@@ -76,8 +76,8 @@ class ElasticsearchHandler(logging.Handler):
             if record.exc_info:
                 log_doc["exception"] = self.format(record)
 
-            # Add any extra fields
-            if hasattr(record, "extra_fields"):
+            # Add any extra fields passed via extra={'extra_fields': {...}}
+            if hasattr(record, "extra_fields") and isinstance(record.extra_fields, dict):
                 log_doc.update(record.extra_fields)
 
             # Send to Elasticsearch
@@ -101,9 +101,10 @@ class CustomLogger(logging.Logger):
         """Override _log to handle extra fields."""
         if extra:
             # Store extra fields in the record
-            if not hasattr(extra, "extra_fields"):
+            if "extra_fields" not in extra:
                 extra["extra_fields"] = {}
-            extra["extra_fields"].update(kwargs)
+            if kwargs:
+                extra["extra_fields"].update(kwargs)
         super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel + 1)
 
 

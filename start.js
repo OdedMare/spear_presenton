@@ -1,5 +1,6 @@
 /* This script starts the FastAPI and Next.js servers, setting up user configuration if necessary. It reads environment variables to configure API keys and other settings, ensuring that the user configuration file is created if it doesn't exist. The script also handles the starting of both servers and keeps the Node.js process alive until one of the servers exits. */
 
+import dotenv from "dotenv";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
@@ -12,8 +13,12 @@ import {
   writeFileSync,
 } from "fs";
 
+// Load environment variables from .env file
+dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
 
 const fastapiDir = join(__dirname, "servers/fastapi");
 const nextjsDir = join(__dirname, "servers/nextjs");
@@ -178,23 +183,33 @@ const startServers = async () => {
     console.error("Ollama process failed to start:", err);
   });
 
-  const nginxProcess = spawn("nginx", ["-g", "daemon off;"], {
-    cwd: "/",
-    stdio: "inherit",
-    env: process.env,
-  });
+  let nginxProcess;
+  if (!isDev) {
+    nginxProcess = spawn("nginx", ["-g", "daemon off;"], {
+      cwd: "/",
+      stdio: "inherit",
+      env: process.env,
+    });
 
-  nginxProcess.on("error", (err) => {
-    console.error("Nginx process failed to start:", err);
-  });
+    nginxProcess.on("error", (err) => {
+      console.error("Nginx process failed to start:", err);
+    });
+  } else {
+    console.log("Skipping Nginx start in dev mode (handled by Next.js rewrites)");
+  }
 
-  // Keep the Node process alive until both servers exit
-  const exitCode = await Promise.race([
+  const processes = [
     new Promise((resolve) => fastApiProcess.on("exit", resolve)),
     new Promise((resolve) => nextjsProcess.on("exit", resolve)),
     new Promise((resolve) => ollamaProcess.on("exit", resolve)),
-    new Promise((resolve) => nginxProcess.on("exit", resolve)),
-  ]);
+  ];
+
+  if (nginxProcess) {
+    processes.push(new Promise((resolve) => nginxProcess.on("exit", resolve)));
+  }
+
+  // Keep the Node process alive until both servers exit
+  const exitCode = await Promise.race(processes);
 
   console.log(`One of the processes exited. Exit code: ${exitCode}`);
   process.exit(exitCode);
