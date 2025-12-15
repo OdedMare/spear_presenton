@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from models.image_prompt import ImagePrompt
 from models.sql.image_asset import ImageAsset
 from models.sql.slide import SlideModel
@@ -12,6 +12,8 @@ from utils.dict_utils import get_dict_at_path, get_dict_paths_with_key, set_dict
 async def process_slide_and_fetch_assets(
     image_generation_service: ImageGenerationService,
     slide: SlideModel,
+    user_id: Optional[int] = None,
+    username: Optional[str] = None,
 ) -> List[ImageAsset]:
 
     async_tasks = []
@@ -25,7 +27,9 @@ async def process_slide_and_fetch_assets(
             image_generation_service.generate_image(
                 ImagePrompt(
                     prompt=__image_prompt__parent["__image_prompt__"],
-                )
+                ),
+                user_id=user_id,
+                username=username,
             )
         )
 
@@ -64,6 +68,8 @@ async def process_old_and_new_slides_and_fetch_assets(
     image_generation_service: ImageGenerationService,
     old_slide_content: dict,
     new_slide_content: dict,
+    user_id: Optional[int] = None,
+    username: Optional[str] = None,
 ) -> List[ImageAsset]:
     # Finds all old images
     old_image_dict_paths = get_dict_paths_with_key(
@@ -122,7 +128,9 @@ async def process_old_and_new_slides_and_fetch_assets(
             image_generation_service.generate_image(
                 ImagePrompt(
                     prompt=new_image["__image_prompt__"],
-                )
+                ),
+                user_id=user_id,
+                username=username,
             )
         )
         new_images_fetch_status.append(True)

@@ -14,6 +14,8 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from utils.logger import logger, log_presentation_generation, log_error
+from api.middlewares import get_current_user
+from models.sql.user import User
 from constants.presentation import DEFAULT_TEMPLATES
 from enums.webhook_event import WebhookEvent
 from models.api_error_model import APIErrorModel
@@ -259,7 +261,9 @@ async def prepare_presentation(
 
 @PRESENTATION_ROUTER.get("/stream/{id}", response_model=PresentationWithSlides)
 async def stream_presentation(
-    id: uuid.UUID, sql_session: AsyncSession = Depends(get_async_session)
+    id: uuid.UUID,
+    sql_session: AsyncSession = Depends(get_async_session),
+    current_user: User | None = Depends(get_current_user),
 ):
     presentation = await sql_session.get(PresentationModel, id)
     if not presentation:
@@ -276,6 +280,8 @@ async def stream_presentation(
         )
 
     image_generation_service = ImageGenerationService(get_images_directory())
+    user_id = current_user.id if current_user else None
+    username = current_user.username if current_user else None
 
     async def inner():
         structure = presentation.get_structure()
@@ -321,7 +327,9 @@ async def stream_presentation(
 
             # This will mutate slide
             async_assets_generation_tasks.append(
-                process_slide_and_fetch_assets(image_generation_service, slide)
+                process_slide_and_fetch_assets(
+                    image_generation_service, slide, user_id, username
+                )
             )
 
             yield SSEResponse(
@@ -449,9 +457,20 @@ async def export_presentation_as_pptx_or_pdf(
 async def check_if_api_request_is_valid(
     request: GeneratePresentationRequest,
     sql_session: AsyncSession = Depends(get_async_session),
+    current_user: User | None = Depends(get_current_user),
 ) -> Tuple[uuid.UUID,]:
     presentation_id = uuid.uuid4()
-    print(f"Presentation ID: {presentation_id}")
+    logger.info(
+        f"Presentation ID: {presentation_id}",
+        extra={
+            "extra_fields": {
+                "user_id": current_user.id if current_user else None,
+                "username": current_user.username if current_user else None,
+                "presentation_id": str(presentation_id),
+                "event_type": "presentation_id_generated",
+            }
+        },
+    )
 
     # Making sure either content, slides markdown or files is provided
     if not (request.content or request.slides_markdown or request.files):
@@ -494,6 +513,8 @@ async def generate_presentation_handler(
     presentation_id: uuid.UUID,
     async_status: Optional[AsyncPresentationGenerationTaskModel],
     sql_session: AsyncSession = Depends(get_async_session),
+    user_id: Optional[int] = None,
+    username: Optional[str] = None,
 ):
     try:
         using_slides_markdown = False
@@ -584,8 +605,18 @@ async def generate_presentation_handler(
             sql_session.add(async_status)
             await sql_session.commit()
 
-        print("-" * 40)
-        print(f"Generated {total_outlines} outlines for the presentation")
+        logger.info(
+            f"Generated {total_outlines} outlines for the presentation",
+            extra={
+                "extra_fields": {
+                    "user_id": user_id,
+                    "username": username,
+                    "presentation_id": str(presentation_id),
+                    "total_outlines": total_outlines,
+                    "event_type": "outlines_generated",
+                }
+            },
+        )
 
         # Parse Layouts
         layout_model = await get_layout_by_name(request.template)
@@ -686,7 +717,19 @@ async def generate_presentation_handler(
         for start in range(0, len(slide_layouts), batch_size):
             end = min(start + batch_size, len(slide_layouts))
 
-            print(f"Generating slides from {start} to {end}")
+            logger.info(
+                f"Generating slides from {start} to {end}",
+                extra={
+                    "extra_fields": {
+                        "user_id": user_id,
+                        "username": username,
+                        "presentation_id": str(presentation_id),
+                        "batch_start": start,
+                        "batch_end": end,
+                        "event_type": "slides_batch_generation",
+                    }
+                },
+            )
 
             # Generate contents for this batch concurrently
             content_tasks = [
@@ -720,7 +763,9 @@ async def generate_presentation_handler(
 
             # Start asset fetch tasks for just-generated slides so they run while next batch is processed
             asset_tasks = [
-                process_slide_and_fetch_assets(image_generation_service, slide)
+                process_slide_and_fetch_assets(
+                    image_generation_service, slide, user_id, username
+                )
                 for slide in batch_slides
             ]
             async_assets_generation_tasks.extend(asset_tasks)
@@ -807,11 +852,17 @@ async def generate_presentation_handler(
 async def generate_presentation_sync(
     request: GeneratePresentationRequest,
     sql_session: AsyncSession = Depends(get_async_session),
+    current_user: User | None = Depends(get_current_user),
 ):
     try:
-        (presentation_id,) = await check_if_api_request_is_valid(request, sql_session)
+        (presentation_id,) = await check_if_api_request_is_valid(request, sql_session, current_user)
         return await generate_presentation_handler(
-            request, presentation_id, None, sql_session
+            request,
+            presentation_id,
+            None,
+            sql_session,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
         )
     except Exception as e:
         traceback.print_exc()
@@ -825,9 +876,11 @@ async def generate_presentation_async(
     request: GeneratePresentationRequest,
     background_tasks: BackgroundTasks,
     sql_session: AsyncSession = Depends(get_async_session),
+    current_user: User | None = Depends(get_current_user),
 ):
+    presentation_id = None
     try:
-        (presentation_id,) = await check_if_api_request_is_valid(request, sql_session)
+        (presentation_id,) = await check_if_api_request_is_valid(request, sql_session, current_user)
 
         async_status = AsyncPresentationGenerationTaskModel(
             status="pending",
@@ -843,12 +896,26 @@ async def generate_presentation_async(
             presentation_id,
             async_status=async_status,
             sql_session=sql_session,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
         )
         return async_status
 
     except Exception as e:
         if not isinstance(e, HTTPException):
-            print(e)
+            logger.error(
+                f"Presentation generation failed: {str(e)}",
+                exc_info=True,
+                extra={
+                    "extra_fields": {
+                        "user_id": current_user.id if current_user else None,
+                        "username": current_user.username if current_user else None,
+                        "presentation_id": str(presentation_id) if presentation_id else None,
+                        "error_type": type(e).__name__,
+                        "event_type": "presentation_generation_error",
+                    }
+                },
+            )
             e = HTTPException(status_code=500, detail="Presentation generation failed")
 
         raise e

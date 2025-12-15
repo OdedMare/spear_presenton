@@ -1,5 +1,6 @@
 import asyncio
 import os
+from typing import Optional
 import aiohttp
 from google import genai
 from google.genai.types import GenerateContentConfig
@@ -15,6 +16,7 @@ from utils.image_provider import (
     is_gemini_flash_selected,
     is_dalle3_selected,
 )
+from utils.logger import logger
 import uuid
 
 
@@ -38,7 +40,12 @@ class ImageGenerationService:
     def is_stock_provider_selected(self):
         return is_pixels_selected() or is_pixabay_selected()
 
-    async def generate_image(self, prompt: ImagePrompt) -> str | ImageAsset:
+    async def generate_image(
+        self,
+        prompt: ImagePrompt,
+        user_id: Optional[int] = None,
+        username: Optional[str] = None,
+    ) -> str | ImageAsset:
         """
         Generates an image based on the provided prompt.
         - If no image generation function is available, returns a placeholder image.
@@ -47,13 +54,33 @@ class ImageGenerationService:
         - Output Directory is used for saving the generated image not the stock provider.
         """
         if not self.image_gen_func:
-            print("No image generation function found. Using placeholder image.")
+            logger.warning(
+                "No image generation function found. Using placeholder image.",
+                extra={
+                    "extra_fields": {
+                        "user_id": user_id,
+                        "username": username,
+                        "event_type": "image_generation_no_provider",
+                    }
+                },
+            )
             return "/static/images/placeholder.jpg"
 
         image_prompt = prompt.get_image_prompt(
             with_theme=not self.is_stock_provider_selected()
         )
-        print(f"Request - Generating Image for {image_prompt}")
+        logger.info(
+            f"Request - Generating Image for {image_prompt}",
+            extra={
+                "extra_fields": {
+                    "user_id": user_id,
+                    "username": username,
+                    "image_prompt": image_prompt,
+                    "prompt": prompt.prompt,
+                    "event_type": "image_generation_request",
+                }
+            },
+        )
 
         try:
             if self.is_stock_provider_selected():
@@ -77,7 +104,19 @@ class ImageGenerationService:
             raise Exception(f"Image not found at {image_path}")
 
         except Exception as e:
-            print(f"Error generating image: {e}")
+            logger.error(
+                f"Error generating image: {e}",
+                exc_info=True,
+                extra={
+                    "extra_fields": {
+                        "user_id": user_id,
+                        "username": username,
+                        "image_prompt": image_prompt,
+                        "error_type": type(e).__name__,
+                        "event_type": "image_generation_error",
+                    }
+                },
+            )
             return "/static/images/placeholder.jpg"
 
     async def generate_image_openai(self, prompt: str, output_directory: str) -> str:
@@ -103,7 +142,14 @@ class ImageGenerationService:
 
         for part in response.candidates[0].content.parts:
             if part.text is not None:
-                print(part.text)
+                logger.info(
+                    f"Gemini image generation response text: {part.text}",
+                    extra={
+                        "extra_fields": {
+                            "event_type": "gemini_image_response_text",
+                        }
+                    },
+                )
             elif part.inline_data is not None:
                 image_path = os.path.join(output_directory, f"{uuid.uuid4()}.jpg")
                 with open(image_path, "wb") as f:

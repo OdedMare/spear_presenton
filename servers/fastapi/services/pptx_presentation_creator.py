@@ -4,6 +4,7 @@ from lxml import etree
 from services.html_to_text_runs_service import (
     parse_html_text_to_text_runs as parse_inline_html_to_runs,
 )
+from utils.logger import logger
 
 from pptx import Presentation
 from pptx.shapes.autoshape import Shape
@@ -65,8 +66,16 @@ def is_rtl_text(text: str) -> bool:
 
 class PptxPresentationCreator:
 
-    def __init__(self, ppt_model: PptxPresentationModel, temp_dir: str):
+    def __init__(
+        self,
+        ppt_model: PptxPresentationModel,
+        temp_dir: str,
+        user_id: Optional[int] = None,
+        username: Optional[str] = None,
+    ):
         self._temp_dir = temp_dir
+        self._user_id = user_id
+        self._username = username
 
         self._ppt_model = ppt_model
         self._slide_models = ppt_model.slides
@@ -202,8 +211,19 @@ class PptxPresentationCreator:
         ):
             try:
                 image = Image.open(image_path)
-            except:
-                print(f"Could not open image: {image_path}")
+            except Exception as e:
+                logger.warning(
+                    f"Could not open image: {image_path}",
+                    extra={
+                        "extra_fields": {
+                            "user_id": self._user_id,
+                            "username": self._username,
+                            "image_path": image_path,
+                            "error_type": type(e).__name__,
+                            "event_type": "pptx_image_open_error",
+                        }
+                    },
+                )
                 return
 
             image = image.convert("RGBA")
@@ -345,8 +365,19 @@ class PptxPresentationCreator:
                 shape.width, shape.height
             )
             shape.adjustments[0] = normalized_border_radius
-        except:
-            print("Could not apply border radius.")
+        except Exception as e:
+            logger.warning(
+                "Could not apply border radius.",
+                extra={
+                    "extra_fields": {
+                        "user_id": self._user_id,
+                        "username": self._username,
+                        "border_radius": border_radius,
+                        "error_type": type(e).__name__,
+                        "event_type": "pptx_border_radius_error",
+                    }
+                },
+            )
 
     def apply_fill_to_shape(self, shape: Shape, fill: Optional[PptxFillModel] = None):
         if not fill:
@@ -462,7 +493,18 @@ class PptxPresentationCreator:
             sF = ts.get_or_change_to_srgbClr()
             self.get_sub_element(sF, "a:alpha", val=str(alpha))
         except Exception as e:
-            print(f"Could not set fill opacity: {e}")
+            logger.warning(
+                f"Could not set fill opacity: {e}",
+                extra={
+                    "extra_fields": {
+                        "user_id": self._user_id,
+                        "username": self._username,
+                        "opacity": opacity,
+                        "error_type": type(e).__name__,
+                        "event_type": "pptx_fill_opacity_error",
+                    }
+                },
+            )
 
     def get_margined_position(
         self, position: PptxPositionModel, margin: Optional[PptxSpacingModel]
