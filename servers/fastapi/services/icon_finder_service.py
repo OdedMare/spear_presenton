@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import ssl
 from typing import List, Optional
 
 import chromadb
@@ -9,6 +11,14 @@ from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 
 class IconFinderService:
     def __init__(self):
+        # Disable SSL verification for environments with self-signed certificates
+        if os.getenv("DISABLE_SSL_VERIFY", "false").lower() == "true":
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            os.environ["CURL_CA_BUNDLE"] = ""
+            os.environ["REQUESTS_CA_BUNDLE"] = ""
+            ssl._create_default_https_context = ssl._create_unverified_context
+
         self.collection_name = "icons"
         self.client: Optional[chromadb.PersistentClient] = None
         self.collection = None

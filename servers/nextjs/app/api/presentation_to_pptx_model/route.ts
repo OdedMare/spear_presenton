@@ -11,6 +11,7 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
+import { logger, logPptxExport, logError } from "@/utils/logger";
 
 interface GetAllChildElementsAttributesArgs {
   element: ElementHandle<Element>;
@@ -31,11 +32,18 @@ interface GetAllChildElementsAttributesArgs {
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   let browser: Browser | null = null;
   let page: Page | null = null;
+  let presentationId = '';
 
   try {
     const id = await getPresentationId(request);
+    presentationId = id;
+
+    logPptxExport(id, 'started');
+    logger.info(`Starting PPTX export for presentation ${id}`);
+
     [browser, page] = await getBrowserAndPage(id);
     const screenshotsDir = getScreenshotsDir();
 
@@ -54,9 +62,19 @@ export async function GET(request: NextRequest) {
 
     await closeBrowserAndPage(browser, page);
 
+    const duration = Date.now() - startTime;
+    logPptxExport(id, 'completed', duration, { slide_count: slides.length });
+    logger.info(`PPTX export completed for ${id} in ${duration}ms`);
+
     return NextResponse.json(presentation_pptx_model);
   } catch (error: any) {
-    console.error(error);
+    const duration = Date.now() - startTime;
+    logPptxExport(presentationId || 'unknown', 'failed', duration, {
+      error: error.message,
+      stack: error.stack
+    });
+    logError(error, 'PPTX Export', { presentation_id: presentationId });
+
     await closeBrowserAndPage(browser, page);
     if (error instanceof ApiError) {
       return NextResponse.json(error, { status: 400 });
@@ -91,6 +109,11 @@ async function getBrowserAndPage(id: string): Promise<[Browser, Page]> {
       "--disable-renderer-backgrounding",
       "--disable-features=TranslateUI",
       "--disable-ipc-flooding-protection",
+      "--disable-crash-reporter",
+      "--disable-breakpad",
+      "--disable-extensions",
+      "--disable-software-rasterizer",
+      "--single-process", // Run in single process mode for containerized environments
     ],
   });
 
@@ -99,7 +122,12 @@ async function getBrowserAndPage(id: string): Promise<[Browser, Page]> {
   await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
   page.setDefaultNavigationTimeout(300000);
   page.setDefaultTimeout(300000);
-  await page.goto(`http://localhost:3000/pdf-maker?id=${id}`, {
+
+  // Use environment variable or 127.0.0.1 for base URL
+  // Using 127.0.0.1 instead of localhost for better OpenShift compatibility
+  const baseUrl = process.env.NEXTJS_BASE_URL || 'http://127.0.0.1:3000';
+
+  await page.goto(`${baseUrl}/pdf-maker?id=${id}`, {
     waitUntil: "networkidle0",
     timeout: 300000,
   });

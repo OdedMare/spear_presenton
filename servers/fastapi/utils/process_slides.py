@@ -51,8 +51,11 @@ async def process_slide_and_fetch_assets(
 
     for icon_path in icon_paths:
         icon_dict = get_dict_at_path(slide.content, icon_path)
-        icon_dict["__icon_url__"] = results.pop()[0]
-        set_dict_at_path(slide.content, icon_path, icon_dict)
+        # Check if we have results available before popping
+        if results:
+            icon_dict["__icon_url__"] = results.pop()[0]
+            set_dict_at_path(slide.content, icon_path, icon_dict)
+        # If no results available (icon generation failed), skip this icon
 
     return return_assets
 

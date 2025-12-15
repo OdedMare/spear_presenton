@@ -4,16 +4,27 @@ import puppeteer from "puppeteer";
 
 import { sanitizeFilename } from "@/app/(presentation-generator)/utils/others";
 import { NextResponse, NextRequest } from "next/server";
+import { logger, logPdfExport, logError } from "@/utils/logger";
 
 export async function POST(req: NextRequest) {
-  const { id, title } = await req.json();
-  if (!id) {
-    return NextResponse.json(
-      { error: "Missing Presentation ID" },
-      { status: 400 }
-    );
-  }
-  const browser = await puppeteer.launch({
+  const startTime = Date.now();
+  let presentationId: string = '';
+
+  try {
+    const { id, title } = await req.json();
+    presentationId = id;
+
+    logPdfExport(id, 'started', undefined, { title });
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Missing Presentation ID" },
+        { status: 400 }
+      );
+    }
+
+    logger.info(`Starting PDF export for presentation ${id}`);
+    const browser = await puppeteer.launch({
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     headless: true,
     args: [
@@ -27,6 +38,11 @@ export async function POST(req: NextRequest) {
       "--disable-renderer-backgrounding",
       "--disable-features=TranslateUI",
       "--disable-ipc-flooding-protection",
+      "--disable-crash-reporter",
+      "--disable-breakpad",
+      "--disable-extensions",
+      "--disable-software-rasterizer",
+      "--single-process", // Run in single process mode for containerized environments
     ],
   });
   const page = await browser.newPage();
@@ -34,7 +50,11 @@ export async function POST(req: NextRequest) {
   page.setDefaultNavigationTimeout(300000);
   page.setDefaultTimeout(300000);
 
-  await page.goto(`http://localhost:3000/pdf-maker?id=${id}`, {
+  // Use environment variable or 127.0.0.1 for base URL
+  // Using 127.0.0.1 instead of localhost for better OpenShift compatibility
+  const baseUrl = process.env.NEXTJS_BASE_URL || 'http://127.0.0.1:3000';
+
+  await page.goto(`${baseUrl}/pdf-maker?id=${id}`, {
     waitUntil: "networkidle0",
     timeout: 300000,
   });
@@ -89,8 +109,25 @@ export async function POST(req: NextRequest) {
   await fs.promises.mkdir(path.dirname(destinationPath), { recursive: true });
   await fs.promises.writeFile(destinationPath, pdfBuffer);
 
+  const duration = Date.now() - startTime;
+  logPdfExport(id, 'completed', duration, { title, filename: `${sanitizedTitle}.pdf` });
+  logger.info(`PDF export completed for ${id} in ${duration}ms`);
+
   return NextResponse.json({
     success: true,
     path: `/api/v1/ppt/files/download/${sanitizedTitle}.pdf`,
   });
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    logPdfExport(presentationId || 'unknown', 'failed', duration, {
+      error: error.message,
+      stack: error.stack
+    });
+    logError(error, 'PDF Export', { presentation_id: presentationId });
+
+    return NextResponse.json(
+      { error: `Failed to export PDF: ${error.message}` },
+      { status: 500 }
+    );
+  }
 }

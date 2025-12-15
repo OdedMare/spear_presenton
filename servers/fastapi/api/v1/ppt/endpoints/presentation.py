@@ -5,6 +5,7 @@ import math
 import os
 import random
 import traceback
+import time
 from typing import Annotated, List, Literal, Optional, Tuple
 import dirtyjson
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path
@@ -12,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from utils.logger import logger, log_presentation_generation, log_error
 from constants.presentation import DEFAULT_TEMPLATES
 from enums.webhook_event import WebhookEvent
 from models.api_error_model import APIErrorModel

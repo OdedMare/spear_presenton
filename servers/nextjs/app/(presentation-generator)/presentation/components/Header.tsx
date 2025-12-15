@@ -60,6 +60,11 @@ const Header = ({
 
   const get_presentation_pptx_model = async (id: string): Promise<PptxPresentationModel> => {
     const response = await fetch(`/api/presentation_to_pptx_model?id=${id}`);
+    if (!response.ok) {
+      const error = await response.json();
+      console.error("PPTX model generation failed:", error);
+      throw new Error(error.detail || "Failed to generate PPTX model");
+    }
     const pptx_model = await response.json();
     return pptx_model;
   };
@@ -70,30 +75,37 @@ const Header = ({
     try {
       setOpen(false);
       setShowLoader(true);
+
+      console.log("Starting PPTX export for presentation:", presentation_id);
+
       // Save the presentation data before exporting
       trackEvent(MixpanelEvent.Header_UpdatePresentationContent_API_Call);
       await PresentationGenerationApi.updatePresentationContent(presentationData);
-
+      console.log("Presentation content updated successfully");
 
       trackEvent(MixpanelEvent.Header_GetPptxModel_API_Call);
+      console.log("Fetching PPTX model...");
       const pptx_model = await get_presentation_pptx_model(presentation_id);
       if (!pptx_model) {
         throw new Error("Failed to get presentation PPTX model");
       }
+      console.log("PPTX model received successfully");
+
       trackEvent(MixpanelEvent.Header_ExportAsPPTX_API_Call);
+      console.log("Exporting to PPTX file...");
       const pptx_path = await PresentationGenerationApi.exportAsPPTX(pptx_model);
       if (pptx_path) {
-        // window.open(pptx_path, '_self');
+        console.log("PPTX export successful, path:", pptx_path);
         downloadLink(pptx_path);
       } else {
         throw new Error("No path returned from export");
       }
     } catch (error) {
-      console.error("Export failed:", error);
+      console.error("PPTX Export failed:", error);
       setShowLoader(false);
       toast.error("בעיה בייצוא!", {
         description:
-          "נתקלנו בבעיה בייצוא המצגת שלך. אנא נסה שוב.",
+          error instanceof Error ? error.message : "נתקלנו בבעיה בייצוא המצגת שלך. אנא נסה שוב.",
       });
     } finally {
       setShowLoader(false);

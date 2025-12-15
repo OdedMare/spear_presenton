@@ -50,6 +50,7 @@ export const updateLLMConfig = (
     disable_thinking: "DISABLE_THINKING",
     extended_reasoning: "EXTENDED_REASONING",
     web_grounding: "WEB_GROUNDING",
+    force_adaptive_mode: "FORCE_ADAPTIVE_MODE",
   };
 
   const configKey = fieldMappings[field];
