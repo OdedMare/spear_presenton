@@ -166,19 +166,27 @@ logger = setup_logger()
 
 
 # Convenience functions for structured logging
-def log_api_request(method: str, path: str, status_code: int, duration_ms: float, **kwargs):
+def log_api_request(method: str, path: str, status_code: int, duration_ms: float, user_id: Optional[int] = None, username: Optional[str] = None, **kwargs):
     """Log API request with structured data."""
+    extra_fields = {
+        "event_type": "api_request",
+        "http_method": method,
+        "http_path": path,
+        "http_status": status_code,
+        "duration_ms": duration_ms,
+        **kwargs
+    }
+
+    # Add user context if provided
+    if user_id:
+        extra_fields["user_id"] = user_id
+    if username:
+        extra_fields["username"] = username
+
     logger.info(
         f"{method} {path} - {status_code} ({duration_ms:.2f}ms)",
         extra={
-            "extra_fields": {
-                "event_type": "api_request",
-                "http_method": method,
-                "http_path": path,
-                "http_status": status_code,
-                "duration_ms": duration_ms,
-                **kwargs
-            }
+            "extra_fields": extra_fields
         }
     )
 
