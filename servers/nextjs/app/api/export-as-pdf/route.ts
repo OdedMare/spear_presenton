@@ -5,16 +5,25 @@ import puppeteer from "puppeteer";
 import { sanitizeFilename } from "@/app/(presentation-generator)/utils/others";
 import { NextResponse, NextRequest } from "next/server";
 import { logger, logPdfExport, logError } from "@/utils/logger";
+import { getUserContextFromToken } from "@/utils/userContext";
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   let presentationId: string = '';
 
   try {
+    // Extract user context from Authorization header
+    const authHeader = req.headers.get('authorization');
+    const userContext = await getUserContextFromToken(authHeader);
+
     const { id, title } = await req.json();
     presentationId = id;
 
-    logPdfExport(id, 'started', undefined, { title });
+    logPdfExport(id, 'started', undefined, {
+      title,
+      user_id: userContext.userId,
+      username: userContext.username,
+    });
 
     if (!id) {
       return NextResponse.json(
@@ -88,7 +97,13 @@ export async function POST(req: NextRequest) {
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
   } catch (error) {
-    console.log("Warning: Some content may not have loaded completely:", error);
+    logger.warn("Warning: Some content may not have loaded completely", {
+      event_type: 'pdf_content_load_warning',
+      presentation_id: presentationId,
+      user_id: userContext.userId,
+      username: userContext.username,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   const pdfBuffer = await page.pdf({

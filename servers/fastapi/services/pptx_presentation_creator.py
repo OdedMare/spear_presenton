@@ -555,7 +555,18 @@ class PptxPresentationCreator:
             elif strike is False:
                 rPr.set("strike", "noStrike")
         except Exception as e:
-            print(f"Could not apply strikethrough: {e}")
+            logger.warning(
+                f"Could not apply strikethrough: {e}",
+                extra={
+                    "extra_fields": {
+                        "user_id": self._user_id,
+                        "username": self._username,
+                        "strike": strike,
+                        "error_type": type(e).__name__,
+                        "event_type": "pptx_strikethrough_error",
+                    }
+                },
+            )
 
     def save(self, path: str):
         self._ppt.save(path)
