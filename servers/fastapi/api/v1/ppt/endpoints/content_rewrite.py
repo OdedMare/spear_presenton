@@ -57,6 +57,47 @@ from utils.logger import logger
 router = APIRouter()
 
 
+def clean_json_response(response_text: str) -> str:
+    """
+    Clean JSON response from LLM by removing markdown code blocks and extra text.
+
+    Some models (especially smaller ones like Qwen) may wrap JSON in ```json blocks
+    or add explanatory text before/after the JSON. This function strips those away.
+
+    Args:
+        response_text: Raw response from LLM
+
+    Returns:
+        Cleaned JSON string
+    """
+    # Strip leading/trailing whitespace
+    text = response_text.strip()
+
+    # Remove markdown code blocks if present
+    # Pattern 1: ```json\n{...}\n```
+    if text.startswith("```json"):
+        text = text[7:]  # Remove ```json
+        if text.endswith("```"):
+            text = text[:-3]  # Remove trailing ```
+        text = text.strip()
+    # Pattern 2: ```\n{...}\n```
+    elif text.startswith("```"):
+        text = text[3:]  # Remove ```
+        if text.endswith("```"):
+            text = text[:-3]  # Remove trailing ```
+        text = text.strip()
+
+    # Find the first { and last } to extract JSON
+    # This handles cases where there's explanatory text before/after JSON
+    first_brace = text.find('{')
+    last_brace = text.rfind('}')
+
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        text = text[first_brace:last_brace + 1]
+
+    return text
+
+
 class RewriteMode(str, Enum):
     """Rewrite mode options"""
     STRICT = "strict"  # Exact structure matching - only rewrite text
@@ -551,14 +592,18 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
                         model=model,
                         messages=messages,
                     )
-                    
+
                     try:
-                        chunk_result = json.loads(response_text)
+                        # Clean the response to remove markdown code blocks and extra text
+                        cleaned_response = clean_json_response(response_text)
+                        chunk_result = json.loads(cleaned_response)
                         # If successful, break the retry loop
                         logger.info(f"Batch {i}: Success with {attempt_name} prompt")
                         break
                     except json.JSONDecodeError as e:
                         logger.warning(f"Batch {i}: Invalid JSON with {attempt_name} prompt: {e}")
+                        logger.warning(f"Batch {i}: Raw response (first 500 chars): {response_text[:500]}")
+                        logger.warning(f"Batch {i}: Cleaned response (first 500 chars): {cleaned_response[:500] if 'cleaned_response' in locals() else 'N/A'}")
                         last_error = e
                         continue
                         
@@ -741,7 +786,9 @@ Generate rewritten content that matches this structure exactly."""
             temperature=0.7,
         )
 
-        rewritten_content = json.loads(response)
+        # Clean the response before parsing
+        cleaned_response = clean_json_response(response)
+        rewritten_content = json.loads(cleaned_response)
         rewritten_content = sanitize_rewritten_content(clean_structure, rewritten_content)
         validate_rewritten_content(clean_structure, rewritten_content)
 

@@ -18,6 +18,7 @@ class ElasticsearchTestResponse(BaseModel):
     message: str
     cluster_name: Optional[str] = None
     version: Optional[str] = None
+    index_prefix: Optional[str] = None
 
 
 @ELASTICSEARCH_ROUTER.post("/test-connection", response_model=ElasticsearchTestResponse)
@@ -49,11 +50,15 @@ async def test_elasticsearch_connection(request: ElasticsearchTestRequest):
 
         if response.status_code == 200:
             data = response.json()
+            # Get index prefix from environment variable
+            index_prefix = os.getenv("ELASTICSEARCH_INDEX_PREFIX", "presenton-logs")
+
             return ElasticsearchTestResponse(
                 success=True,
                 message="התחברות ל-Elasticsearch הצליחה! (Successfully connected to Elasticsearch)",
                 cluster_name=data.get("cluster_name"),
-                version=data.get("version", {}).get("number")
+                version=data.get("version", {}).get("number"),
+                index_prefix=index_prefix
             )
         elif response.status_code == 401:
             return ElasticsearchTestResponse(

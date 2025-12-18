@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_simplified_outline_prompt(
+    
     complexity_level: int,
     n_slides: int,
     include_title_slide: bool = True,

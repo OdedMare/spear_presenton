@@ -442,6 +442,51 @@ OUTPUT RULES:
 ✗ DO NOT truncate with "..." or cut off words - always write complete sentences/words
 
 ═══════════════════════════════════════════════════════════════════════════════
+CRITICAL OUTPUT FORMAT INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+Your response MUST be PURE JSON with NO additional text.
+DO NOT wrap the JSON in markdown code blocks like ```json or ```.
+DO NOT add any explanatory text before or after the JSON.
+Your response must start with the character { and end with the character }
+
+CORRECT example:
+{
+  "slides": [
+    {
+      "slideNumber": 1,
+      "elements": [
+        {
+          "id": "slide1_shape0",
+          "text": "New Title"
+        }
+      ]
+    }
+  ]
+}
+
+INCORRECT examples (DO NOT DO THESE):
+
+Example 1 - DO NOT wrap in markdown:
+```json
+{
+  "slides": [...]
+}
+```
+
+Example 2 - DO NOT add explanatory text:
+Here is the rewritten content:
+{
+  "slides": [...]
+}
+
+Example 3 - DO NOT add any text after the JSON:
+{
+  "slides": [...]
+}
+I hope this helps!
+
+═══════════════════════════════════════════════════════════════════════════════
 
 CRITICAL REMINDERS:
 ✓ NEVER copy or keep the old text from the input - it's only a REFERENCE
@@ -747,6 +792,53 @@ OUTPUT RULES:
 ✓ Use sequential slideNumber values (1, 2, 3, ...)
 ✓ **For new text boxes: ID MUST start with "new_"** (e.g. "new_title_1")
 ✓ For existing elements: Use the exact ID from the input structure
+
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL OUTPUT FORMAT INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+Your response MUST be PURE JSON with NO additional text.
+DO NOT wrap the JSON in markdown code blocks like ```json or ```.
+DO NOT add any explanatory text before or after the JSON.
+Your response must start with the character { and end with the character }
+
+CORRECT example:
+{
+  "slides": [
+    {
+      "slideNumber": 1,
+      "elements": [
+        {
+          "id": "slide1_shape0",
+          "text": "New Title",
+          "type": "shape",
+          "placeholderType": "title"
+        }
+      ]
+    }
+  ]
+}
+
+INCORRECT examples (DO NOT DO THESE):
+
+Example 1 - DO NOT wrap in markdown:
+```json
+{
+  "slides": [...]
+}
+```
+
+Example 2 - DO NOT add explanatory text:
+Here is the flexible rewritten content:
+{
+  "slides": [...]
+}
+
+Example 3 - DO NOT add any text after the JSON:
+{
+  "slides": [...]
+}
+I've added 2 new slides for better content flow.
 ✓ Use "isNew": true to mark new slides
 ✓ Use "remove": true to delete existing slides or elements
 ✓ Use "cloneFrom": "element_id" to copy styling from existing elements
@@ -800,7 +892,13 @@ INPUT STRUCTURE:
   ]
 }
 
-OUTPUT FORMAT:
+OUTPUT FORMAT - CRITICAL INSTRUCTIONS:
+Your response must be PURE JSON with NO additional text.
+DO NOT wrap the JSON in markdown code blocks (```json or ```).
+DO NOT add any explanatory text before or after the JSON.
+Start your response with { and end with }
+
+Example of CORRECT output:
 {
   "slides": [
     {
@@ -810,6 +908,19 @@ OUTPUT FORMAT:
       ]
     }
   ]
+}
+
+Example of INCORRECT output (DO NOT DO THIS):
+```json
+{
+  "slides": [...]
+}
+```
+
+Example of INCORRECT output (DO NOT DO THIS):
+Here is the rewritten content:
+{
+  "slides": [...]
 }
 """
 
@@ -832,7 +943,13 @@ RULES:
 11. All text must have COMPLETE sentences and words - no mid-sentence or mid-word truncation.
 12. Use shorter synonyms or more concise phrasing instead of truncating.
 
-OUTPUT FORMAT:
+OUTPUT FORMAT - CRITICAL INSTRUCTIONS:
+Your response must be PURE JSON with NO additional text.
+DO NOT wrap the JSON in markdown code blocks (```json or ```).
+DO NOT add any explanatory text before or after the JSON.
+Start your response with { and end with }
+
+Example of CORRECT output:
 {
   "slides": [
     {
@@ -850,6 +967,19 @@ OUTPUT FORMAT:
       ]
     }
   ]
+}
+
+Example of INCORRECT output (DO NOT DO THIS):
+```json
+{
+  "slides": [...]
+}
+```
+
+Example of INCORRECT output (DO NOT DO THIS):
+Here is the flexible content:
+{
+  "slides": [...]
 }
 """
 

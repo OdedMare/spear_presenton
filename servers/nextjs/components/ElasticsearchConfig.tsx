@@ -15,7 +15,7 @@ export default function ElasticsearchConfig({
   const [isExpanded, setIsExpanded] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState<string>('');
-  const [clusterInfo, setClusterInfo] = useState<{ name?: string; version?: string } | null>(null);
+  const [clusterInfo, setClusterInfo] = useState<{ name?: string; version?: string; indexPrefix?: string } | null>(null);
 
   const handleInputChange = (field: keyof LLMConfig, value: string | boolean) => {
     setLlmConfig({
@@ -58,10 +58,11 @@ export default function ElasticsearchConfig({
       if (data.success) {
         setTestStatus('success');
         setTestMessage(data.message);
-        if (data.cluster_name || data.version) {
+        if (data.cluster_name || data.version || data.index_prefix) {
           setClusterInfo({
             name: data.cluster_name,
             version: data.version,
+            indexPrefix: data.index_prefix,
           });
         }
       } else {
@@ -274,6 +275,12 @@ export default function ElasticsearchConfig({
                       {clusterInfo.version && (
                         <div>
                           <span className="font-semibold">גרסה:</span> {clusterInfo.version}
+                        </div>
+                      )}
+                      {clusterInfo.indexPrefix && (
+                        <div>
+                          <span className="font-semibold">קידומת אינדקס (Logger):</span>{' '}
+                          {clusterInfo.indexPrefix}
                         </div>
                       )}
                     </div>
