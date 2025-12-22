@@ -15,24 +15,20 @@ async def process_slide_and_fetch_assets(
     user_id: Optional[int] = None,
     username: Optional[str] = None,
 ) -> List[ImageAsset]:
+    """
+    Fetch assets for a slide.
+
+    NOTE: Image generation has been disabled - users add images manually.
+    This function only fetches icons now.
+    """
 
     async_tasks = []
-
-    image_paths = get_dict_paths_with_key(slide.content, "__image_prompt__")
     icon_paths = get_dict_paths_with_key(slide.content, "__icon_query__")
 
-    for image_path in image_paths:
-        __image_prompt__parent = get_dict_at_path(slide.content, image_path)
-        async_tasks.append(
-            image_generation_service.generate_image(
-                ImagePrompt(
-                    prompt=__image_prompt__parent["__image_prompt__"],
-                ),
-                user_id=user_id,
-                username=username,
-            )
-        )
+    # NOTE: Image generation removed - users add images manually
+    # Old code searched for __image_prompt__ but that field no longer exists
 
+    # Fetch icons only
     for icon_path in icon_paths:
         __icon_query__parent = get_dict_at_path(slide.content, icon_path)
         async_tasks.append(
@@ -40,28 +36,16 @@ async def process_slide_and_fetch_assets(
         )
 
     results = await asyncio.gather(*async_tasks)
-    results.reverse()
 
-    return_assets = []
-    for image_path in image_paths:
-        image_dict = get_dict_at_path(slide.content, image_path)
-        result = results.pop()
-        if isinstance(result, ImageAsset):
-            return_assets.append(result)
-            image_dict["__image_url__"] = result.path
-        else:
-            image_dict["__image_url__"] = result
-        set_dict_at_path(slide.content, image_path, image_dict)
-
+    # Update icons in slide content
     for icon_path in icon_paths:
         icon_dict = get_dict_at_path(slide.content, icon_path)
-        # Check if we have results available before popping
         if results:
-            icon_dict["__icon_url__"] = results.pop()[0]
+            icon_dict["__icon_url__"] = results.pop(0)[0]
             set_dict_at_path(slide.content, icon_path, icon_dict)
         # If no results available (icon generation failed), skip this icon
 
-    return return_assets
+    return []  # No image assets generated
 
 
 async def process_old_and_new_slides_and_fetch_assets(
@@ -71,16 +55,15 @@ async def process_old_and_new_slides_and_fetch_assets(
     user_id: Optional[int] = None,
     username: Optional[str] = None,
 ) -> List[ImageAsset]:
-    # Finds all old images
-    old_image_dict_paths = get_dict_paths_with_key(
-        old_slide_content, "__image_prompt__"
-    )
-    old_image_dicts = [
-        get_dict_at_path(old_slide_content, path) for path in old_image_dict_paths
-    ]
-    old_image_prompts = [
-        old_image_dict["__image_prompt__"] for old_image_dict in old_image_dicts
-    ]
+    """
+    Fetch assets for updated slides.
+
+    NOTE: Image generation has been disabled - users add images manually.
+    This function only fetches icons now.
+    """
+
+    # NOTE: Image generation removed - users add images manually
+    # Old code searched for __image_prompt__ but that field no longer exists
 
     # Finds all old icons
     old_icon_dict_paths = get_dict_paths_with_key(old_slide_content, "__icon_query__")
@@ -91,49 +74,15 @@ async def process_old_and_new_slides_and_fetch_assets(
         old_icon_dict["__icon_query__"] for old_icon_dict in old_icon_dicts
     ]
 
-    # Finds all new images
-    new_image_dict_paths = get_dict_paths_with_key(
-        new_slide_content, "__image_prompt__"
-    )
-    new_image_dicts = [
-        get_dict_at_path(new_slide_content, path) for path in new_image_dict_paths
-    ]
-
     # Finds all new icons
     new_icon_dict_paths = get_dict_paths_with_key(new_slide_content, "__icon_query__")
     new_icon_dicts = [
         get_dict_at_path(new_slide_content, path) for path in new_icon_dict_paths
     ]
 
-    # Creates async tasks for fetching new images
-    async_image_fetch_tasks = []
-    new_images_fetch_status = []
-
     # Creates async tasks for fetching new icons
     async_icon_fetch_tasks = []
     new_icons_fetch_status = []
-
-    # Creates async tasks for fetching new images
-    # Use old image url if prompt is same
-    for new_image in new_image_dicts:
-        if new_image["__image_prompt__"] in old_image_prompts:
-            old_image_url = old_image_dicts[
-                old_image_prompts.index(new_image["__image_prompt__"])
-            ]["__image_url__"]
-            new_image["__image_url__"] = old_image_url
-            new_images_fetch_status.append(False)
-            continue
-
-        async_image_fetch_tasks.append(
-            image_generation_service.generate_image(
-                ImagePrompt(
-                    prompt=new_image["__image_prompt__"],
-                ),
-                user_id=user_id,
-                username=username,
-            )
-        )
-        new_images_fetch_status.append(True)
 
     # Creates async tasks for fetching new icons
     # Use old icon url if query is same
@@ -151,34 +100,19 @@ async def process_old_and_new_slides_and_fetch_assets(
         )
         new_icons_fetch_status.append(True)
 
-    new_images = await asyncio.gather(*async_image_fetch_tasks)
     new_icons = await asyncio.gather(*async_icon_fetch_tasks)
 
-    # list of new assets
-    new_assets = []
-
-    # Sets new image and icon urls for assets that were fetched
-    for i, new_image in enumerate(new_images):
-        if new_images_fetch_status[i]:
-            fetched_image = new_images[i]
-            if isinstance(fetched_image, ImageAsset):
-                new_assets.append(fetched_image)
-                image_url = fetched_image.path
-            else:
-                image_url = fetched_image
-            new_image_dicts[i]["__image_url__"] = image_url
-
-    for i, new_icon in enumerate(new_icons):
-        if new_icons_fetch_status[i]:
-            new_icon_dicts[i]["__icon_url__"] = new_icons[i][0]
-
-    for i, new_image_dict in enumerate(new_image_dicts):
-        set_dict_at_path(new_slide_content, new_image_dict_paths[i], new_image_dict)
+    # Sets new icon urls for assets that were fetched
+    icon_index = 0
+    for i, should_fetch in enumerate(new_icons_fetch_status):
+        if should_fetch:
+            new_icon_dicts[i]["__icon_url__"] = new_icons[icon_index][0]
+            icon_index += 1
 
     for i, new_icon_dict in enumerate(new_icon_dicts):
         set_dict_at_path(new_slide_content, new_icon_dict_paths[i], new_icon_dict)
 
-    return new_assets
+    return []  # No image assets generated
 
 
 def process_slide_add_placeholder_assets(slide: SlideModel):

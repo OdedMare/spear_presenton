@@ -66,11 +66,8 @@ Input:
 Output: 
 const ImageSchema = z.object({
     __image_url__: z.url().meta({
-        description: "URL to image",
+        description: "URL to placeholder image (user will replace manually)",
     }),
-    __image_prompt__: z.string().meta({
-        description: "Prompt used to generate the image. Max 30 words",
-    }).min(10).max(50),
 })
 
 const IconSchema = z.object({
@@ -93,8 +90,7 @@ const Schema = z.object({
         description: "Main description text explaining the problem or topic. Max 30 words",
     }), 
     image: ImageSchema.default({
-        __image_url__: 'https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-        __image_prompt__: "Business people analyzing documents and charts in office"
+        __image_url__: 'https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
     }).meta({
         description: "Supporting image for the slide. Max 30 words",
     }),
@@ -177,7 +173,7 @@ const dynamicSlideLayout: React.FC<BulletWithIconsSlideLayoutProps> = ({ data: s
                             <div className="w-full max-w-md h-80 rounded-2xl overflow-hidden shadow-lg">
                                 <img
                                     src={slideData?.image?.__image_url__ || ""}
-                                    alt={slideData?.image?.__image_prompt__ || slideData?.title || ""}
+                                    alt={slideData?.title || ""}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
