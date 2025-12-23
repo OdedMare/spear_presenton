@@ -166,6 +166,100 @@ def attempt_json_repair(json_string: str) -> Optional[str]:
         return None
 
 
+def smart_truncate(text: str, max_length: int) -> str:
+    """
+    Truncate text to max_length with smart boundary detection.
+    
+    Priority:
+    1. Complete sentences (if length >= 80% of max_length)
+    2. Complete words
+    3. Hard cut (fallback)
+    """
+    if not text or len(text) <= max_length:
+        return text
+        
+    # If we need to truncate, we reserve 3 chars for ellipsis if we fall back to word/hard cut
+    # But for strict preservation of meaning, we try to find a full sentence first.
+    
+    truncated_full = text[:max_length]
+
+    # Strategy 1: Look for sentence ending (.!?) in the last 20% of the allowed space
+    # This ensures we don't cut a 100 char string at the first sentence which might be 10 chars.
+    min_sentence_length = int(max_length * 0.8)
+    
+    # Find last sentence punctuation in the valid window
+    import re
+    # Look for .!? followed by space or EOS
+    # We search in text[:max_length]
+    matches = list(re.finditer(r'[.!?](?:\s|$)', truncated_full))
+    
+    if matches:
+        # Check if the last match is within our "passable" range
+        last_match = matches[-1]
+        if last_match.end() >= min_sentence_length:
+             return truncated_full[:last_match.end()].strip()
+             
+    # Strategy 2: Cut at last word boundary
+    # Reserve space for "..."
+    target_len = max_length - 3
+    if target_len < 1:
+        return text[:max_length]
+        
+    truncated_target = text[:target_len]
+    last_space = truncated_target.rfind(' ')
+    
+    if last_space != -1:
+        return truncated_target[:last_space] + "..."
+        
+    # Strategy 3: Hard cut
+    return text[:target_len] + "..."
+
+
+def validate_content_constraints(
+    original_structure: Dict[str, Any], 
+    rewritten_content: Dict[str, Any]
+) -> List[str]:
+    """
+    Validate that rewritten content respects strict constraints.
+    Returns a list of specific error messages.
+    """
+    errors = []
+    
+    orig_slides = {s.get("slideNumber"): s for s in original_structure.get("slides", [])}
+    rewritten_slides = rewritten_content.get("slides", [])
+    
+    for slide in rewritten_slides:
+        slide_num = slide.get("slideNumber")
+        orig_slide = orig_slides.get(slide_num)
+        
+        if not orig_slide:
+            continue
+            
+        orig_elements = {e.get("id"): e for e in orig_slide.get("elements", [])}
+        
+        for element in slide.get("elements", []):
+            el_id = element.get("id")
+            text = element.get("text", "")
+            
+            orig_el = orig_elements.get(el_id)
+            if not orig_el:
+                continue
+                
+            # Check Max Length
+            max_length = orig_el.get("maxLength")
+            if max_length and len(text) > max_length:
+                errors.append(f"Element {el_id}: Text length {len(text)} exceeds maxLength {max_length} (Text: '{text[:20]}...')")
+                
+            # Check Max Lines
+            max_lines = orig_el.get("maxLines")
+            if max_lines and text:
+                line_count = len(text.split('\n'))
+                if line_count > max_lines:
+                     errors.append(f"Element {el_id}: Line count {line_count} exceeds maxLines {max_lines}")
+
+    return errors
+
+
 class RewriteMode(str, Enum):
     """Rewrite mode options"""
     STRICT = "strict"  # Exact structure matching - only rewrite text
@@ -285,30 +379,42 @@ def sanitize_rewritten_content(
     # STRICT mode: Apply original constraints using ID matching
     # Map original slides by slideNumber for O(1) lookup
     orig_slides_map = {s.get("slideNumber"): s for s in original_slides}
+    rewritten_slides_map = {s.get("slideNumber"): s for s in rewritten_slides}
 
-    for rewritten_slide in rewritten_slides:
-        slide_num = rewritten_slide.get("slideNumber")
-        orig_slide = orig_slides_map.get(slide_num)
+    errors: List[str] = []
 
-        if not orig_slide:
-            # In strict mode, we skip slides that weren't in the original request
-            logger.warning(f"Strict mode: Skipping unknown slide number {slide_num}")
+    # Detect extra slides not present in the original structure
+    extra_slides = set(rewritten_slides_map.keys()) - set(orig_slides_map.keys())
+    if extra_slides:
+        errors.append(f"Unexpected slides returned: {sorted(extra_slides)}")
+
+    sanitized_slides = []
+
+    for orig_slide in original_slides:
+        slide_num = orig_slide.get("slideNumber")
+        rewritten_slide = rewritten_slides_map.get(slide_num)
+
+        if not rewritten_slide:
+            errors.append(f"Missing slide {slide_num} in rewritten content")
             continue
 
         # Map original elements by ID for O(1) lookup
         orig_elements_map = {e.get("id"): e for e in orig_slide.get("elements", [])}
-        
+
         rewritten_elements = rewritten_slide.get("elements", [])
         sanitized_elements = []
+        seen_ids = set()
+        extra_element_ids = []
 
         for rewritten_el in rewritten_elements:
             el_id = rewritten_el.get("id")
             orig_el = orig_elements_map.get(el_id)
 
             if not orig_el:
-                # In strict mode, we skip elements that weren't in the original request
-                logger.warning(f"Strict mode: Skipping unknown element ID {el_id}")
+                extra_element_ids.append(el_id)
                 continue
+
+            seen_ids.add(el_id)
 
             text = rewritten_el.get("text", "")
             max_length = orig_el.get("maxLength")
@@ -320,11 +426,7 @@ def sanitize_rewritten_content(
                     f"Truncating element {el_id}: "
                     f"length {len(text)} exceeds maxLength {max_length}"
                 )
-                # Truncate with ellipsis if possible
-                if max_length > 3:
-                    text = text[:max_length - 3] + "..."
-                else:
-                    text = text[:max_length]
+                text = smart_truncate(text, max_length)
 
             # Truncate lines if exceeds maxLines
             if max_lines:
@@ -341,10 +443,23 @@ def sanitize_rewritten_content(
                 "text": text
             })
 
-        sanitized["slides"].append({
+        missing_ids = set(orig_elements_map.keys()) - seen_ids
+        if missing_ids:
+            errors.append(f"Slide {slide_num} missing element IDs: {sorted(missing_ids)}")
+        if extra_element_ids:
+            errors.append(f"Slide {slide_num} has unexpected element IDs: {sorted(extra_element_ids)}")
+
+        sanitized_slides.append({
             "slideNumber": slide_num,
             "elements": sanitized_elements
         })
+
+    if errors:
+        error_message = "; ".join(errors)
+        logger.error(f"Strict mode validation failed during sanitization: {error_message}")
+        raise ValueError(error_message)
+
+    sanitized["slides"] = sanitized_slides
 
     return sanitized
 
@@ -717,62 +832,90 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
                 attempts.append(("full", False))
                 attempts.append(("lite", True))
 
+            # Additional retry loop for validation failures
+            max_validation_retries = 2
+            
             for attempt_name, use_lite in attempts:
-                try:
-                    logger.info(f"Batch {i+1}: Attempting with {attempt_name} prompt...")
-                    system_prompt = get_prompts(use_lite=use_lite)
-
-                    messages = [
-                        LLMSystemMessage(content=system_prompt),
-                        LLMUserMessage(content=user_message)
-                    ]
-
-                    response_text = await llm_client.generate(
-                        model=model,
-                        messages=messages,
-                    )
-
+                current_user_message = user_message
+                
+                for validation_attempt in range(max_validation_retries + 1):
                     try:
-                        # Clean the response to remove markdown code blocks and extra text
-                        cleaned_response = clean_json_response(response_text)
+                        logger.info(f"Batch {i+1}: Attempting with {attempt_name} prompt (try {validation_attempt+1})...")
+                        system_prompt = get_prompts(use_lite=use_lite)
 
-                        # Try to parse the cleaned response
+                        messages = [
+                            LLMSystemMessage(content=system_prompt),
+                            LLMUserMessage(content=current_user_message)
+                        ]
+
+                        response_text = await llm_client.generate(
+                            model=model,
+                            messages=messages,
+                        )
+
                         try:
-                            chunk_result = json.loads(cleaned_response)
-                            logger.info(f"Batch {i+1}: Success with {attempt_name} prompt (direct parse)")
-                            break
-                        except json.JSONDecodeError as parse_error:
-                            # Attempt JSON repair for small models
-                            logger.info(f"Batch {i+1}: Direct parse failed, attempting repair...")
-                            repaired_json = attempt_json_repair(cleaned_response)
+                            # Clean the response to remove markdown code blocks and extra text
+                            cleaned_response = clean_json_response(response_text)
+                            parsed_result = None
 
-                            if repaired_json:
-                                chunk_result = json.loads(repaired_json)
-                                logger.info(f"Batch {i+1}: Success with {attempt_name} prompt (after repair)")
-                                break
-                            else:
-                                # Repair failed, log and try next attempt
-                                logger.warning(f"Batch {i+1}: Invalid JSON with {attempt_name} prompt: {parse_error}")
-                                logger.warning(f"Batch {i+1}: Raw response (first 500 chars): {response_text[:500]}")
-                                logger.warning(f"Batch {i+1}: Cleaned response (first 500 chars): {cleaned_response[:500]}")
-                                last_error = parse_error
-                                continue
-                    except Exception as inner_error:
-                        logger.warning(f"Batch {i+1}: Unexpected error parsing JSON: {inner_error}")
-                        last_error = inner_error
-                        continue
+                            # Try to parse the cleaned response
+                            try:
+                                parsed_result = json.loads(cleaned_response)
+                                logger.info(f"Batch {i+1}: Success with {attempt_name} prompt (direct parse)")
+                            except json.JSONDecodeError as parse_error:
+                                # Attempt JSON repair for small models
+                                logger.info(f"Batch {i+1}: Direct parse failed, attempting repair...")
+                                repaired_json = attempt_json_repair(cleaned_response)
 
-                except Exception as e:
-                    logger.warning(f"Batch {i+1}: Error with {attempt_name} prompt: {e}")
-                    last_error = e
-                    continue
+                                if repaired_json:
+                                    parsed_result = json.loads(repaired_json)
+                                    logger.info(f"Batch {i+1}: Success with {attempt_name} prompt (after repair)")
+                                else:
+                                    # Repair failed
+                                    logger.warning(f"Batch {i+1}: Invalid JSON with {attempt_name} prompt: {parse_error}")
+                                    last_error = parse_error
+                                    # Break internal loop to try next prompt strategy (or fail if last one)
+                                    break
+                            
+                            if parsed_result:
+                                # Validate constraints if in STRICT mode
+                                if mode == RewriteMode.STRICT:
+                                    validation_errors = validate_content_constraints(chunk, parsed_result)
+                                    if validation_errors:
+                                        if validation_attempt < max_validation_retries:
+                                            logger.warning(f"Batch {i+1}: Validation failed with {len(validation_errors)} errors. Retrying...")
+                                            # Update prompt with errors
+                                            error_list = "\n".join(f"- {e}" for e in validation_errors[:5]) # Limit specific errors
+                                            current_user_message = user_message + f"\n\nPREVIOUS ATTEMPT WAS INVALID. PLEASE FIX THESE ISSUES:\n{error_list}\n\nMaintain the EXACT SAME JSON STRUCTURE."
+                                            continue # Try again with new prompt
+                                        else:
+                                            logger.warning(f"Batch {i+1}: Validation failed after all retries. Proceeding with sanitization.")
+                                            # Fall through to use what we have (sanitization will handle it)
+                                    else:
+                                        logger.info(f"Batch {i+1}: Validation passed.")
+                                
+                                chunk_result = parsed_result
+                                break # Success! Break validation loop and attempt loop
+
+                        except Exception as inner_error:
+                            logger.warning(f"Batch {i+1}: Unexpected error parsing/processing JSON: {inner_error}")
+                            last_error = inner_error
+                            continue # Try next attempt
+                    
+                    except Exception as e:
+                        logger.warning(f"Batch {i+1}: Error with {attempt_name} prompt: {e}")
+                        last_error = e
+                        break # If LLM call fails, maybe try next prompt strategy
+                
+                if chunk_result:
+                    break # Found a valid result, exit prompt strategy loop
 
             if chunk_result is None:
                 error_msg = f"Failed to process batch {i+1} after {len(attempts)} attempts. Last error: {last_error}"
                 logger.error(error_msg)
                 raise HTTPException(status_code=500, detail=error_msg)
 
-            # Sanitize chunk result
+            # Sanitize chunk result (truncation will happen here if validation failed)
             chunk_result = sanitize_rewritten_content(chunk, chunk_result, mode)
             return (i, chunk_result)
 

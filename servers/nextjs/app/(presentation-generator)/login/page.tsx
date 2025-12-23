@@ -20,8 +20,13 @@ export default function LoginPage() {
   );
 
   useEffect(() => {
+    logger.info("Login page view", { event_type: "login_page_view" });
     // Redirect if already authenticated
     if (isAuthenticated) {
+      logger.info("Already authenticated, redirecting to dashboard", {
+        event_type: "login_redirect",
+        reason: "already_authenticated",
+      });
       router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
@@ -29,15 +34,30 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!username.trim()) {
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      logger.warn("Login submit blocked: empty username", {
+        event_type: "login_submit_blocked",
+        reason: "empty_username",
+      });
       return;
     }
 
-    logger.info(`Login attempt for user: ${username.trim()}`);
+    logger.info(`Login attempt for user: ${trimmedUsername}`, {
+      event_type: "login_submit_start",
+      username: trimmedUsername,
+      username_length: trimmedUsername.length,
+    });
     dispatch(loginStart());
+    const requestStart = Date.now();
 
     try {
-      const response = await loginApi(username.trim());
+      logger.info("Login request sent", {
+        event_type: "login_request_sent",
+        username: trimmedUsername,
+      });
+      const response = await loginApi(trimmedUsername);
+      const durationMs = Date.now() - requestStart;
 
       dispatch(
         loginSuccess({
@@ -47,12 +67,27 @@ export default function LoginPage() {
         })
       );
 
-      logger.info(`Login successful: ${response.username}`);
+      logger.info(`Login successful: ${response.username}`, {
+        event_type: "login_request_success",
+        user_id: response.user_id,
+        username: response.username,
+        duration_ms: durationMs,
+      });
       // Redirect to dashboard
+      logger.info("Login redirect to dashboard", {
+        event_type: "login_redirect",
+        reason: "login_success",
+      });
       router.push("/dashboard");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "התחברות נכשלה. אנא נסה שנית.";
-      logger.error(`Login failed for ${username}: ${errorMessage}`);
+      const durationMs = Date.now() - requestStart;
+      logger.error(`Login failed for ${trimmedUsername}: ${errorMessage}`, {
+        event_type: "login_request_failed",
+        username: trimmedUsername,
+        duration_ms: durationMs,
+        error_message: errorMessage,
+      });
       dispatch(
         loginFailure(
           errorMessage
@@ -108,7 +143,7 @@ export default function LoginPage() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="הכנס שם משתמש"
+                  placeholder="חיבור עם יוזר נס הרים או וואןאמן"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}

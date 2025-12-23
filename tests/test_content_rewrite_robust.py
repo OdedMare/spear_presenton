@@ -120,18 +120,14 @@ class TestContentRewriteRobust(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "element count mismatch"):
             validate_rewritten_content(MOCK_PLACEHOLDER_STRUCTURE, MOCK_REWRITTEN_EXTRA_ID)
             
-    def test_sanitize_removes_extra_id(self):
-        """Test that sanitization removes extra IDs in strict mode"""
-        sanitized = sanitize_rewritten_content(
-            MOCK_PLACEHOLDER_STRUCTURE, 
-            MOCK_REWRITTEN_EXTRA_ID, 
-            RewriteMode.STRICT
-        )
-        
-        elements = sanitized["slides"][0]["elements"]
-        self.assertEqual(len(elements), 2)
-        ids = [e["id"] for e in elements]
-        self.assertNotIn("id_3", ids)
+    def test_sanitize_rejects_extra_id(self):
+        """Strict mode should reject unexpected element IDs instead of silently dropping them."""
+        with self.assertRaisesRegex(ValueError, "unexpected element IDs"):
+            sanitize_rewritten_content(
+                MOCK_PLACEHOLDER_STRUCTURE,
+                MOCK_REWRITTEN_EXTRA_ID,
+                RewriteMode.STRICT
+            )
 
 if __name__ == "__main__":
     unittest.main()

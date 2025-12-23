@@ -5,6 +5,7 @@ from services.html_to_text_runs_service import (
     parse_html_text_to_text_runs as parse_inline_html_to_runs,
 )
 from utils.logger import logger
+from utils.get_env import get_app_data_directory_env
 
 from pptx import Presentation
 from pptx.shapes.autoshape import Shape
@@ -20,7 +21,7 @@ from pptx.dml.color import RGBColor
 
 from models.pptx_models import (
     PptxAutoShapeBoxModel,
-    PptxBoxShapeEnum,
+    PptxBoxShapeEnum, 
     PptxConnectorModel,
     PptxFillModel,
     PptxFontModel,
@@ -103,7 +104,7 @@ class PptxPresentationCreator:
                         if "app_data/" in image_path:
                             relative_path = image_path.split("app_data/")[1]
                             each_shape.picture.path = os.path.join(
-                                "/tmp/app_data", relative_path
+                                get_app_data_directory_env(), relative_path
                             )
                             each_shape.picture.is_network = False
                             continue
@@ -118,7 +119,7 @@ class PptxPresentationCreator:
                         if "app_data" in image_path:
                             relative_path = image_path.split("app_data/")[1]
                             each_shape.picture.path = os.path.join(
-                                "/tmp/app_data", relative_path
+                                get_app_data_directory_env(), relative_path
                             )
                             each_shape.picture.is_network = False
                             continue

@@ -546,6 +546,7 @@ class LLMClient:
         messages: List[LLMMessage],
         max_tokens: Optional[int] = None,
         tools: Optional[List[dict]] = None,
+        response_format: Optional[dict] = None,
         extra_body: Optional[dict] = None,
         depth: int = 0,
     ) -> AsyncGenerator[str, None]:
@@ -555,6 +556,7 @@ class LLMClient:
             messages=[message.model_dump() for message in messages],
             max_completion_tokens=max_tokens,
             tools=tools,
+            response_format=response_format,
             extra_body=extra_body,
             stream=True,
             stream_options={"include_usage": True},
@@ -686,11 +688,51 @@ class LLMClient:
     ) -> AsyncGenerator[str, None]:
         """
         Stream structured output from LLM.
-        For now, this falls back to non-streaming generate_structured and yields the complete result.
-        True streaming of structured output would require parsing partial JSON, which is complex.
         """
-        # For now, we'll use the non-streaming method and yield the complete result
-        # This maintains the async generator interface while we work on true streaming support
+        # Adapt strict mode
+        adaptive_strict = strict and self.get_adaptive_strict_mode(model)
+        
+        # Check if we can use native structured output streaming (OpenAI only for now)
+        can_stream_structured = (
+            self.llm_provider == LLMProvider.OPENAI and 
+            self.supports_structured_outputs(model) and
+            not self.use_tool_calls_for_structured_output()
+        )
+
+        if can_stream_structured:
+            schema_to_use = response_format
+            if adaptive_strict:
+                schema_to_use = ensure_strict_json_schema(
+                    response_format, path=(), root=response_format
+                )
+
+            json_schema_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "ResponseSchema",
+                    "strict": adaptive_strict,
+                    "schema": schema_to_use,
+                },
+            }
+            
+            parsed_tools = self.tool_calls_handler.parse_tools(tools)
+            
+            # Use native streaming
+            try:
+                async for chunk in self._stream_openai(
+                    model=model,
+                    messages=messages,
+                    response_format=json_schema_format,
+                    tools=parsed_tools,
+                    max_tokens=max_tokens
+                ):
+                    yield chunk
+                return
+            except Exception as e:
+                logger.warning(f"Streaming structured output failed: {e}. Falling back to non-streaming.")
+                # Fallback to non-streaming below
+        
+        # Fallback: Use non-streaming method and yield result at the end
         result = await self.generate_structured(
             model=model,
             messages=messages,
@@ -699,6 +741,5 @@ class LLMClient:
             tools=tools,
             max_tokens=max_tokens,
         )
-        # Convert the dict result to JSON string and yield it
         import json
         yield json.dumps(result)
