@@ -94,9 +94,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(presentation_pptx_model);
   } catch (error: any) {
     const duration = Date.now() - startTime;
+
+    // Safely extract error information
+    const errorMessage = error?.message || String(error) || 'Unknown error';
+    const errorStack = error?.stack || undefined;
+    const errorName = error?.name || 'Error';
+
     logPptxExport(presentationId || 'unknown', 'failed', duration, {
-      error: error.message,
-      stack: error.stack,
+      error: errorMessage,
+      stack: errorStack,
+      error_type: errorName,
       user_id: userContext?.userId,
       username: userContext?.username,
     });
@@ -111,7 +118,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(error, { status: 400 });
     }
     return NextResponse.json(
-      { detail: `Internal server error: ${error.message}` },
+      { detail: `Internal server error: ${errorMessage}` },
       { status: 500 }
     );
   }

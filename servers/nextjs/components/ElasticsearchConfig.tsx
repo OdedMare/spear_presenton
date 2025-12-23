@@ -40,7 +40,7 @@ export default function ElasticsearchConfig({
     setClusterInfo(null);
 
     try {
-      const response = await fetch('/api/v1/config/elasticsearch/test-connection', {
+      const response = await fetch('/api/v1/system/test-logging', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,9 +55,10 @@ export default function ElasticsearchConfig({
 
       const data = await response.json();
 
-      if (data.success) {
+      if (data.status === 'success') {
         setTestStatus('success');
-        setTestMessage(data.message);
+        setTestMessage(`${data.message}${data.doc_id ? ` (ID: ${data.doc_id})` : ''}`);
+        // We can still try to show cluster info if we want, but the priority is the log write
         if (data.cluster_name || data.version || data.index_prefix) {
           setClusterInfo({
             name: data.cluster_name,
@@ -67,7 +68,7 @@ export default function ElasticsearchConfig({
         }
       } else {
         setTestStatus('error');
-        setTestMessage(data.message);
+        setTestMessage(data.message || 'החיבור או כתיבת הלוג נכשלו');
       }
     } catch (error) {
       setTestStatus('error');
@@ -245,11 +246,10 @@ export default function ElasticsearchConfig({
             {/* Test Result */}
             {testStatus !== 'idle' && testStatus !== 'testing' && (
               <div
-                className={`mt-3 p-3 rounded-lg border flex items-start gap-2 ${
-                  testStatus === 'success'
+                className={`mt-3 p-3 rounded-lg border flex items-start gap-2 ${testStatus === 'success'
                     ? 'bg-green-50 border-green-200'
                     : 'bg-red-50 border-red-200'
-                }`}
+                  }`}
               >
                 {testStatus === 'success' ? (
                   <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -258,9 +258,8 @@ export default function ElasticsearchConfig({
                 )}
                 <div className="flex-1">
                   <p
-                    className={`text-sm font-medium ${
-                      testStatus === 'success' ? 'text-green-900' : 'text-red-900'
-                    }`}
+                    className={`text-sm font-medium ${testStatus === 'success' ? 'text-green-900' : 'text-red-900'
+                      }`}
                   >
                     {testMessage}
                   </p>

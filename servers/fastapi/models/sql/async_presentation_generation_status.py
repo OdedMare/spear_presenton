@@ -1,10 +1,9 @@
 from datetime import datetime
 import secrets
 from typing import Optional
-import uuid
-
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
+from utils.datetime_utils import get_current_utc_datetime
 
 
 class AsyncPresentationGenerationTaskModel(SQLModel, table=True):
@@ -17,6 +16,6 @@ class AsyncPresentationGenerationTaskModel(SQLModel, table=True):
     status: str
     message: Optional[str] = None
     error: Optional[dict] = Field(sa_column=Column(JSON), default=None)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=get_current_utc_datetime)
+    updated_at: datetime = Field(default_factory=get_current_utc_datetime)
     data: Optional[dict] = Field(sa_column=Column(JSON), default=None)

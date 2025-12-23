@@ -79,7 +79,18 @@ class Logger {
         headers,
         body: JSON.stringify(logDoc),
       }).catch((error) => {
-        console.error('Failed to send log to Elasticsearch:', error);
+        // Use a less verbose log for connection errors in development
+        if (error.cause?.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
+          // Only log once or use debug to avoid spam
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Elasticsearch unreachable (ECONNREFUSED) - logging disabled for this session to avoid spam.');
+            this.elasticsearchEnabled = false;
+          } else {
+            console.error('Failed to send log to Elasticsearch: Connection Refused');
+          }
+        } else {
+          console.error('Failed to send log to Elasticsearch:', error);
+        }
       });
     } catch (error) {
       console.error('Error in sendToElasticsearch:', error);
@@ -217,15 +228,24 @@ export function logPptxExport(
 }
 
 export function logError(
-  error: Error,
+  error: Error | unknown,
   context: string,
   extra: Record<string, any> = {}
 ): void {
-  logger.error(`${context}: ${error.message}`, {
+  // Handle cases where error might not be an Error object
+  const errorObj = error instanceof Error
+    ? error
+    : new Error(
+      typeof error === 'object' && error !== null
+        ? JSON.stringify(error)
+        : String(error) || 'Unknown error'
+    );
+
+  logger.error(`${context}: ${errorObj.message}`, {
     event_type: 'error',
-    error_type: error.name,
-    error_message: error.message,
-    error_stack: error.stack,
+    error_type: errorObj.name,
+    error_message: errorObj.message,
+    error_stack: errorObj.stack,
     context,
     ...extra,
   });

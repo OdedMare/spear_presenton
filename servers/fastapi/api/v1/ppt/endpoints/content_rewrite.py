@@ -53,6 +53,11 @@ from enum import Enum
 from api.middlewares import get_current_user
 from models.sql.user import User
 from utils.logger import logger
+from fastapi import BackgroundTasks
+from models.sql.async_presentation_generation_status import AsyncPresentationGenerationTaskModel
+from services.database import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
 
 router = APIRouter()
 
@@ -96,6 +101,69 @@ def clean_json_response(response_text: str) -> str:
         text = text[first_brace:last_brace + 1]
 
     return text
+
+
+def attempt_json_repair(json_string: str) -> Optional[str]:
+    """
+    Attempt to repair malformed JSON from small models.
+
+    Common issues fixed:
+    - Missing closing braces/brackets
+    - Trailing commas
+    - Incomplete last element
+
+    Returns repaired JSON string or None if unrepairable.
+    """
+    try:
+        # First attempt: try parsing as-is
+        json.loads(json_string)
+        return json_string
+    except json.JSONDecodeError as e:
+        logger.info(f"Attempting JSON repair. Error: {e}")
+
+        # Attempt 1: Add missing closing braces
+        if e.msg and "Expecting" in e.msg:
+            # Count opening and closing braces
+            open_braces = json_string.count('{')
+            close_braces = json_string.count('}')
+            open_brackets = json_string.count('[')
+            close_brackets = json_string.count(']')
+
+            # Add missing closers
+            repaired = json_string
+            repaired += ']' * (open_brackets - close_brackets)
+            repaired += '}' * (open_braces - close_braces)
+
+            try:
+                json.loads(repaired)
+                logger.info("JSON repair successful: added missing closing braces/brackets")
+                return repaired
+            except:
+                pass
+
+        # Attempt 2: Remove trailing comma before closing brace/bracket
+        import re
+        repaired = re.sub(r',(\s*[}\]])', r'\1', json_string)
+        try:
+            json.loads(repaired)
+            logger.info("JSON repair successful: removed trailing commas")
+            return repaired
+        except:
+            pass
+
+        # Attempt 3: Try to extract complete "slides" array
+        match = re.search(r'"slides"\s*:\s*\[(.*)\]', json_string, re.DOTALL)
+        if match:
+            repaired = '{"slides":[' + match.group(1) + ']}'
+            try:
+                json.loads(repaired)
+                logger.info("JSON repair successful: extracted complete slides array")
+                return repaired
+            except:
+                pass
+
+        logger.warning("JSON repair failed - unable to fix malformed JSON")
+        return None
 
 
 class RewriteMode(str, Enum):
@@ -383,25 +451,88 @@ async def extract_placeholders(
         raise HTTPException(status_code=500, detail=f"Failed to extract placeholders: {str(e)}")
 
 
-@router.post("/generate-rewritten-content", response_model=RewrittenContentResponse)
-async def generate_rewritten_content(request: RewriteRequest):
+@router.post("/generate-rewritten-content", response_model=AsyncPresentationGenerationTaskModel)
+async def generate_rewritten_content(
+    request: RewriteRequest,
+    background_tasks: BackgroundTasks,
+    sql_session: AsyncSession = Depends(get_async_session),
+    current_user: User | None = Depends(get_current_user),
+):
     """
-    Generate rewritten content using LLM with smart chunking and automatic fallback.
-
-    Features:
-    - Estimates token usage before sending to LLM
-    - Automatically chunks large presentations
-    - Tries full prompt first, falls back to lite prompt on failure
-    - Processes chunks sequentially
-    - For TRANSLATE mode: Uses multi-agent sy stem with configurable models
+    Initiate async content rewrite task.
+    Returns a task ID to poll for status.
     """
     try:
+        # Create task record
+        async_status = AsyncPresentationGenerationTaskModel(
+            status="pending",
+            message="Queued for content rewrite",
+            data=None,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        sql_session.add(async_status)
+        await sql_session.commit()
+        await sql_session.refresh(async_status)
+
+        # Add background task
+        background_tasks.add_task(
+            process_rewrite_task,
+            request,
+            async_status.id,
+            sql_session,
+            current_user
+        )
+
+        return async_status
+
+    except Exception as e:
+        logger.error(f"Failed to queue rewrite task: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to queue task: {str(e)}")
+
+
+async def process_rewrite_task(
+    request: RewriteRequest,
+    task_id: str,
+    sql_session: AsyncSession,
+    current_user: User | None
+):
+    """
+    Background task handler for content rewrite.
+    """
+    try:
+        # Get fresh task object
+        async_status = await sql_session.get(AsyncPresentationGenerationTaskModel, task_id)
+        if not async_status:
+            logger.error(f"Task {task_id} not found in background handler")
+            return
+
+        # Update status to processing
+        async_status.status = "processing"
+        async_status.message = "Generating content..."
+        async_status.updated_at = datetime.utcnow()
+        sql_session.add(async_status)
+        await sql_session.commit()
+
         user_prompt = request.user_prompt
         placeholder_structure = request.placeholder_structure
         mode = request.mode
         keywords = request.keywords or []
         source_language = request.source_language
         target_language = request.target_language
+        
+        # Log process start explicitly
+        process_type = "Translation" if mode == RewriteMode.TRANSLATE else "Rewrite"
+        logger.info(f"Process started: {process_type}", extra={"extra_fields": {
+            "event_type": "process_started",
+            "process_type": process_type,
+            "mode": mode.value,
+            "source_language": source_language,
+            "target_language": target_language,
+            "slide_count": len(placeholder_structure.get("slides", [])),
+            "user_prompt_length": len(user_prompt) if user_prompt else 0,
+            "task_id": str(task_id)
+        }})
 
         # Remove metadata fields before sending to LLM
         clean_structure = {
@@ -412,12 +543,17 @@ async def generate_rewritten_content(request: RewriteRequest):
         if mode == RewriteMode.TRANSLATE and source_language and target_language:
             logger.info(f"Using multi-agent translation: {source_language} → {target_language}")
 
+            async_status.message = "Running multi-agent translation..."
+            sql_session.add(async_status)
+            await sql_session.commit()
+
             # Get agent configurations from request (with env var fallbacks)
             use_agents = (
                 request.translation_use_agents
                 if request.translation_use_agents is not None
                 else os.getenv("TRANSLATION_USE_AGENTS", "true").lower() == "true"
             )
+
 
             if use_agents:
                 # Configure agents from request or environment variables
@@ -471,10 +607,14 @@ async def generate_rewritten_content(request: RewriteRequest):
 
                 logger.info("Multi-agent translation completed successfully")
 
-                return RewrittenContentResponse(
-                    rewritten_content=rewritten_content,
-                    message=f"Successfully translated {len(rewritten_content['slides'])} slides using multi-agent system"
-                )
+                # Success - Update Task
+                async_status.status = "completed"
+                async_status.message = "Translation completed"
+                async_status.data = {"rewritten_content": rewritten_content}
+                async_status.updated_at = datetime.utcnow()
+                sql_session.add(async_status)
+                await sql_session.commit()
+                return
             else:
                 logger.info("Multi-agent system disabled, using legacy translation flow")
                 # Fall through to legacy translation below
@@ -550,24 +690,23 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
 
         logger.info(f"Processing content rewrite in {len(chunks)} batch(es)")
 
-        chunked_results = []
-        
-        for i, chunk in enumerate(chunks, 1):
+        # Define async function to process a single chunk
+        async def process_chunk(i: int, chunk: dict):
             chunk_slides = chunk.get("slides", [])
             slide_numbers = [s.get("slideNumber") for s in chunk_slides]
-            
-            logger.info(f"Processing batch {i}/{len(chunks)}: {len(chunk_slides)} slides")
-            
+
+            logger.info(f"Processing batch {i+1}/{len(chunks)}: {len(chunk_slides)} slides")
+
             # Create user message for this chunk
             user_message = user_message_template.replace(
                 "{PLACEHOLDER_DATA}",
                 json.dumps(chunk, indent=2)
             )
-            
+
             # Try processing with fallback logic
             chunk_result = None
             last_error = None
-            
+
             # Determine attempts based on prompt_mode
             attempts = []
             if prompt_mode == "lite":
@@ -577,12 +716,12 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
             else: # auto
                 attempts.append(("full", False))
                 attempts.append(("lite", True))
-            
+
             for attempt_name, use_lite in attempts:
                 try:
-                    logger.info(f"Batch {i}: Attempting with {attempt_name} prompt...")
+                    logger.info(f"Batch {i+1}: Attempting with {attempt_name} prompt...")
                     system_prompt = get_prompts(use_lite=use_lite)
-                    
+
                     messages = [
                         LLMSystemMessage(content=system_prompt),
                         LLMUserMessage(content=user_message)
@@ -596,30 +735,61 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
                     try:
                         # Clean the response to remove markdown code blocks and extra text
                         cleaned_response = clean_json_response(response_text)
-                        chunk_result = json.loads(cleaned_response)
-                        # If successful, break the retry loop
-                        logger.info(f"Batch {i}: Success with {attempt_name} prompt")
-                        break
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"Batch {i}: Invalid JSON with {attempt_name} prompt: {e}")
-                        logger.warning(f"Batch {i}: Raw response (first 500 chars): {response_text[:500]}")
-                        logger.warning(f"Batch {i}: Cleaned response (first 500 chars): {cleaned_response[:500] if 'cleaned_response' in locals() else 'N/A'}")
-                        last_error = e
+
+                        # Try to parse the cleaned response
+                        try:
+                            chunk_result = json.loads(cleaned_response)
+                            logger.info(f"Batch {i+1}: Success with {attempt_name} prompt (direct parse)")
+                            break
+                        except json.JSONDecodeError as parse_error:
+                            # Attempt JSON repair for small models
+                            logger.info(f"Batch {i+1}: Direct parse failed, attempting repair...")
+                            repaired_json = attempt_json_repair(cleaned_response)
+
+                            if repaired_json:
+                                chunk_result = json.loads(repaired_json)
+                                logger.info(f"Batch {i+1}: Success with {attempt_name} prompt (after repair)")
+                                break
+                            else:
+                                # Repair failed, log and try next attempt
+                                logger.warning(f"Batch {i+1}: Invalid JSON with {attempt_name} prompt: {parse_error}")
+                                logger.warning(f"Batch {i+1}: Raw response (first 500 chars): {response_text[:500]}")
+                                logger.warning(f"Batch {i+1}: Cleaned response (first 500 chars): {cleaned_response[:500]}")
+                                last_error = parse_error
+                                continue
+                    except Exception as inner_error:
+                        logger.warning(f"Batch {i+1}: Unexpected error parsing JSON: {inner_error}")
+                        last_error = inner_error
                         continue
-                        
+
                 except Exception as e:
-                    logger.warning(f"Batch {i}: Error with {attempt_name} prompt: {e}")
+                    logger.warning(f"Batch {i+1}: Error with {attempt_name} prompt: {e}")
                     last_error = e
                     continue
-            
+
             if chunk_result is None:
-                error_msg = f"Failed to process batch {i} after {len(attempts)} attempts. Last error: {last_error}"
+                error_msg = f"Failed to process batch {i+1} after {len(attempts)} attempts. Last error: {last_error}"
                 logger.error(error_msg)
                 raise HTTPException(status_code=500, detail=error_msg)
-            
+
             # Sanitize chunk result
             chunk_result = sanitize_rewritten_content(chunk, chunk_result, mode)
-            chunked_results.append(chunk_result)
+            return (i, chunk_result)
+
+        # Process batches in parallel using asyncio.gather
+        import asyncio
+        logger.info(f"Processing {len(chunks)} batches in parallel...")
+        start_time = asyncio.get_event_loop().time()
+
+        tasks = [process_chunk(i, chunk) for i, chunk in enumerate(chunks)]
+        results = await asyncio.gather(*tasks)
+
+        elapsed = asyncio.get_event_loop().time() - start_time
+        logger.info(f"Completed {len(chunks)} batches in {elapsed:.2f}s (parallel processing)")
+
+        # Sort results by index to maintain order
+        results.sort(key=lambda x: x[0])
+        chunked_results = [result for _, result in results]
         
         # Combine all chunk results
         if len(chunks) > 1:
@@ -667,16 +837,30 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
 
         logger.info("Successfully generated rewritten content")
 
-        return RewrittenContentResponse(
-            rewritten_content=rewritten_content,
-            message=f"Successfully generated content for {len(rewritten_content['slides'])} slides in {len(chunks)} batch(es)"
-        )
+        # Success - Update Task
+        async_status.status = "completed"
+        async_status.message = "Rewrite completed successfully"
+        async_status.data = {"rewritten_content": rewritten_content}
+        async_status.updated_at = datetime.utcnow()
+        sql_session.add(async_status)
+        await sql_session.commit()
 
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Error generating rewritten content: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to generate content: {str(e)}")
+        logger.error(f"Error in rewrite task {task_id}: {e}", exc_info=True)
+        # Update task with error
+        try:
+            # Re-fetch in case session was weird
+            async_status = await sql_session.get(AsyncPresentationGenerationTaskModel, task_id)
+            if async_status:
+                async_status.status = "failed"
+                async_status.message = "Process failed"
+                async_status.error = {"detail": str(e)}
+                async_status.updated_at = datetime.utcnow()
+                sql_session.add(async_status)
+                await sql_session.commit()
+        except Exception as update_error:
+             logger.error(f"Failed to update error status for task {task_id}: {update_error}")
+
 
 
 @router.post("/inject-and-download")

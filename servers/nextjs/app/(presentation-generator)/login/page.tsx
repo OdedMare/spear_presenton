@@ -9,6 +9,7 @@ import { login as loginApi } from "../services/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LogIn, Sparkles } from "lucide-react";
+import { logger } from "@/utils/logger";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -32,6 +33,7 @@ export default function LoginPage() {
       return;
     }
 
+    logger.info(`Login attempt for user: ${username.trim()}`);
     dispatch(loginStart());
 
     try {
@@ -45,12 +47,15 @@ export default function LoginPage() {
         })
       );
 
+      logger.info(`Login successful: ${response.username}`);
       // Redirect to dashboard
       router.push("/dashboard");
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "התחברות נכשלה. אנא נסה שנית.";
+      logger.error(`Login failed for ${username}: ${errorMessage}`);
       dispatch(
         loginFailure(
-          err instanceof Error ? err.message : "התחברות נכשלה. אנא נסה שנית."
+          errorMessage
         )
       );
     }

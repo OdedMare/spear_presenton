@@ -230,7 +230,20 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
       }
 
       const data = await response.json()
-      setPlaceholderStructure(data.placeholder_structure)
+      const placeholders = data.placeholder_structure
+
+      // Check slide limit
+      const maxSlides = llmConfig.MAX_REWRITE_SLIDES || 50
+      const slideCount = placeholders.slides?.length || 0
+
+      if (slideCount > maxSlides) {
+        throw new Error(
+          `המצגת מכילה ${slideCount} שקפים, אך המגבלה היא ${maxSlides} שקפים. ` +
+          `אנא צמצם את המצגת או עדכן את ההגדרות.`
+        )
+      }
+
+      setPlaceholderStructure(placeholders)
       setStep('prompt')
     } catch (err: any) {
       console.error('Upload error:', err)
@@ -243,6 +256,58 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
       setLoading(false)
       setLoadingStage(null)
     }
+  }
+
+  // Polling helper function
+  const pollStatus = async (taskId: string) => {
+    const pollInterval = 2000 // 2 seconds
+    const maxAttempts = 300 // ~10 minutes
+    let attempts = 0
+
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`/api/v1/ppt/presentation/status/${taskId}`)
+        if (!response.ok) {
+          throw new Error('Failed to check task status')
+        }
+
+        const task = await response.json()
+
+        // Update loading message based on backend status
+        if (task.message) {
+          // We can add a specialized state for this if needed, 
+          // but for now we'll stick to 'generating_content' stage 
+          // and potentially show the message in a toast if desired.
+        }
+
+        if (task.status === 'completed') {
+          if (task.data && task.data.rewritten_content) {
+            setRewrittenContent(task.data.rewritten_content)
+            setStep('preview')
+            setLoading(false)
+            setLoadingStage(null)
+          } else {
+            throw new Error('Task completed but returned no content')
+          }
+        } else if (task.status === 'failed' || task.status === 'error') {
+          const errorDetail = task.error?.detail || task.message || 'Task failed'
+          throw new Error(errorDetail)
+        } else {
+          // Still pending/processing
+          attempts++
+          if (attempts >= maxAttempts) {
+            throw new Error('Task timed out')
+          }
+          setTimeout(checkStatus, pollInterval)
+        }
+      } catch (err: any) {
+        setError(err.message || 'Error checking task status')
+        setLoading(false)
+        setLoadingStage(null)
+      }
+    }
+
+    checkStatus()
   }
 
   const handleGenerateContent = async () => {
@@ -305,12 +370,17 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
         throw new Error(errorData.detail || 'נכשל ביצירת תוכן')
       }
 
-      const data = await response.json()
-      setRewrittenContent(data.rewritten_content)
-      setStep('preview')
+      const task = await response.json()
+
+      // Start polling
+      if (task.id) {
+        pollStatus(task.id)
+      } else {
+        throw new Error('No task ID returned')
+      }
+
     } catch (err: any) {
       setError(err.message || 'אירעה שגיאה בעת יצירת התוכן')
-    } finally {
       setLoading(false)
       setLoadingStage(null)
     }
@@ -636,6 +706,18 @@ export default function ContentRewritePage({ defaultMode = 'rewrite' }: ContentR
                     אובייקטים מקובצים (Grouped Objects) וצורות מורכבות עלולים שלא לעבור תרגום או שכתוב כהלכה.
                     מומלץ לבטל קיבוץ של אובייקטים לפני העלאת המצגת לקבלת תוצאות מיטביות.
                   </p>
+                </div>
+              </div>
+
+              {/* Warning about SmartArt, tables, charts, and large presentations */}
+              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-semibold mb-1">מגבלות מערכת:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>SmartArt, טבלאות וגרפים לא ישתנו בתהליך השכתוב או התרגום</li>
+                    <li>מצגות גדולות עלולות לקבל תוצאות באיכות נמוכה יותר</li>
+                  </ul>
                 </div>
               </div>
 

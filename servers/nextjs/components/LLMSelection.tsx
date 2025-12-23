@@ -24,6 +24,7 @@ import { LLMConfig } from "@/types/llm_config";
 import TemplateModelConfig from "./TemplateModelConfig";
 import TranslationAgentsConfig from "./TranslationAgentsConfig";
 import ElasticsearchConfig from "./ElasticsearchConfig";
+import RewriteLimitsConfig from "./RewriteLimitsConfig";
 
 
 // Button state interface
@@ -347,6 +348,14 @@ export default function LLMProviderSelection({
         {/* Elasticsearch Logging Configuration */}
         <div className="mt-10 p-6 border border-gray-200 rounded-2xl bg-white shadow-sm">
           <ElasticsearchConfig
+            llmConfig={llmConfig}
+            setLlmConfig={setLlmConfig}
+          />
+        </div>
+
+        {/* Rewrite/Translation Limits Configuration */}
+        <div className="mt-10 p-6 border border-gray-200 rounded-2xl bg-white shadow-sm">
+          <RewriteLimitsConfig
             llmConfig={llmConfig}
             setLlmConfig={setLlmConfig}
           />

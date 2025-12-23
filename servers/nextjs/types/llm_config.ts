@@ -55,6 +55,9 @@ export interface LLMConfig {
   LOG_LEVEL?: string;
   DISABLE_SSL_VERIFY?: boolean;
 
+  // Content Rewrite/Translation Configuration
+  MAX_REWRITE_SLIDES?: number;
+
   // Only used in UI settings
   USE_CUSTOM_URL?: boolean;
 }

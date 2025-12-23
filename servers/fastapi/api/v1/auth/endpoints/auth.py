@@ -27,16 +27,25 @@ async def login(
     Login or create a user with the given username.
     Returns a session token for authentication.
     """
+    logger.info(f"Login attempt: {request.username}", extra={"extra_fields": {
+        "event_type": "login_attempt",
+        "username": request.username
+    }})
     try:
         user, session_token = await AuthService.login(request.username, session)
+        
+        is_new_user = user.created_at == user.last_login
+        event_msg = f"User logged in: {user.username} ({'New' if is_new_user else 'Returning'} user)"
 
         logger.info(
-            f"User logged in: {user.username}",
+            event_msg,
             extra={
                 "extra_fields": {
                     "event_type": "user_login",
                     "user_id": user.id,
                     "username": user.username,
+                    "is_new_user": is_new_user,
+                    "last_login": user.last_login.isoformat() if user.last_login else None
                 }
             },
         )
@@ -49,9 +58,18 @@ async def login(
             last_login=user.last_login or user.created_at,
         )
     except ValueError as e:
+        logger.warning(f"Login validation failed: {request.username} - {str(e)}", extra={"extra_fields": {
+            "event_type": "login_validation_failed",
+            "username": request.username,
+            "error": str(e)
+        }})
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Login error: {str(e)}", exc_info=True)
+        logger.error(f"Login error: {str(e)}", exc_info=True, extra={"extra_fields": {
+            "event_type": "login_error",
+            "username": request.username,
+            "error": str(e)
+        }})
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -78,6 +96,9 @@ async def validate_session(
                 valid=True, user_id=user.id, username=user.username
             )
         else:
+            logger.warning("Session validation failed: Invalid or expired token", extra={"extra_fields": {
+                "event_type": "session_validation_failed"
+            }})
             return ValidateSessionResponse(valid=False)
 
     except HTTPException:

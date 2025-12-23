@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     AsyncSession,
 )
+from sqlalchemy import select, text
 from sqlmodel import SQLModel
 
 from models.sql.async_presentation_generation_status import (
@@ -73,6 +74,47 @@ async def create_db_and_tables():
                 ],
             )
         )
+        
+        # Simple migration for KeyValueSqlModel columns
+        try:
+            await conn.execute(text("ALTER TABLE keyvaluesqlmodel ADD COLUMN expires_at DATETIME"))
+        except Exception:
+            pass
+            
+        try:
+            await conn.execute(text("ALTER TABLE keyvaluesqlmodel ADD COLUMN created_at DATETIME"))
+        except Exception:
+            pass
+
+        # Migrations for PresentationModel (frequent updates)
+        presentation_columns = [
+            ("instructions", "TEXT"),
+            ("tone", "VARCHAR"),
+            ("verbosity", "VARCHAR"),
+            ("include_table_of_contents", "BOOLEAN DEFAULT FALSE"),
+            ("include_title_slide", "BOOLEAN DEFAULT TRUE"),
+            ("web_search", "BOOLEAN DEFAULT FALSE"),
+            ("layout", "JSON"),
+            ("structure", "JSON"),
+            ("title", "VARCHAR"),
+        ]
+        
+        for col_name, col_type in presentation_columns:
+            try:
+                await conn.execute(text(f"ALTER TABLE presentations ADD COLUMN {col_name} {col_type}"))
+            except Exception:
+                pass # Column already exists
+
+        # Migration for SlideModel
+        try:
+            await conn.execute(text("ALTER TABLE slides ADD COLUMN speaker_note TEXT"))
+        except Exception:
+            pass
+
+        try:
+            await conn.execute(text("ALTER TABLE slides ADD COLUMN properties JSON"))
+        except Exception:
+            pass
 
     async with container_db_engine.begin() as conn:
         await conn.run_sync(
