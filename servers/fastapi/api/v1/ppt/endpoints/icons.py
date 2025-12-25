@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter
-from service.icon_finder_service import ICON_FINDER_SERVICE
+from service.asset_service import ICON_FINDER_SERVICE
 
 ICONS_ROUTER = APIRouter(prefix="/icons", tags=["Icons"])
 

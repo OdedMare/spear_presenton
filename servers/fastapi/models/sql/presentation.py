@@ -7,7 +7,7 @@ from sqlmodel import Boolean, Field, SQLModel
 from models.presentation_layout import PresentationLayoutModel
 from models.presentation_outline_model import PresentationOutlineModel
 from models.presentation_structure_model import PresentationStructureModel
-from utils.datetime_utils import get_current_utc_datetime
+from utils.datetime.datetime_utils import get_current_utc_datetime
 
 
 class PresentationModel(SQLModel, table=True):

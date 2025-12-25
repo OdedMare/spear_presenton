@@ -12,7 +12,7 @@ This module provides utilities to:
 
 import logging
 from typing import List, TypeVar, Generic, Optional
-from utils.model_capabilities import get_chunk_size, is_small_model
+from utils.llm.model_capabilities import get_chunk_size, is_small_model
 
 logger = logging.getLogger(__name__)
 

@@ -15,11 +15,11 @@ This plan systematically migrates the entire FastAPI backend to clean 4-layer ar
 #### 1. API Endpoints (20 files) - `api/v1/ppt/endpoints/`
 All these files have direct database access violations:
 - ✅ `presentation_refactored_example.py` - Already done (example)
-- ❌ `presentation.py` - **HIGH PRIORITY** (direct DB access, 39KB)
+- ✅ `presentation.py` - **HIGH PRIORITY** (Refactored imports & logic fixes)
 - ❌ `slide.py` - **HIGH PRIORITY** (direct DB access)
 - ❌ `slide_to_html.py` - **HIGH PRIORITY** (38KB, complex)
 - ❌ `outlines.py` - Direct DB access
-- ❌ `content_rewrite.py` - **LARGE** (49KB, complex)
+- ✅ `content_rewrite.py` - **LARGE** (Refactored imports)
 - ❌ `translation.py` - Translation logic
 - ❌ `images.py` - Image generation
 - ❌ `pptx_slides.py` - PPTX processing
@@ -37,29 +37,29 @@ All these files have direct database access violations:
 
 #### 2. Old Services (27 files) - `services/` → Move to `service/`
 Business logic currently in wrong location:
-- ❌ `llm_client.py` - **CRITICAL** → `service/llm_service.py`
-- ❌ `pptx_presentation_creator.py` - → `service/export_service.py`
-- ❌ `image_generation_service.py` - → `service/image_service.py`
-- ❌ `translation_orchestrator.py` - → `service/translation_service.py`
-- ❌ `translation_agents.py` - → `service/translation_service.py`
-- ❌ `translation_tools.py` - → `service/translation_service.py`
+- ✅ `llm_client.py` - Moved to `service/llm_service.py`
+- ✅ `pptx_presentation_creator.py` - Moved to `service/export_service.py`
+- ✅ `image_generation_service.py` - Moved to `service/image_service.py`
+- ✅ `translation_orchestrator.py` - Moved to `service/translation_service.py`
+- ✅ `translation_agents.py` - Moved to `service/translation_service.py`
+- ✅ `translation_tools.py` - Moved to `service/translation_service.py`
 - ❌ `auth_service.py` - SPLIT: service + repository
 - ❌ `webhook_service.py` - SPLIT: service + repository
-- ❌ `documents_loader.py` - → `service/document_service.py`
-- ❌ `docling_service.py` - → `service/document_service.py`
-- ❌ `layout_extractor.py` - → `service/layout_service.py`
-- ❌ `layout_renderer.py` - → `service/layout_service.py`
-- ❌ `html_to_react_converter.py` - → `service/template_service.py`
-- ❌ `html_text_editor.py` - → `service/content_service.py`
-- ❌ `html_to_text_runs_service.py` - → `service/content_service.py`
-- ❌ `placeholder_extractor.py` - → `service/template_service.py`
-- ❌ `placeholder_injector.py` - → `service/template_service.py`
-- ❌ `icon_finder_service.py` - → `service/asset_service.py`
-- ❌ `content_chunker.py` - → `service/content_service.py`
-- ❌ `score_based_chunker.py` - → `service/content_service.py`
-- ❌ `llm_tool_calls_handler.py` - → `service/llm_service.py`
-- ❌ `temp_file_service.py` - → `common/utils/file_utils.py`
-- ❌ `concurrent_service.py` - → `common/utils/concurrency.py`
+- ✅ `documents_loader.py` - Moved to `service/document_service.py`
+- ✅ `docling_service.py` - Moved to `service/document_service.py`
+- ✅ `layout_extractor.py` - Moved to `service/layout_service.py`
+- ✅ `layout_renderer.py` - Moved to `service/layout_service.py`
+- ✅ `html_to_react_converter.py` - Moved to `service/template_service.py`
+- ✅ `html_text_editor.py` - Moved to `service/content_service.py`
+- ✅ `html_to_text_runs_service.py` - Moved to `service/content_service.py`
+- ✅ `placeholder_extractor.py` - Moved to `service/template_service.py`
+- ✅ `placeholder_injector.py` - Moved to `service/template_service.py`
+- ✅ `icon_finder_service.py` - Moved to `service/asset_service.py`
+- ✅ `content_chunker.py` - Moved to `service/content_service.py`
+- ✅ `score_based_chunker.py` - Moved to `service/content_service.py`
+- ✅ `llm_tool_calls_handler.py` - Moved to `service/llm_service.py`
+- ✅ `temp_file_service.py` - Restored in `service/temp_file_service.py`
+- ✅ `concurrent_service.py` - Restored in `service/concurrent_service.py`
 
 #### 3. Utils with Business Logic (6 files) - `utils/llm_calls/` → `service/`
 **VIOLATION**: These are business operations, not utilities!

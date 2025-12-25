@@ -4,12 +4,12 @@ import os
 from fastapi import FastAPI
 
 from dal.database import create_db_and_tables
-from utils.get_env import get_app_data_directory_env, get_can_change_keys_env
-from utils.model_availability import (
+from utils.config.env_config import get_app_data_directory_env, get_can_change_keys_env
+from utils.llm.model_availability import (
     check_llm_and_image_provider_api_or_model_availability,
 )
-from utils.safe_init import safe_init
-from utils.user_config import update_env_with_user_config
+from utils.file_operations.safe_init import safe_init
+from utils.config.user_config import update_env_with_user_config
 
 
 @safe_init(message="Warning: Database unavailable, continuing without migrations")

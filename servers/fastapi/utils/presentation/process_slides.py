@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 from models.image_prompt import ImagePrompt
 from models.sql.image_asset import ImageAsset
 from models.sql.slide import SlideModel
-from service.icon_finder_service import ICON_FINDER_SERVICE
+from service.asset_service import ICON_FINDER_SERVICE
 from service.image_service import ImageGenerationService
 from utils.file_operations.asset_directory import get_images_directory
 from utils.data_processing.dict_utils import get_dict_at_path, get_dict_paths_with_key, set_dict_at_path

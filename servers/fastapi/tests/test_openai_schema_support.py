@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-from utils.llm_provider import get_llm_client, get_large_model
+from utils.llm.provider import get_llm_client, get_large_model
 
 
 class HeadingDescription(BaseModel):

@@ -9,7 +9,7 @@ from models.llm_message import (
 )
 from models.llm_tool_call import OpenAIToolCall
 from models.llm_tools import LLMDynamicTool, LLMTool, SearchWebTool
-from utils.schema_utils import (
+from utils.llm.schema_utils import (
     ensure_strict_json_schema,
 )
 

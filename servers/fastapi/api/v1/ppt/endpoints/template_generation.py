@@ -12,10 +12,10 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from constants.documents import POWERPOINT_TYPES
-from service.layout_extractor import parse_pptx_to_layouts
-from service.layout_renderer import render_slide
-from service.html_to_react_converter import convert_html_to_react
-from service.html_text_editor import (
+from service.layout_service import parse_pptx_to_layouts
+from service.layout_service import render_slide
+from service.template_service import convert_html_to_react
+from service.template_service import (
     TextEdit,
     edit_html_text,
     extract_editable_elements,
@@ -23,7 +23,7 @@ from service.html_text_editor import (
 )
 from api.v1.ppt.endpoints import pptx_slides as pptx_slides_module
 from api.v1.ppt.endpoints.pptx_slides import FontAnalysisResult
-from utils.asset_directory_utils import get_images_directory
+from utils.file_operations.asset_directory import get_images_directory
 
 
 TEMPLATE_GENERATION_ROUTER = APIRouter(

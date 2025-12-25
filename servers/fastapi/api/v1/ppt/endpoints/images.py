@@ -7,10 +7,10 @@ from models.image_prompt import ImagePrompt
 from models.sql.image_asset import ImageAsset
 from dal.database import get_async_session
 from service.image_service import ImageGenerationService
-from utils.asset_directory_utils import get_images_directory
+from utils.file_operations.asset_directory import get_images_directory
 import os
 import uuid
-from utils.file_utils import get_file_name_with_random_uuid
+from utils.file_operations.file_utils import get_file_name_with_random_uuid
 
 IMAGES_ROUTER = APIRouter(prefix="/images", tags=["Images"])
 

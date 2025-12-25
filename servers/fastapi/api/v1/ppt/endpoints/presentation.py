@@ -6,6 +6,7 @@ import os
 import random
 import traceback
 import time
+import uuid
 from typing import Annotated, List, Literal, Optional, Tuple
 import dirtyjson
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path
@@ -38,38 +39,40 @@ from models.sql.template import TemplateModel
 
 from service.document_service import DocumentsLoader
 from service.webhook_service import WebhookService
-from utils.get_layout_by_name import get_layout_by_name
-from service.image_service import ImageGenerationService
-from utils.dict_utils import deep_update
-from utils.export_utils import export_presentation
-from service.outline_service import generate_ppt_outline
-from models.sql.slide import SlideModel
-from models.sse_response import SSECompleteResponse, SSEErrorResponse, SSEResponse
-
-from dal.database import get_async_session
-from service.temp_file_service import TEMP_FILE_SERVICE
-from service.concurrent_service import CONCURRENT_SERVICE
-from models.sql.presentation import PresentationModel
 from service.export_service import PptxPresentationCreator
-from models.sql.async_presentation_generation_status import (
-    AsyncPresentationGenerationTaskModel,
-)
-from utils.asset_directory_utils import get_exports_directory, get_images_directory
+from utils.file_operations.asset_directory import get_exports_directory, get_images_directory
 from service.structure_service import (
     generate_presentation_structure,
 )
 from service.slide_content_service import (
     get_slide_content_from_type_and_outline,
 )
-from utils.ppt_utils import (
+from utils.presentation.ppt_utils import (
     get_presentation_title_from_outlines,
     select_toc_or_list_slide_layout_index,
 )
-from utils.process_slides import (
+from utils.presentation.process_slides import (
     process_slide_add_placeholder_assets,
     process_slide_and_fetch_assets,
 )
-import uuid
+from utils.presentation.export_utils import export_presentation
+from utils.presentation.get_layout_by_name import get_layout_by_name
+from service.image_service import ImageGenerationService
+from utils.data_processing.dict_utils import deep_update
+from service.outline_service import generate_ppt_outline
+from models.sql.slide import SlideModel
+from models.sse_response import SSECompleteResponse, SSEErrorResponse, SSEResponse
+
+from dal.database import get_async_session
+# temp_file_service and concurrent_service moved to common/utils or similar in refactor plan?
+# Actually MIGRATION_PLAN says services/temp_file_service.py -> common/utils/file_utils.py
+# Let's check where they actually are.
+from models.sql.presentation import PresentationModel
+from models.sql.async_presentation_generation_status import (
+    AsyncPresentationGenerationTaskModel,
+)
+from service.temp_file_service import TEMP_FILE_SERVICE
+from service.concurrent_service import CONCURRENT_SERVICE
 
 
 PRESENTATION_ROUTER = APIRouter(prefix="/presentation", tags=["Presentation"])

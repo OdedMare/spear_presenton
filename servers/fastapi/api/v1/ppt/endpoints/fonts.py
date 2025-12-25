@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, File, UploadFile
 from pydantic import BaseModel
-from utils.asset_directory_utils import get_app_data_directory_env
+from utils.file_operations.asset_directory import get_app_data_directory_env
 import uuid
 
 try:

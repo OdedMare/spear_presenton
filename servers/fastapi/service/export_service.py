@@ -1,11 +1,11 @@
 import os
 from typing import List, Optional
 from lxml import etree
-from service.html_to_text_runs_service import (
+from service.content_service import (
     parse_html_text_to_text_runs as parse_inline_html_to_runs,
 )
 from common.logger import logger
-from utils.get_env import get_app_data_directory_env
+from utils.config.env_config import get_app_data_directory_env
 
 from pptx import Presentation
 from pptx.shapes.autoshape import Shape
@@ -36,8 +36,8 @@ from models.pptx_models import (
     PptxTextBoxModel,
     PptxTextRunModel,
 )
-from utils.download_helpers import download_files
-from utils.image_utils import (
+from utils.file_operations.download import download_files
+from utils.media.image_utils import (
     clip_image,
     create_circle_image,
     fit_image,

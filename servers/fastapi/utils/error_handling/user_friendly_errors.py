@@ -6,7 +6,7 @@ Provides helpful, actionable error messages instead of technical stack traces.
 
 import logging
 from typing import Optional
-from utils.model_capabilities import is_small_model
+from utils.llm.model_capabilities import is_small_model
 
 logger = logging.getLogger(__name__)
 

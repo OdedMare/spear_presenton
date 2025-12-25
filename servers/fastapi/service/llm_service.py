@@ -30,9 +30,9 @@ from models.llm_tool_call import (
 )
 from models.llm_tools import LLMDynamicTool, LLMTool
 from service.llm_tool_calls_handler import LLMToolCallsHandler
-from utils.async_iterator import iterator_to_async
-from utils.dummy_functions import do_nothing_async
-from utils.get_env import (
+from utils.async_helpers.async_iterator import iterator_to_async
+from utils.helpers.dummy_functions import do_nothing_async
+from utils.config.env_config import (
     get_custom_llm_api_key_env,
     get_custom_llm_url_env,
     get_disable_thinking_env,
@@ -40,19 +40,19 @@ from utils.get_env import (
     get_tool_calls_env,
     get_web_grounding_env,
 )
-from utils.llm_provider import get_llm_provider, get_model
-from utils.parsers import parse_bool_or_none
-from utils.schema_utils import (
+from utils.llm.provider import get_llm_provider, get_model
+from utils.data_processing.parsers import parse_bool_or_none
+from utils.llm.schema_utils import (
     ensure_strict_json_schema,
 )
-from utils.model_capabilities import (
+from utils.llm.model_capabilities import (
     is_small_model,
     get_prompt_mode,
     should_use_strict_json,
     get_max_retries,
 )
-from utils.json_repair import parse_llm_json
-from utils.llm_retry import retry_with_backoff, retry_with_fallback
+from utils.data_processing.json_utils import parse_llm_json
+from utils.llm.retry import retry_with_backoff, retry_with_fallback
 from common.logger import logger
 
 

@@ -23,9 +23,9 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from service.placeholder_extractor import extract_all_placeholders
-from service.placeholder_injector import inject_content_into_pptx
-from service.translation_orchestrator import (
+from service.template_service import extract_all_placeholders
+from service.template_service import inject_content_into_pptx
+from service.translation_service import (
     translate_presentation_with_agents,
     TranslationResult,
     TranslationError,

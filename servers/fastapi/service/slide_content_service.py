@@ -4,9 +4,9 @@ from models.llm_message import LLMSystemMessage, LLMUserMessage
 from models.presentation_layout import SlideLayoutModel
 from models.presentation_outline_model import SlideOutlineModel
 from service.llm_service import LLMService, LLMClient
-from utils.llm_client_error_handler import handle_llm_client_exceptions
-from utils.llm_provider import get_model
-from utils.schema_utils import add_field_in_schema, remove_fields_from_schema
+from utils.llm.error_handler import handle_llm_client_exceptions
+from utils.llm.provider import get_model
+from utils.llm.schema_utils import add_field_in_schema, remove_fields_from_schema
 
 
 def get_system_prompt(

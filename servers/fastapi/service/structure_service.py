@@ -3,11 +3,11 @@ from models.llm_message import LLMSystemMessage, LLMUserMessage
 from models.presentation_layout import PresentationLayoutModel
 from models.presentation_outline_model import PresentationOutlineModel
 from service.llm_service import LLMService, LLMClient
-from utils.llm_client_error_handler import handle_llm_client_exceptions
-from utils.llm_provider import get_model
-from utils.get_dynamic_models import get_presentation_structure_model_with_n_slides
+from utils.llm.error_handler import handle_llm_client_exceptions
+from utils.llm.provider import get_model
+from utils.external_services.get_dynamic_models import get_presentation_structure_model_with_n_slides
 from models.presentation_structure_model import PresentationStructureModel
-from utils.model_capabilities import is_small_model
+from utils.llm.model_capabilities import is_small_model
 
 
 def get_messages(

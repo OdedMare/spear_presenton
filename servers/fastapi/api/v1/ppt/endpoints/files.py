@@ -3,14 +3,14 @@ import os
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Body, File, UploadFile
 from fastapi.responses import FileResponse
-from utils.asset_directory_utils import get_exports_directory
+from utils.file_operations.asset_directory import get_exports_directory
 
 from constants.documents import UPLOAD_ACCEPTED_FILE_TYPES
 from models.decomposed_file_info import DecomposedFileInfo
 from service.temp_file_service import TEMP_FILE_SERVICE
 from service.document_service import DocumentsLoader
 import uuid
-from utils.validators import validate_files
+from utils.data_processing.validators import validate_files
 
 FILES_ROUTER = APIRouter(prefix="/files", tags=["Files"])
 

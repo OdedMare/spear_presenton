@@ -4,7 +4,7 @@ import uuid
 from sqlalchemy import Column, DateTime
 from sqlmodel import SQLModel, Field
 
-from utils.datetime_utils import get_current_utc_datetime
+from utils.datetime.datetime_utils import get_current_utc_datetime
 
 
 class TemplateModel(SQLModel, table=True):

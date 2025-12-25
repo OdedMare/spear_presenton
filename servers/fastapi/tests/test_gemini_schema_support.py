@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from google.genai.types import GenerateContentResponse, GenerateContentConfig
 
 
-from utils.llm_provider import get_google_llm_client, get_large_model
+from utils.llm.provider import get_google_llm_client, get_large_model
 
 
 class HeadingDescription(BaseModel):

@@ -3,7 +3,7 @@ from typing import Any, Dict
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from service.layout_renderer import render_slide
+from service.layout_service import render_slide
 
 LAYOUT_RENDER_ROUTER = APIRouter(prefix="/layout", tags=["Layout"])
 

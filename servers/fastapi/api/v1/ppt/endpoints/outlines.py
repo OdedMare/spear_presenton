@@ -20,7 +20,7 @@ from service.temp_file_service import TEMP_FILE_SERVICE
 from dal.database import get_async_session
 from service.document_service import DocumentsLoader
 from service.outline_service import generate_ppt_outline
-from utils.ppt_utils import get_presentation_title_from_outlines
+from utils.presentation.ppt_utils import get_presentation_title_from_outlines
 
 OUTLINES_ROUTER = APIRouter(prefix="/outlines", tags=["Outlines"])
 

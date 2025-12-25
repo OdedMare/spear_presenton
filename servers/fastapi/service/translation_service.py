@@ -25,7 +25,7 @@ from contextlib import contextmanager
 
 from service.translation_tools import (
     extract_placeholders,
-    validate_structure,
+    validate_structure, 
     write_translation_map,
     read_translation_map,
     merge_translations,
@@ -35,7 +35,7 @@ from service.translation_tools import (
     quality_check_translation,
     detect_language,
 )
-from service.translation_agents import (
+from service.translation_service import (
     Agent1Parser,
     Agent2Translator,
     Agent3Validator,

@@ -59,6 +59,30 @@ def get_openai_model_env():
     return os.getenv("OPENAI_MODEL")
 
 
+def get_google_api_key_env():
+    return os.getenv("GOOGLE_API_KEY")
+
+
+def get_google_model_env():
+    return os.getenv("GOOGLE_MODEL")
+
+
+def get_anthropic_api_key_env():
+    return os.getenv("ANTHROPIC_API_KEY")
+
+
+def get_anthropic_model_env():
+    return os.getenv("ANTHROPIC_MODEL")
+
+
+def get_ollama_url_env():
+    return os.getenv("OLLAMA_URL")
+
+
+def get_ollama_model_env():
+    return os.getenv("OLLAMA_MODEL")
+
+
 def get_custom_llm_api_key_env():
     return os.getenv("CUSTOM_LLM_API_KEY")
 

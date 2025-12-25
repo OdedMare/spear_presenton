@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from sqlmodel import Column, DateTime, Field, SQLModel
 
-from utils.datetime_utils import get_current_utc_datetime
+from utils.datetime.datetime_utils import get_current_utc_datetime
 
 
 class WebhookSubscription(SQLModel, table=True):

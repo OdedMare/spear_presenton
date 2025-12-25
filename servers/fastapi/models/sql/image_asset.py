@@ -5,7 +5,7 @@ import uuid
 from sqlalchemy import JSON, Column, DateTime
 from sqlmodel import Field, SQLModel
 
-from utils.datetime_utils import get_current_utc_datetime
+from utils.datetime.datetime_utils import get_current_utc_datetime
 
 
 class ImageAsset(SQLModel, table=True):

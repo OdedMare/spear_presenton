@@ -8,10 +8,10 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from constants.documents import POWERPOINT_TYPES
-from service.layout_extractor import parse_pptx_to_layouts
+from service.layout_service import parse_pptx_to_layouts
 from api.v1.ppt.endpoints import pptx_slides as pptx_slides_module
 from api.v1.ppt.endpoints.pptx_slides import FontAnalysisResult
-from utils.asset_directory_utils import get_images_directory
+from utils.file_operations.asset_directory import get_images_directory
 
 LAYOUT_PROCESS_ROUTER = APIRouter(prefix="/layout", tags=["Layout"])
 logger = logging.getLogger(__name__)

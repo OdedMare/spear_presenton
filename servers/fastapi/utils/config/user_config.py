@@ -36,7 +36,7 @@ from utils.config.env_config import (
     get_log_level_env,
     get_disable_ssl_verify_env,
 )
-from utils.parsers import parse_bool_or_none
+from utils.data_processing.parsers import parse_bool_or_none
 from utils.config.env_setter import (
     set_custom_llm_api_key_env,
     set_custom_llm_url_env,

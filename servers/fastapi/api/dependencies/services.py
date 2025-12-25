@@ -18,6 +18,9 @@ from service.presentation_service import PresentationService
 from service.slide_service import SlideService
 from service.auth_service import AuthService
 from service.llm_service import LLMService
+from service.document_service import DocumentsLoader
+from service.export_service import PptxPresentationCreator
+from service.image_service import ImageGenerationService
 
 
 # Repository Factories
@@ -158,11 +161,26 @@ async def get_auth_service(
 def get_llm_service() -> LLMService:
     """
     Create LLMService (singleton pattern).
-
-    LLM service doesn't need repository dependencies,
-    it manages its own LLM provider clients.
-
-    Returns:
-        LLMService instance
     """
     return LLMService()
+
+
+def get_document_service() -> DocumentsLoader:
+    """
+    Create DocumentsLoader service.
+    """
+    return DocumentsLoader()
+
+
+def get_image_service() -> ImageGenerationService:
+    """
+    Create ImageGenerationService service.
+    """
+    return ImageGenerationService()
+
+
+def get_export_service() -> PptxPresentationCreator:
+    """
+    Create PptxPresentationCreator service.
+    """
+    return PptxPresentationCreator()

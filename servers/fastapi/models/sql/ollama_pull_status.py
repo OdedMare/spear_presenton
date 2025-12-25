@@ -1,7 +1,7 @@
 from datetime import datetime
 import uuid
 from sqlmodel import Field, Column, JSON, SQLModel, DateTime
-from utils.datetime_utils import get_current_utc_datetime
+from utils.datetime.datetime_utils import get_current_utc_datetime
 
 
 class OllamaPullStatus(SQLModel, table=True):

@@ -21,7 +21,7 @@ from models.sql.presentation_layout_code import PresentationLayoutCodeModel
 from models.sql.template import TemplateModel
 from models.sql.user import User
 from models.sql.webhook_subscription import WebhookSubscription
-from utils.db_utils import get_database_url_and_connect_args
+from utils.database.db_utils import get_database_url_and_connect_args
 
 
 database_url, connect_args = get_database_url_and_connect_args()
@@ -36,7 +36,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 
-from utils.get_env import get_app_data_directory_env
+from utils.config.env_config import get_app_data_directory_env
 
 # Container DB (Lives inside the container)
 # Use app_data directory for local development as well

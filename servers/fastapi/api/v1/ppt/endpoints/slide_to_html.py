@@ -12,7 +12,7 @@ from openai import APIError
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
-from utils.asset_directory_utils import get_images_directory
+from utils.file_operations.asset_directory import get_images_directory
 from dal.database import get_async_session
 from models.sql.presentation_layout_code import PresentationLayoutCodeModel
 from .prompts import (
@@ -21,7 +21,7 @@ from .prompts import (
     HTML_EDIT_SYSTEM_PROMPT,
 )
 from models.sql.template import TemplateModel
-from utils.get_env import (
+from utils.config.env_config import (
     get_custom_llm_api_key_env,
     get_custom_llm_url_env,
     get_custom_model_env,

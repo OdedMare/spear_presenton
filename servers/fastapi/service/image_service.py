@@ -7,10 +7,10 @@ from google.genai.types import GenerateContentConfig
 from openai import AsyncOpenAI
 from models.image_prompt import ImagePrompt
 from models.sql.image_asset import ImageAsset
-from utils.download_helpers import download_file
-from utils.get_env import get_pexels_api_key_env
-from utils.get_env import get_pixabay_api_key_env
-from utils.image_provider import (
+from utils.file_operations.download import download_file
+from utils.config.env_config import get_pexels_api_key_env
+from utils.config.env_config import get_pixabay_api_key_env
+from utils.media.image_provider import (
     is_pixels_selected,
     is_pixabay_selected,
     is_gemini_flash_selected,
