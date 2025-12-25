@@ -1,4 +1,5 @@
 import os
+import time
 from typing import List, Optional
 from lxml import etree
 from service.content_service import (

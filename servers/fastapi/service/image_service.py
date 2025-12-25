@@ -6,8 +6,8 @@ from google import genai
 from google.genai.types import GenerateContentConfig
 from openai import AsyncOpenAI
 from models.image_prompt import ImagePrompt
-from models.sql.image_asset import ImageAsset
 from utils.file_operations.download import download_file
+import time
 from utils.config.env_config import get_pexels_api_key_env
 from utils.config.env_config import get_pixabay_api_key_env
 from utils.media.image_provider import (
@@ -45,7 +45,7 @@ class ImageGenerationService:
         prompt: ImagePrompt,
         user_id: Optional[int] = None,
         username: Optional[str] = None,
-    ) -> str | ImageAsset:
+    ) -> "str | ImageAsset":
         """
         Generates an image based on the provided prompt.
         - If no image generation function is available, returns a placeholder image.
@@ -53,6 +53,7 @@ class ImageGenerationService:
         otherwise it uses the full image prompt with theme.
         - Output Directory is used for saving the generated image not the stock provider.
         """
+        start_time = time.time()
         if not self.image_gen_func:
             logger.warning(
                 "No image generation function found. Using placeholder image.",
@@ -104,6 +105,7 @@ class ImageGenerationService:
                 if image_path.startswith("http"):
                     return image_path
                 elif os.path.exists(image_path):
+                    from models.sql.image_asset import ImageAsset
                     return ImageAsset(
                         path=image_path,
                         is_uploaded=False,

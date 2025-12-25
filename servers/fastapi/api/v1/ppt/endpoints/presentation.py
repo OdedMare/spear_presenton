@@ -832,11 +832,11 @@ async def generate_presentation_handler(
             await sql_session.commit()
 
         # Triggering webhook on success
-        CONCURRENT_SERVICE.run_task(
-            None,
-            WebhookService.send_webhook,
-            WebhookEvent.PRESENTATION_GENERATION_COMPLETED,
-            response.model_dump(mode="json"),
+        asyncio.create_task(
+            WebhookService.send_webhook(
+                WebhookEvent.PRESENTATION_GENERATION_COMPLETED,
+                response.model_dump(mode="json"),
+            )
         )
 
         return response
@@ -849,11 +849,11 @@ async def generate_presentation_handler(
         api_error_model = APIErrorModel.from_exception(e)
 
         # Triggering webhook on failure
-        CONCURRENT_SERVICE.run_task(
-            None,
-            WebhookService.send_webhook,
-            WebhookEvent.PRESENTATION_GENERATION_FAILED,
-            api_error_model.model_dump(mode="json"),
+        asyncio.create_task(
+            WebhookService.send_webhook(
+                WebhookEvent.PRESENTATION_GENERATION_FAILED,
+                api_error_model.model_dump(mode="json"),
+            )
         )
 
         if async_status:
@@ -884,6 +884,8 @@ async def generate_presentation_sync(
             user_id=current_user.id if current_user else None,
             username=current_user.username if current_user else None,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Presentation generation failed")

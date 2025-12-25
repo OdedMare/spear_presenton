@@ -81,7 +81,7 @@ def get_user_config():
             with open(user_config_path, "r") as f:
                 existing_config = UserConfig(**json.load(f))
     except Exception as e:
-        print("Error while loading user config")
+        print(f"Error while loading user config: {e}")
         pass
 
     return UserConfig(

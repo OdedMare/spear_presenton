@@ -49,10 +49,10 @@ class TestImageGenerationService:
             - Checks if the correct function is selected based on environment variable
             - Ensures that the function is set to get_image_from_pixabay when Pixabay is selected
         """
-        with patch('services.image_generation_service.is_pixabay_selected', return_value=True):
-            with patch('services.image_generation_service.is_pixels_selected', return_value=False):
-                with patch('services.image_generation_service.is_gemini_flash_selected', return_value=False):
-                    with patch('services.image_generation_service.is_dalle3_selected', return_value=False):
+        with patch('service.image_service.is_pixabay_selected', return_value=True):
+            with patch('service.image_service.is_pixels_selected', return_value=False):
+                with patch('service.image_service.is_gemini_flash_selected', return_value=False):
+                    with patch('service.image_service.is_dalle3_selected', return_value=False):
                         with patch.dict(os.environ, {"IMAGE_PROVIDER": "pixabay"}):
                             service = ImageGenerationService(mock_images_directory)
                             assert service.image_gen_func == service.get_image_from_pixabay
@@ -63,10 +63,10 @@ class TestImageGenerationService:
         - Checks if the correct function is selected based on environment variable
         - Ensures that the function is set to get_image_from_pexels when Pexels is selected
         """
-        with patch('services.image_generation_service.is_pixabay_selected', return_value=False):
-            with patch('services.image_generation_service.is_pixels_selected', return_value=True):
-                with patch('services.image_generation_service.is_gemini_flash_selected', return_value=False):
-                    with patch('services.image_generation_service.is_dalle3_selected', return_value=False):
+        with patch('service.image_service.is_pixabay_selected', return_value=False):
+            with patch('service.image_service.is_pixels_selected', return_value=True):
+                with patch('service.image_service.is_gemini_flash_selected', return_value=False):
+                    with patch('service.image_service.is_dalle3_selected', return_value=False):
                         with patch.dict(os.environ, {"IMAGE_PROVIDER": "pexels"}):
                             service = ImageGenerationService(mock_images_directory)
                             assert service.image_gen_func == service.get_image_from_pexels
@@ -77,10 +77,10 @@ class TestImageGenerationService:
         - Checks if the correct function is selected based on environment variable
         - Ensures that the function is set to generate_image_openai when DALL-E 3 is selected
         """
-        with patch('services.image_generation_service.is_pixabay_selected', return_value=False):
-            with patch('services.image_generation_service.is_pixels_selected', return_value=False):
-                with patch('services.image_generation_service.is_gemini_flash_selected', return_value=False):
-                    with patch('services.image_generation_service.is_dalle3_selected', return_value=True):
+        with patch('service.image_service.is_pixabay_selected', return_value=False):
+            with patch('service.image_service.is_pixels_selected', return_value=False):
+                with patch('service.image_service.is_gemini_flash_selected', return_value=False):
+                    with patch('service.image_service.is_dalle3_selected', return_value=True):
                         with patch.dict(os.environ, {"IMAGE_PROVIDER": "dall-e-3"}):
                             service = ImageGenerationService(mock_images_directory)
                             assert service.image_gen_func == service.generate_image_openai
@@ -91,20 +91,20 @@ class TestImageGenerationService:
         - Checks if the stock provider is selected correctly based on environment variable
         - Ensures that is_stock_provider_selected returns True for Pexels or Pixabay
         """
-        with patch('services.image_generation_service.is_pixels_selected', return_value=True):
-            with patch('services.image_generation_service.is_pixabay_selected', return_value=False):
+        with patch('service.image_service.is_pixels_selected', return_value=True):
+            with patch('service.image_service.is_pixabay_selected', return_value=False):
                 with patch.dict(os.environ, {"IMAGE_PROVIDER": "pexels"}):
                     service = ImageGenerationService(mock_images_directory)
                     assert service.is_stock_provider_selected() is True
         
-        with patch('services.image_generation_service.is_pixels_selected', return_value=False):
-            with patch('services.image_generation_service.is_pixabay_selected', return_value=True):
+        with patch('service.image_service.is_pixels_selected', return_value=False):
+            with patch('service.image_service.is_pixabay_selected', return_value=True):
                 with patch.dict(os.environ, {"IMAGE_PROVIDER": "pixabay"}):
                     service = ImageGenerationService(mock_images_directory)
                     assert service.is_stock_provider_selected() is True
         
-        with patch('services.image_generation_service.is_pixels_selected', return_value=False):
-            with patch('services.image_generation_service.is_pixabay_selected', return_value=False):
+        with patch('service.image_service.is_pixels_selected', return_value=False):
+            with patch('service.image_service.is_pixabay_selected', return_value=False):
                 with patch.dict(os.environ, {"IMAGE_PROVIDER": "dall-e-3"}):
                     service = ImageGenerationService(mock_images_directory)
                     assert service.is_stock_provider_selected() is False
@@ -118,10 +118,10 @@ class TestImageGenerationService:
         """
         async def run_test():
             with patch.dict(os.environ, {"IMAGE_PROVIDER": "pexels", "PEXELS_API_KEY": "test_key"}):
-                with patch('services.image_generation_service.is_pixels_selected', return_value=True):
-                    with patch('services.image_generation_service.is_pixabay_selected', return_value=False):
-                        with patch('services.image_generation_service.is_gemini_flash_selected', return_value=False):
-                            with patch('services.image_generation_service.is_dalle3_selected', return_value=False):
+                with patch('service.image_service.is_pixels_selected', return_value=True):
+                    with patch('service.image_service.is_pixabay_selected', return_value=False):
+                        with patch('service.image_service.is_gemini_flash_selected', return_value=False):
+                            with patch('service.image_service.is_dalle3_selected', return_value=False):
                                 service = ImageGenerationService(mock_images_directory)
                                 
                                 mock_response = AsyncMock()
@@ -153,10 +153,10 @@ class TestImageGenerationService:
         """
         async def run_test():
             with patch.dict(os.environ, {"IMAGE_PROVIDER": "dall-e-3"}):
-                with patch('services.image_generation_service.is_pixels_selected', return_value=False):
-                    with patch('services.image_generation_service.is_pixabay_selected', return_value=False):
-                        with patch('services.image_generation_service.is_gemini_flash_selected', return_value=False):
-                            with patch('services.image_generation_service.is_dalle3_selected', return_value=True):
+                with patch('service.image_service.is_pixels_selected', return_value=False):
+                    with patch('service.image_service.is_pixabay_selected', return_value=False):
+                        with patch('service.image_service.is_gemini_flash_selected', return_value=False):
+                            with patch('service.image_service.is_dalle3_selected', return_value=True):
                                 service = ImageGenerationService(mock_images_directory)
                                 
                                 # Create a real test file
@@ -185,10 +185,10 @@ class TestImageGenerationService:
         - Checks if the image generation function is called with the correct prompt
         """
         async def run_test():
-            with patch('services.image_generation_service.is_pixels_selected', return_value=False):
-                with patch('services.image_generation_service.is_pixabay_selected', return_value=False):
-                    with patch('services.image_generation_service.is_gemini_flash_selected', return_value=False):
-                        with patch('services.image_generation_service.is_dalle3_selected', return_value=False):
+            with patch('service.image_service.is_pixels_selected', return_value=False):
+                with patch('service.image_service.is_pixabay_selected', return_value=False):
+                    with patch('service.image_service.is_gemini_flash_selected', return_value=False):
+                        with patch('service.image_service.is_dalle3_selected', return_value=False):
                             with patch.dict(os.environ, {"IMAGE_PROVIDER": "pexels"}):
                                 service = ImageGenerationService(mock_images_directory)
                                 
@@ -207,10 +207,10 @@ class TestImageGenerationService:
         - Checks if the image generation function is called with the correct prompt
         """
         async def run_test():
-            with patch('services.image_generation_service.is_pixels_selected', return_value=True):
-                with patch('services.image_generation_service.is_pixabay_selected', return_value=False):
-                    with patch('services.image_generation_service.is_gemini_flash_selected', return_value=False):
-                        with patch('services.image_generation_service.is_dalle3_selected', return_value=False):
+            with patch('service.image_service.is_pixels_selected', return_value=True):
+                with patch('service.image_service.is_pixabay_selected', return_value=False):
+                    with patch('service.image_service.is_gemini_flash_selected', return_value=False):
+                        with patch('service.image_service.is_dalle3_selected', return_value=False):
                             with patch.dict(os.environ, {"IMAGE_PROVIDER": "pexels"}):
                                 service = ImageGenerationService(mock_images_directory)
                                 

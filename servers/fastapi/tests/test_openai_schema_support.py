@@ -4,7 +4,8 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-from utils.llm.provider import get_llm_client, get_large_model
+from openai import AsyncOpenAI
+from constants.llm import DEFAULT_OPENAI_MODEL
 
 
 class HeadingDescription(BaseModel):
@@ -53,9 +54,10 @@ class TwoColumnSlideModel(BaseModel):
 
 
 def test_openai_schema_support():
+    client = AsyncOpenAI()
     response = asyncio.run(
-        get_llm_client().beta.chat.completions.parse(
-            model=get_large_model(),
+        client.beta.chat.completions.parse(
+            model=DEFAULT_OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": "Generate a slide for a presentation"},

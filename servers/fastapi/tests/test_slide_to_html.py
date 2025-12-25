@@ -3,7 +3,7 @@ import os
 from fastapi.testclient import TestClient
 
 # Import the main app
-from server import app
+from api.main import app
 
 client = TestClient(app)
 

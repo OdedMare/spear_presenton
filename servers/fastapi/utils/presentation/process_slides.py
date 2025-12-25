@@ -1,8 +1,6 @@
 import asyncio
 from typing import List, Optional, Tuple
 from models.image_prompt import ImagePrompt
-from models.sql.image_asset import ImageAsset
-from models.sql.slide import SlideModel
 from service.asset_service import ICON_FINDER_SERVICE
 from service.image_service import ImageGenerationService
 from utils.file_operations.asset_directory import get_images_directory
@@ -11,10 +9,10 @@ from utils.data_processing.dict_utils import get_dict_at_path, get_dict_paths_wi
 
 async def process_slide_and_fetch_assets(
     image_generation_service: ImageGenerationService,
-    slide: SlideModel,
+    slide: "SlideModel",
     user_id: Optional[int] = None,
     username: Optional[str] = None,
-) -> List[ImageAsset]:
+) -> List["ImageAsset"]:
     """
     Fetch assets for a slide.
 
@@ -54,7 +52,7 @@ async def process_old_and_new_slides_and_fetch_assets(
     new_slide_content: dict,
     user_id: Optional[int] = None,
     username: Optional[str] = None,
-) -> List[ImageAsset]:
+) -> List["ImageAsset"]:
     """
     Fetch assets for updated slides.
 
@@ -115,7 +113,7 @@ async def process_old_and_new_slides_and_fetch_assets(
     return []  # No image assets generated
 
 
-def process_slide_add_placeholder_assets(slide: SlideModel):
+def process_slide_add_placeholder_assets(slide: "SlideModel"):
 
     image_paths = get_dict_paths_with_key(slide.content, "__image_prompt__")
     icon_paths = get_dict_paths_with_key(slide.content, "__icon_query__")

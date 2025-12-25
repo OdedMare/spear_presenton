@@ -8,7 +8,6 @@ from pathvalidate import sanitize_filename
 
 from models.pptx_models import PptxPresentationModel
 from models.presentation_and_path import PresentationAndPath
-from service.export_service import PptxPresentationCreator
 from service.temp_file_service import TEMP_FILE_SERVICE
 from utils.file_operations.asset_directory import get_exports_directory
 import uuid
@@ -17,6 +16,7 @@ import uuid
 async def export_presentation(
     presentation_id: uuid.UUID, title: str, export_as: Literal["pptx", "pdf"]
 ) -> PresentationAndPath:
+    from service.export_service import PptxPresentationCreator
     if export_as == "pptx":
 
         # Get the converted PPTX model from the Next.js service

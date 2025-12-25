@@ -18,13 +18,13 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Try to import jsonrepair (optional dependency)
+# Try to import json_repair (optional dependency)
 try:
-    from jsonrepair import jsonrepair
+    from json_repair import repair_json as jsonrepair
     HAS_JSONREPAIR = True
 except ImportError:
     HAS_JSONREPAIR = False
-    logger.warning("jsonrepair library not found. Install with: pip install jsonrepair")
+    logger.warning("json-repair library not found. Install with: pip install json-repair")
 
 
 def extract_json_from_markdown(text: str) -> Optional[str]:

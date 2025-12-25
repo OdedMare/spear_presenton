@@ -37,7 +37,10 @@ def get_temp_directory_env():
 
 
 def get_user_config_path_env():
-    return os.getenv("USER_CONFIG_PATH")
+    path = os.getenv("USER_CONFIG_PATH")
+    if path:
+        return path
+    return os.path.join(get_app_data_directory_env(), "userConfig.json")
 
 
 def get_llm_provider_env():

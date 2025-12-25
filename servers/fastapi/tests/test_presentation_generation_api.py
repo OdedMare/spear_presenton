@@ -83,7 +83,7 @@ def mock_get_layout():
     return _mock_get_layout_by_name
 
 async def mock_generate_ppt_outline(*args, **kwargs):
-    yield '{"title": "Test", "slides": [{"title": "Slide 1", "body": "Body 1"}], "notes": []}'
+    yield '{"slides": [{"content": "Slide 1"}, {"content": "Slide 2"}, {"content": "Slide 3"}, {"content": "Slide 4"}, {"content": "Slide 5"}]}'
 
 @pytest.fixture(autouse=True)
 def patch_presentation_api(monkeypatch, mock_get_layout):
@@ -92,14 +92,12 @@ def patch_presentation_api(monkeypatch, mock_get_layout):
         patch('api.v1.ppt.endpoints.presentation.get_layout_by_name', new=AsyncMock(side_effect=mock_get_layout)),
         patch('api.v1.ppt.endpoints.presentation.TEMP_FILE_SERVICE.create_temp_dir', return_value='/tmp/mockdir'),
         patch('api.v1.ppt.endpoints.presentation.DocumentsLoader'),
-        patch('api.v1.ppt.endpoints.presentation.generate_document_summary', new_callable=AsyncMock, return_value="mock_summary"),
         patch('api.v1.ppt.endpoints.presentation.generate_ppt_outline', side_effect=mock_generate_ppt_outline),
-        patch('api.v1.ppt.endpoints.presentation.get_sql_session'),
+        patch('api.v1.ppt.endpoints.presentation.get_async_session'),
         patch('api.v1.ppt.endpoints.presentation.get_slide_content_from_type_and_outline', new_callable=AsyncMock, return_value={"mock": "slide_content"}),
         patch('api.v1.ppt.endpoints.presentation.process_slide_and_fetch_assets', new_callable=AsyncMock),
         patch('api.v1.ppt.endpoints.presentation.get_exports_directory', return_value='/tmp/exports'),
         patch('api.v1.ppt.endpoints.presentation.PptxPresentationCreator'),
-        patch('api.v1.ppt.endpoints.presentation.aiohttp.ClientSession', return_value=MockAiohttpSession()),
     ]
     mocks = [p.start() for p in patches]
 
@@ -109,7 +107,7 @@ def patch_presentation_api(monkeypatch, mock_get_layout):
     docs_loader.return_value.documents = []
 
     # Setup PptxPresentationCreator mock for pptx test
-    pptx_creator = mocks[9]
+    pptx_creator = mocks[8]
     pptx_creator.return_value.create_ppt = AsyncMock()
     pptx_creator.return_value.save = MagicMock()
 
@@ -123,11 +121,11 @@ class TestPresentationGenerationAPI:
         response = client.post(
             "/api/v1/ppt/presentation/generate",
             json={
-                "prompt": "Create a presentation about artificial intelligence and machine learning",
+                "content": "Create a presentation about artificial intelligence and machine learning",
                 "n_slides": 5,
                 "language": "English",
                 "export_as": "pdf",
-                "layout": "general"
+                "template": "general"
             }
         )
         assert response.status_code == 200
@@ -138,11 +136,11 @@ class TestPresentationGenerationAPI:
         response = client.post(
             "/api/v1/ppt/presentation/generate",
             json={
-                "prompt": "Create a presentation about artificial intelligence and machine learning",
+                "content": "Create a presentation about artificial intelligence and machine learning",
                 "n_slides": 5,
                 "language": "English",
                 "export_as": "pptx",
-                "layout": "general"
+                "template": "general"
             }
         )
         assert response.status_code == 200
@@ -156,7 +154,7 @@ class TestPresentationGenerationAPI:
                 "n_slides": 5,
                 "language": "English",
                 "export_as": "pdf",
-                "layout": "general"
+                "template": "general"
             }
         )
         assert response.status_code == 422
@@ -166,11 +164,11 @@ class TestPresentationGenerationAPI:
         response = client.post(
             "/api/v1/ppt/presentation/generate",
             json={
-                "prompt": "Create a presentation about artificial intelligence and machine learning",
+                "content": "Create a presentation about artificial intelligence and machine learning",
                 "n_slides": 0,
                 "language": "English",
                 "export_as": "pdf",
-                "layout": "general"
+                "template": "general"
             }
         )
         assert response.status_code == 422
@@ -179,11 +177,11 @@ class TestPresentationGenerationAPI:
         response = client.post(
             "/api/v1/ppt/presentation/generate",
             json={
-                "prompt": "Create a presentation about artificial intelligence and machine learning",
+                "content": "Create a presentation about artificial intelligence and machine learning",
                 "n_slides": 5,
                 "language": "English",
                 "export_as": "invalid_type",
-                "layout": "general"
+                "template": "general"
             }
         )
         assert response.status_code == 422
