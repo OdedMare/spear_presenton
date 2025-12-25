@@ -17,6 +17,7 @@ from dal.repositories.template_repository import TemplateRepository
 from service.presentation_service import PresentationService
 from service.slide_service import SlideService
 from service.auth_service import AuthService
+from service.llm_service import LLMService
 
 
 # Repository Factories
@@ -152,3 +153,16 @@ async def get_auth_service(
         AuthService instance
     """
     return AuthService(user_repo=user_repo)
+
+
+def get_llm_service() -> LLMService:
+    """
+    Create LLMService (singleton pattern).
+
+    LLM service doesn't need repository dependencies,
+    it manages its own LLM provider clients.
+
+    Returns:
+        LLMService instance
+    """
+    return LLMService()
