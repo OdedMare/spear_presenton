@@ -29,7 +29,7 @@ from models.llm_tool_call import (
     OpenAIToolCallFunction,
 )
 from models.llm_tools import LLMDynamicTool, LLMTool
-from services.llm_tool_calls_handler import LLMToolCallsHandler
+from service.llm_tool_calls_handler import LLMToolCallsHandler
 from utils.async_iterator import iterator_to_async
 from utils.dummy_functions import do_nothing_async
 from utils.get_env import (

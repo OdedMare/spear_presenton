@@ -16,7 +16,7 @@ from utils.schema_utils import (
 
 class LLMToolCallsHandler:
     def __init__(self, client):
-        from services.llm_client import LLMClient
+        from service.llm_client import LLMClient
 
         self.client: LLMClient = client
 

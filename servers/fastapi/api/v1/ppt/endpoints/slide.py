@@ -6,11 +6,11 @@ import uuid
 from models.sql.presentation import PresentationModel
 from models.sql.slide import SlideModel
 from dal.database import get_async_session
-from services.image_generation_service import ImageGenerationService
+from service.image_service import ImageGenerationService
 from utils.asset_directory_utils import get_images_directory
-from utils.llm_calls.edit_slide import get_edited_slide_content
-from utils.llm_calls.edit_slide_html import get_edited_slide_html
-from utils.llm_calls.select_slide_type_on_edit import get_slide_layout_from_prompt
+from service.slide_service import get_edited_slide_content
+from service.slide_service_html import get_edited_slide_html
+from service.slide_service import get_slide_layout_from_prompt
 from utils.process_slides import process_old_and_new_slides_and_fetch_assets
 import uuid
 

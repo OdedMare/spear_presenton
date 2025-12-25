@@ -6,7 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel
 
-from services.documents_loader import DocumentsLoader
+from service.document_service import DocumentsLoader
 from utils.asset_directory_utils import get_images_directory
 import uuid
 from constants.documents import PDF_MIME_TYPES

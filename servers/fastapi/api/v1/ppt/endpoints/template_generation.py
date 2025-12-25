@@ -12,10 +12,10 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from constants.documents import POWERPOINT_TYPES
-from services.layout_extractor import parse_pptx_to_layouts
-from services.layout_renderer import render_slide
-from services.html_to_react_converter import convert_html_to_react
-from services.html_text_editor import (
+from service.layout_extractor import parse_pptx_to_layouts
+from service.layout_renderer import render_slide
+from service.html_to_react_converter import convert_html_to_react
+from service.html_text_editor import (
     TextEdit,
     edit_html_text,
     extract_editable_elements,

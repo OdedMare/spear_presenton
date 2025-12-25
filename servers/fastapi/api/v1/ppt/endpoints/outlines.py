@@ -16,10 +16,10 @@ from models.sse_response import (
     SSEResponse,
     SSEStatusResponse,
 )
-from services.temp_file_service import TEMP_FILE_SERVICE
+from service.temp_file_service import TEMP_FILE_SERVICE
 from dal.database import get_async_session
-from services.documents_loader import DocumentsLoader
-from utils.llm_calls.generate_presentation_outlines import generate_ppt_outline
+from service.document_service import DocumentsLoader
+from service.outline_service import generate_ppt_outline
 from utils.ppt_utils import get_presentation_title_from_outlines
 
 OUTLINES_ROUTER = APIRouter(prefix="/outlines", tags=["Outlines"])

@@ -7,8 +7,8 @@ from utils.asset_directory_utils import get_exports_directory
 
 from constants.documents import UPLOAD_ACCEPTED_FILE_TYPES
 from models.decomposed_file_info import DecomposedFileInfo
-from services.temp_file_service import TEMP_FILE_SERVICE
-from services.documents_loader import DocumentsLoader
+from service.temp_file_service import TEMP_FILE_SERVICE
+from service.document_service import DocumentsLoader
 import uuid
 from utils.validators import validate_files
 

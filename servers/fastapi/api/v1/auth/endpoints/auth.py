@@ -11,7 +11,7 @@ from models.auth_models import (
     ValidateSessionResponse,
     LogoutResponse,
 )
-from services.auth_service import AuthService
+from service.auth_service import AuthService
 from dal.database import get_async_session
 from common.logger import logger
 

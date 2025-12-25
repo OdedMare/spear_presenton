@@ -23,7 +23,7 @@ from enum import Enum
 from dataclasses import dataclass
 from contextlib import contextmanager
 
-from services.translation_tools import (
+from service.translation_tools import (
     extract_placeholders,
     validate_structure,
     write_translation_map,
@@ -35,7 +35,7 @@ from services.translation_tools import (
     quality_check_translation,
     detect_language,
 )
-from services.translation_agents import (
+from service.translation_agents import (
     Agent1Parser,
     Agent2Translator,
     Agent3Validator,
@@ -521,7 +521,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-from services.llm_client import LLMClient
+from service.llm_service import LLMService, LLMClient
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from common.logger import logger
 

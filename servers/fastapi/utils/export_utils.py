@@ -8,8 +8,8 @@ from pathvalidate import sanitize_filename
 
 from models.pptx_models import PptxPresentationModel
 from models.presentation_and_path import PresentationAndPath
-from services.pptx_presentation_creator import PptxPresentationCreator
-from services.temp_file_service import TEMP_FILE_SERVICE
+from service.export_service import PptxPresentationCreator
+from service.temp_file_service import TEMP_FILE_SERVICE
 from utils.asset_directory_utils import get_exports_directory
 import uuid
 

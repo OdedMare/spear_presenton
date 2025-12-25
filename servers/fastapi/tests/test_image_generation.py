@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from fastapi import FastAPI
 from api.v1.ppt.endpoints.images import IMAGES_ROUTER
 from models.image_prompt import ImagePrompt
-from services.image_generation_service import ImageGenerationService
+from service.image_service import ImageGenerationService
 from models.sql.image_asset import ImageAsset
 
 

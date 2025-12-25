@@ -6,7 +6,7 @@ from models.pptx_models import (
     PptxPresentationModel,
     PptxSlideModel,
 )
-from services.pptx_presentation_creator import PptxPresentationCreator
+from service.export_service import PptxPresentationCreator
 from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
 
 

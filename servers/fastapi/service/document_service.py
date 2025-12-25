@@ -10,7 +10,7 @@ from constants.documents import (
     TEXT_MIME_TYPES,
     WORD_TYPES,
 )
-from services.docling_service import DoclingService
+from service.docling_service import DoclingService
 
 
 class DocumentsLoader:

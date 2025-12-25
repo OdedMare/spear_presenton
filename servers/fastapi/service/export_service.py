@@ -1,7 +1,7 @@
 import os
 from typing import List, Optional
 from lxml import etree
-from services.html_to_text_runs_service import (
+from service.html_to_text_runs_service import (
     parse_html_text_to_text_runs as parse_inline_html_to_runs,
 )
 from common.logger import logger

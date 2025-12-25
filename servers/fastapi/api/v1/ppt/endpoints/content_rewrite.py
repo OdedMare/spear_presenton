@@ -30,15 +30,15 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from services.placeholder_extractor import extract_all_placeholders, validate_rewritten_content
-from services.placeholder_injector import inject_content_into_pptx
-from services.llm_client import LLMClient
-from services.content_chunker import (
+from service.placeholder_extractor import extract_all_placeholders, validate_rewritten_content
+from service.placeholder_injector import inject_content_into_pptx
+from service.llm_service import LLMService, LLMClient
+from service.content_chunker import (
     chunk_placeholder_structure,
     combine_chunked_results,
     estimate_structure_tokens
 )
-from services.translation_agents import translate_with_agents
+from service.translation_agents import translate_with_agents
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from utils.llm_provider import get_model
 from api.v1.ppt.endpoints.prompts import (

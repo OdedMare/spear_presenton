@@ -36,29 +36,29 @@ from models.presentation_with_slides import (
 )
 from models.sql.template import TemplateModel
 
-from services.documents_loader import DocumentsLoader
-from services.webhook_service import WebhookService
+from service.document_service import DocumentsLoader
+from service.webhook_service import WebhookService
 from utils.get_layout_by_name import get_layout_by_name
-from services.image_generation_service import ImageGenerationService
+from service.image_service import ImageGenerationService
 from utils.dict_utils import deep_update
 from utils.export_utils import export_presentation
-from utils.llm_calls.generate_presentation_outlines import generate_ppt_outline
+from service.outline_service import generate_ppt_outline
 from models.sql.slide import SlideModel
 from models.sse_response import SSECompleteResponse, SSEErrorResponse, SSEResponse
 
 from dal.database import get_async_session
-from services.temp_file_service import TEMP_FILE_SERVICE
-from services.concurrent_service import CONCURRENT_SERVICE
+from service.temp_file_service import TEMP_FILE_SERVICE
+from service.concurrent_service import CONCURRENT_SERVICE
 from models.sql.presentation import PresentationModel
-from services.pptx_presentation_creator import PptxPresentationCreator
+from service.export_service import PptxPresentationCreator
 from models.sql.async_presentation_generation_status import (
     AsyncPresentationGenerationTaskModel,
 )
 from utils.asset_directory_utils import get_exports_directory, get_images_directory
-from utils.llm_calls.generate_presentation_structure import (
+from service.structure_service import (
     generate_presentation_structure,
 )
-from utils.llm_calls.generate_slide_content import (
+from service.slide_content_service import (
     get_slide_content_from_type_and_outline,
 )
 from utils.ppt_utils import (

@@ -23,14 +23,14 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from services.placeholder_extractor import extract_all_placeholders
-from services.placeholder_injector import inject_content_into_pptx
-from services.translation_orchestrator import (
+from service.placeholder_extractor import extract_all_placeholders
+from service.placeholder_injector import inject_content_into_pptx
+from service.translation_orchestrator import (
     translate_presentation_with_agents,
     TranslationResult,
     TranslationError,
 )
-from services.temp_file_service import TempFileService
+from service.temp_file_service import TempFileService
 from api.middlewares import get_current_user
 from models.sql.user import User
 from common.logger import logger
@@ -305,7 +305,7 @@ async def get_translation_status(presentation_id: str):
     This can be used to check if a translation is complete and retrieve
     the translation map file if available.
     """
-    from services.translation_tools import TRANSLATION_MAPS_DIR
+    from service.translation_tools import TRANSLATION_MAPS_DIR
     from pathlib import Path
 
     map_path = TRANSLATION_MAPS_DIR / f"{presentation_id}_map.json"
@@ -347,7 +347,7 @@ async def translation_health_check():
     dependencies_installed = False
     dependency_error = None
     try:
-        from services.translation_tools import _get_translator, _get_langdetect
+        from service.translation_tools import _get_translator, _get_langdetect
         _get_translator()
         _get_langdetect()
         dependencies_installed = True
