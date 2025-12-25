@@ -1,4 +1,5 @@
-Default = "rect"
+from __future__ import annotations
+
 import base64
 import logging
 import os
@@ -802,7 +803,7 @@ def parse_pptx_to_layouts(pptx_path: str, asset_output_dir: str, asset_url_prefi
 
         logger.info("Extracted %s slides", len(layouts))
         return layouts
-from __future__ import annotations
+
 
 import html
 import math

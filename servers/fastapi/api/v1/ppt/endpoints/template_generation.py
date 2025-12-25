@@ -15,7 +15,7 @@ from constants.documents import POWERPOINT_TYPES
 from service.layout_service import parse_pptx_to_layouts
 from service.layout_service import render_slide
 from service.template_service import convert_html_to_react
-from service.template_service import (
+from service.content_service import (
     TextEdit,
     edit_html_text,
     extract_editable_elements,

@@ -8,9 +8,11 @@ from models.sql.slide import SlideModel
 from dal.database import get_async_session
 from service.image_service import ImageGenerationService
 from utils.file_operations.asset_directory import get_images_directory
-from service.slide_service import get_edited_slide_content
-from service.slide_service_html import get_edited_slide_html
-from service.slide_service import get_slide_layout_from_prompt
+from service.slide_content_service import (
+    get_edited_slide_content,
+    get_edited_slide_html,
+    get_slide_layout_from_prompt,
+)
 from utils.presentation.process_slides import process_old_and_new_slides_and_fetch_assets
 import uuid
 
