@@ -12,7 +12,6 @@ Each agent can use a different model for optimal cost/quality balance.
 
 import os
 import json
-import logging
 import re
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
@@ -20,8 +19,7 @@ from enum import Enum
 
 from services.llm_client import LLMClient
 from models.llm_message import LLMSystemMessage, LLMUserMessage
-
-logger = logging.getLogger(__name__)
+from utils.logger import logger
 
 
 class ElementCategory(str, Enum):
@@ -329,6 +327,33 @@ CRITICAL REMINDER:
 - DO NOT use "..." or "…" anywhere - ALL text must be complete
 - If too long, rephrase to be shorter while completing the thought
 - Return JSON with element IDs as keys"""
+
+        logger.info("Translation prompt prepared", extra={"extra_fields": {
+            "event_type": "translation_prompt",
+            "source_language": source_language,
+            "target_language": target_language,
+            "model": self.model,
+            "batch_size": len(batch),
+            "element_ids": [el_id for el_id, _ in batch],
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt,
+        }})
+        print(
+            "translation_prompt",
+            json.dumps(
+                {
+                    "event_type": "translation_prompt",
+                    "source_language": source_language,
+                    "target_language": target_language,
+                    "model": self.model,
+                    "batch_size": len(batch),
+                    "element_ids": [el_id for el_id, _ in batch],
+                    "system_prompt": system_prompt,
+                    "user_prompt": user_prompt,
+                },
+                ensure_ascii=True,
+            ),
+        )
 
         messages = [
             LLMSystemMessage(content=system_prompt),

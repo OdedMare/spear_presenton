@@ -11,6 +11,45 @@ import { Input } from "@/components/ui/input";
 import { LogIn, Sparkles } from "lucide-react";
 import { logger } from "@/utils/logger";
 
+type ClientLogLevel = "debug" | "info" | "warn" | "error";
+
+const logClientEvent = (
+  level: ClientLogLevel,
+  message: string,
+  extra: Record<string, any> = {}
+) => {
+  switch (level) {
+    case "debug":
+      logger.debug(message, extra);
+      break;
+    case "warn":
+      logger.warn(message, extra);
+      break;
+    case "error":
+      logger.error(message, extra);
+      break;
+    default:
+      logger.info(message, extra);
+      break;
+  }
+
+  const payload = {
+    level,
+    message,
+    event_type:
+      typeof extra.event_type === "string" ? extra.event_type : undefined,
+    extra,
+    path: typeof window !== "undefined" ? window.location.pathname : undefined,
+    timestamp: new Date().toISOString(),
+  };
+
+  void fetch("/api/client-logs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).catch(() => {});
+};
+
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const dispatch = useDispatch<AppDispatch>();
@@ -20,10 +59,15 @@ export default function LoginPage() {
   );
 
   useEffect(() => {
-    logger.info("Login page view", { event_type: "login_page_view" });
+    logClientEvent("info", "Login page view", {
+      event_type: "login_page_view",
+    });
+  }, []);
+
+  useEffect(() => {
     // Redirect if already authenticated
     if (isAuthenticated) {
-      logger.info("Already authenticated, redirecting to dashboard", {
+      logClientEvent("info", "Already authenticated, redirecting to dashboard", {
         event_type: "login_redirect",
         reason: "already_authenticated",
       });
@@ -36,14 +80,14 @@ export default function LoginPage() {
 
     const trimmedUsername = username.trim();
     if (!trimmedUsername) {
-      logger.warn("Login submit blocked: empty username", {
+      logClientEvent("warn", "Login submit blocked: empty username", {
         event_type: "login_submit_blocked",
         reason: "empty_username",
       });
       return;
     }
 
-    logger.info(`Login attempt for user: ${trimmedUsername}`, {
+    logClientEvent("info", `Login attempt for user: ${trimmedUsername}`, {
       event_type: "login_submit_start",
       username: trimmedUsername,
       username_length: trimmedUsername.length,
@@ -52,7 +96,7 @@ export default function LoginPage() {
     const requestStart = Date.now();
 
     try {
-      logger.info("Login request sent", {
+      logClientEvent("info", "Login request sent", {
         event_type: "login_request_sent",
         username: trimmedUsername,
       });
@@ -67,14 +111,14 @@ export default function LoginPage() {
         })
       );
 
-      logger.info(`Login successful: ${response.username}`, {
+      logClientEvent("info", `Login successful: ${response.username}`, {
         event_type: "login_request_success",
         user_id: response.user_id,
         username: response.username,
         duration_ms: durationMs,
       });
       // Redirect to dashboard
-      logger.info("Login redirect to dashboard", {
+      logClientEvent("info", "Login redirect to dashboard", {
         event_type: "login_redirect",
         reason: "login_success",
       });
@@ -82,7 +126,7 @@ export default function LoginPage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "התחברות נכשלה. אנא נסה שנית.";
       const durationMs = Date.now() - requestStart;
-      logger.error(`Login failed for ${trimmedUsername}: ${errorMessage}`, {
+      logClientEvent("error", `Login failed for ${trimmedUsername}: ${errorMessage}`, {
         event_type: "login_request_failed",
         username: trimmedUsername,
         duration_ms: durationMs,
@@ -143,7 +187,7 @@ export default function LoginPage() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="חיבור עם יוזר נס הרים או וואןאמן"
+                  placeholder="חיבור עם יוזר נס הרים או oa"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}

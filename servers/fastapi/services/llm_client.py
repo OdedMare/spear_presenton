@@ -694,7 +694,7 @@ class LLMClient:
         
         # Check if we can use native structured output streaming (OpenAI only for now)
         can_stream_structured = (
-            self.llm_provider == LLMProvider.OPENAI and 
+            (self.llm_provider == LLMProvider.OPENAI or self.llm_provider == LLMProvider.CUSTOM) and 
             self.supports_structured_outputs(model) and
             not self.use_tool_calls_for_structured_output()
         )
@@ -733,6 +733,9 @@ class LLMClient:
                 # Fallback to non-streaming below
         
         # Fallback: Use non-streaming method and yield result at the end
+        # We yield a single space as a preliminary heartbeat to help with some proxies
+        yield " " 
+        
         result = await self.generate_structured(
             model=model,
             messages=messages,

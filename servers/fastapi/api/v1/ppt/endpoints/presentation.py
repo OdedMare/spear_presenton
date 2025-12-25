@@ -534,11 +534,16 @@ async def generate_presentation_handler(
                 await sql_session.commit()
 
             if request.files:
-                documents_loader = DocumentsLoader(file_paths=request.files)
-                await documents_loader.load_documents()
-                documents = documents_loader.documents
-                if documents:
-                    additional_context = "\n\n".join(documents)
+                temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
+                try:
+                    documents_loader = DocumentsLoader(file_paths=request.files)
+                    await documents_loader.load_documents(temp_dir)
+                    documents = documents_loader.documents
+                    if documents:
+                        additional_context = "\n\n".join(documents)
+                finally:
+                    # Cleanup documents after loading context
+                    TEMP_FILE_SERVICE.cleanup_temp_dir(temp_dir)
 
             # Finding number of slides to generate by considering table of contents
             n_slides_to_generate = request.n_slides

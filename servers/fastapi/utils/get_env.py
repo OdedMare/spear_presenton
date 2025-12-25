@@ -22,7 +22,7 @@ def get_app_data_directory_env():
         return app_data_dir
 
     # Use Docker/OpenShift volume mount if present
-    if os.path.isdir("/tmp/app_data"):
+    if os.path.isdir("/tmp/app_data") or os.getenv("KUBERNETES_SERVICE_HOST"):
         return "/tmp/app_data"
 
     # Fall back to repo-local app_data directory

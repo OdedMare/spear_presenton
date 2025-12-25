@@ -843,6 +843,38 @@ IMPORTANT: If a placeholder has empty text ("text": "") but has maxLength/maxLin
                         logger.info(f"Batch {i+1}: Attempting with {attempt_name} prompt (try {validation_attempt+1})...")
                         system_prompt = get_prompts(use_lite=use_lite)
 
+                        if mode == RewriteMode.STRICT:
+                            logger.info("Content rewrite prompt prepared", extra={"extra_fields": {
+                                "event_type": "content_rewrite_prompt",
+                                "mode": mode.value,
+                                "prompt_variant": attempt_name,
+                                "validation_attempt": validation_attempt + 1,
+                                "batch_index": i + 1,
+                                "batch_total": len(chunks),
+                                "slide_numbers": slide_numbers,
+                                "model": model,
+                                "system_prompt": system_prompt,
+                                "user_prompt": current_user_message,
+                            }})
+                            print(
+                                "content_rewrite_prompt",
+                                json.dumps(
+                                    {
+                                        "event_type": "content_rewrite_prompt",
+                                        "mode": mode.value,
+                                        "prompt_variant": attempt_name,
+                                        "validation_attempt": validation_attempt + 1,
+                                        "batch_index": i + 1,
+                                        "batch_total": len(chunks),
+                                        "slide_numbers": slide_numbers,
+                                        "model": model,
+                                        "system_prompt": system_prompt,
+                                        "user_prompt": current_user_message,
+                                    },
+                                    ensure_ascii=True,
+                                ),
+                            )
+
                         messages = [
                             LLMSystemMessage(content=system_prompt),
                             LLMUserMessage(content=current_user_message)
