@@ -3,7 +3,7 @@ from typing import AsyncGenerator
 import aiohttp
 from fastapi import HTTPException
 from models.ollama_model_status import OllamaModelStatus
-from utils.get_env import get_ollama_url_env
+from utils.config.env_config import get_ollama_url_env
 
 
 async def pull_ollama_model(model: str) -> AsyncGenerator[dict, None]:

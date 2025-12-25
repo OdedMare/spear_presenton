@@ -1,5 +1,5 @@
 from enums.image_provider import ImageProvider
-from utils.get_env import (
+from utils.config.env_config import (
     get_image_provider_env,
     get_openai_api_key_env,
     get_pexels_api_key_env,

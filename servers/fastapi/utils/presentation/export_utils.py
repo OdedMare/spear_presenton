@@ -10,7 +10,7 @@ from models.pptx_models import PptxPresentationModel
 from models.presentation_and_path import PresentationAndPath
 from service.export_service import PptxPresentationCreator
 from service.temp_file_service import TEMP_FILE_SERVICE
-from utils.asset_directory_utils import get_exports_directory
+from utils.file_operations.asset_directory import get_exports_directory
 import uuid
 
 

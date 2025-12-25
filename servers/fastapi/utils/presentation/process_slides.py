@@ -5,8 +5,8 @@ from models.sql.image_asset import ImageAsset
 from models.sql.slide import SlideModel
 from service.icon_finder_service import ICON_FINDER_SERVICE
 from service.image_service import ImageGenerationService
-from utils.asset_directory_utils import get_images_directory
-from utils.dict_utils import get_dict_at_path, get_dict_paths_with_key, set_dict_at_path
+from utils.file_operations.asset_directory import get_images_directory
+from utils.data_processing.dict_utils import get_dict_at_path, get_dict_paths_with_key, set_dict_at_path
 
 
 async def process_slide_and_fetch_assets(

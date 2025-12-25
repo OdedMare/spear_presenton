@@ -1,10 +1,10 @@
 from constants.llm import OPENAI_URL
 from enums.image_provider import ImageProvider
 from enums.llm_provider import LLMProvider
-from utils.available_models import (
+from utils.llm.available_models import (
     list_available_openai_compatible_models,
 )
-from utils.get_env import (
+from utils.config.env_config import (
     get_can_change_keys_env,
     get_openai_api_key_env,
     get_openai_model_env,
@@ -14,11 +14,11 @@ from utils.get_env import (
     get_custom_llm_url_env,
     get_custom_model_env,
 )
-from utils.llm_provider import (
+from utils.llm.provider import (
     get_llm_provider,
     is_custom_llm_selected,
 )
-from utils.image_provider import get_selected_image_provider
+from utils.media.image_provider import get_selected_image_provider
 
 
 async def check_llm_and_image_provider_api_or_model_availability():

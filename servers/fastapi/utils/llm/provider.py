@@ -4,7 +4,7 @@ from constants.llm import (
     DEFAULT_OPENAI_MODEL,
 )
 from enums.llm_provider import LLMProvider
-from utils.get_env import (
+from utils.config.env_config import (
     get_custom_model_env,
     get_llm_provider_env,
     get_openai_model_env,

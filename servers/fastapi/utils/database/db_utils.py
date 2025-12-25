@@ -1,5 +1,5 @@
 import os
-from utils.get_env import get_app_data_directory_env, get_database_url_env
+from utils.config.env_config import get_app_data_directory_env, get_database_url_env
 from urllib.parse import urlsplit, urlunsplit, parse_qsl
 import ssl
 

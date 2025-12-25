@@ -3,7 +3,7 @@ from typing import Any, List
 
 from openai import NOT_GIVEN
 
-from utils.dict_utils import (
+from utils.data_processing.dict_utils import (
     get_dict_paths_with_key,
     get_dict_at_path,
     has_more_than_n_keys,
