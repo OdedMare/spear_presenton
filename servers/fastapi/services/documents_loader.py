@@ -42,9 +42,12 @@ class DocumentsLoader:
 
         for file_path in self._file_paths:
             if not os.path.exists(file_path):
+                logger.error(f"File not found: {file_path}")
                 raise HTTPException(
                     status_code=404, detail=f"File {file_path} not found"
                 )
+            
+            logger.debug(f"Loading document: {file_path}")
 
             document = ""
             imgs = []
@@ -76,6 +79,8 @@ class DocumentsLoader:
     ) -> Tuple[str, List[str]]:
         image_paths = []
         document: str = ""
+        
+        logger.info(f"Parsing PDF: {file_path}")
 
         if load_text:
             document = await asyncio.to_thread(self.docling_service.parse_to_markdown, file_path)

@@ -16,7 +16,7 @@ from utils.image_provider import (
     is_gemini_flash_selected,
     is_dalle3_selected,
 )
-from utils.logger import logger
+from common.logger import logger
 import uuid
 
 
@@ -90,6 +90,17 @@ class ImageGenerationService:
                     image_prompt, self.output_directory
                 )
             if image_path:
+                logger.info(f"Image generation completed in {time.time() - start_time:.2f}s",
+                    extra={
+                        "extra_fields": {
+                            "user_id": user_id,
+                            "username": username,
+                            "image_prompt": image_prompt,
+                            "event_type": "image_generation_success",
+                            "duration_seconds": round(time.time() - start_time, 2),
+                        }
+                    },
+                )
                 if image_path.startswith("http"):
                     return image_path
                 elif os.path.exists(image_path):
@@ -114,6 +125,7 @@ class ImageGenerationService:
                         "image_prompt": image_prompt,
                         "error_type": type(e).__name__,
                         "event_type": "image_generation_error",
+                        "duration_seconds": round(time.time() - start_time, 2),
                     }
                 },
             )

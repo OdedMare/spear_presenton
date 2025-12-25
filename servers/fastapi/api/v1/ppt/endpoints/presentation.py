@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-from utils.logger import logger, log_presentation_generation, log_error
+from common.logger import logger, log_presentation_generation, log_error
 from api.middlewares import get_current_user
 from models.sql.user import User
 from constants.presentation import DEFAULT_TEMPLATES
@@ -46,7 +46,7 @@ from utils.llm_calls.generate_presentation_outlines import generate_ppt_outline
 from models.sql.slide import SlideModel
 from models.sse_response import SSECompleteResponse, SSEErrorResponse, SSEResponse
 
-from services.database import get_async_session
+from dal.database import get_async_session
 from services.temp_file_service import TEMP_FILE_SERVICE
 from services.concurrent_service import CONCURRENT_SERVICE
 from models.sql.presentation import PresentationModel
@@ -534,6 +534,8 @@ async def generate_presentation_handler(
                 await sql_session.commit()
 
             if request.files:
+                logger.info(f"[{presentation_id}] Starting document loading for {len(request.files)} files")
+                start_time = time.time()
                 temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
                 try:
                     documents_loader = DocumentsLoader(file_paths=request.files)
@@ -541,6 +543,7 @@ async def generate_presentation_handler(
                     documents = documents_loader.documents
                     if documents:
                         additional_context = "\n\n".join(documents)
+                    logger.info(f"[{presentation_id}] Document loading completed in {time.time() - start_time:.2f}s")
                 finally:
                     # Cleanup documents after loading context
                     TEMP_FILE_SERVICE.cleanup_temp_dir(temp_dir)
@@ -561,6 +564,8 @@ async def generate_presentation_handler(
                 )
 
             presentation_outlines_text = ""
+            logger.info(f"[{presentation_id}] Starting outline generation for {n_slides_to_generate} slides")
+            outline_start_time = time.time()
             async for chunk in generate_ppt_outline(
                 request.content,
                 n_slides_to_generate,
@@ -574,9 +579,12 @@ async def generate_presentation_handler(
             ):
 
                 if isinstance(chunk, HTTPException):
+                    logger.error(f"[{presentation_id}] Outline generation failed with HTTPException: {chunk.detail}")
                     raise chunk
 
                 presentation_outlines_text += chunk
+            
+            logger.info(f"[{presentation_id}] Outline generation completed in {time.time() - outline_start_time:.2f}s")
 
             try:
                 presentation_outlines_json = dict(
@@ -718,6 +726,8 @@ async def generate_presentation_handler(
         slide_layouts = [layout_model.slides[idx] for idx in slide_layout_indices]
 
         # Schedule slide content generation and asset fetching in batches of 10
+        logger.info(f"[{presentation_id}] Starting slide content generation for {len(slide_layouts)} slides")
+        slides_start_time = time.time()
         batch_size = 10
         for start in range(0, len(slide_layouts), batch_size):
             end = min(start + batch_size, len(slide_layouts))
@@ -774,6 +784,8 @@ async def generate_presentation_handler(
                 for slide in batch_slides
             ]
             async_assets_generation_tasks.extend(asset_tasks)
+        
+        logger.info(f"[{presentation_id}] Slide content generation batch processing completed in {time.time() - slides_start_time:.2f}s")
 
         if async_status:
             async_status.message = "Fetching assets for slides"

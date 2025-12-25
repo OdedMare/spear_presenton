@@ -14,7 +14,7 @@ if not os.path.exists("/tmp/presenton_test"):
 import pytest
 from fastapi.testclient import TestClient
 from api.main import app
-from services.database import create_db_and_tables
+from dal.database import create_db_and_tables
 
 client = TestClient(app)
 

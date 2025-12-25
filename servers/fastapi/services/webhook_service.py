@@ -3,7 +3,7 @@ import aiohttp
 from sqlmodel import select
 from enums.webhook_event import WebhookEvent
 from models.sql.webhook_subscription import WebhookSubscription
-from services.database import get_async_session
+from dal.database import get_async_session
 
 
 class WebhookService:

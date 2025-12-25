@@ -143,7 +143,8 @@ class StructureAgent:
             (contexts_dict, error) - error is None on success
         """
         try:
-            # Tool: validate_structure
+            logger.info(f"Starting translation pipeline for presentation {presentation_id}")
+            # Step 1: Extract structure
             logger.info(f"[Structure Agent] Validating structure for {presentation_id}")
             validate_structure(placeholder_structure)
 

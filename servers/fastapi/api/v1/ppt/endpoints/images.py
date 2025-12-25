@@ -5,7 +5,7 @@ from sqlmodel import select
 
 from models.image_prompt import ImagePrompt
 from models.sql.image_asset import ImageAsset
-from services.database import get_async_session
+from dal.database import get_async_session
 from services.image_generation_service import ImageGenerationService
 from utils.asset_directory_utils import get_images_directory
 import os

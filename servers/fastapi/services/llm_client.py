@@ -517,6 +517,7 @@ class LLMClient:
 
         try:
             # Try with retry logic and fallback
+            logger.info(f"Starting structured generation with model {model} (provider: {self.llm_provider})")
             content = await retry_with_fallback(
                 primary_func=generate_with_strict,
                 fallback_func=generate_with_relaxed if adaptive_strict else None,
@@ -700,6 +701,7 @@ class LLMClient:
         )
 
         if can_stream_structured:
+            logger.info(f"Using native structured streaming for model {model}")
             schema_to_use = response_format
             if adaptive_strict:
                 schema_to_use = ensure_strict_json_schema(
@@ -734,6 +736,7 @@ class LLMClient:
         
         # Fallback: Use non-streaming method and yield result at the end
         # We yield a single space as a preliminary heartbeat to help with some proxies
+        logger.info(f"Model {model} (provider: {self.llm_provider}) does not support native structured streaming. Using non-streaming fallback.")
         yield " " 
         
         result = await self.generate_structured(

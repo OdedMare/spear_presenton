@@ -4,7 +4,7 @@ from lxml import etree
 from services.html_to_text_runs_service import (
     parse_html_text_to_text_runs as parse_inline_html_to_runs,
 )
-from utils.logger import logger
+from common.logger import logger
 from utils.get_env import get_app_data_directory_env
 
 from pptx import Presentation
@@ -137,6 +137,8 @@ class PptxPresentationCreator:
                     each_shape.picture.is_network = False
 
     async def create_ppt(self):
+        logger.info(f"Starting PPTX creation for: {self._ppt_model.name}")
+        start_time = time.time()
         await self.fetch_network_assets()
 
         for slide_model in self._slide_models:
@@ -145,6 +147,8 @@ class PptxPresentationCreator:
                 slide_model.shapes.append(self._ppt_model.shapes)
 
             self.add_and_populate_slide(slide_model)
+        
+        logger.info(f"PPTX creation completed in {time.time() - start_time:.2f}s")
 
     def set_presentation_theme(self):
         slide_master = self._ppt.slide_master

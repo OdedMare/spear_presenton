@@ -2,7 +2,7 @@
 Logger utility for sending logs to Elasticsearch in production environments.
 
 Usage:
-    from utils.logger import logger
+    from common.logger import logger
 
     logger.info("Application started")
     logger.error("An error occurred", extra={"user_id": 123})

@@ -19,7 +19,7 @@ from enum import Enum
 
 from services.llm_client import LLMClient
 from models.llm_message import LLMSystemMessage, LLMUserMessage
-from utils.logger import logger
+from common.logger import logger
 
 
 class ElementCategory(str, Enum):

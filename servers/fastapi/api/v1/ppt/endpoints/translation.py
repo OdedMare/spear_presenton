@@ -33,7 +33,7 @@ from services.translation_orchestrator import (
 from services.temp_file_service import TempFileService
 from api.middlewares import get_current_user
 from models.sql.user import User
-from utils.logger import logger
+from common.logger import logger
 
 router = APIRouter()
 

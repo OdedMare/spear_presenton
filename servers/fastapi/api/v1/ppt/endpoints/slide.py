@@ -5,7 +5,7 @@ import uuid
 
 from models.sql.presentation import PresentationModel
 from models.sql.slide import SlideModel
-from services.database import get_async_session
+from dal.database import get_async_session
 from services.image_generation_service import ImageGenerationService
 from utils.asset_directory_utils import get_images_directory
 from utils.llm_calls.edit_slide import get_edited_slide_content

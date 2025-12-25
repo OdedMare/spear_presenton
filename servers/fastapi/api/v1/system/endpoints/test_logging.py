@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from utils.logger import logger, ElasticsearchHandler
+from common.logger import logger, ElasticsearchHandler
 import logging
 import os
 import uuid

@@ -3,7 +3,7 @@ import os
 
 from fastapi import FastAPI
 
-from services.database import create_db_and_tables
+from dal.database import create_db_and_tables
 from utils.get_env import get_app_data_directory_env, get_can_change_keys_env
 from utils.model_availability import (
     check_llm_and_image_provider_api_or_model_availability,

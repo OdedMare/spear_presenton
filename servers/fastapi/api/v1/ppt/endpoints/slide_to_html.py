@@ -13,7 +13,7 @@ from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 from utils.asset_directory_utils import get_images_directory
-from services.database import get_async_session
+from dal.database import get_async_session
 from models.sql.presentation_layout_code import PresentationLayoutCodeModel
 from .prompts import (
     GENERATE_HTML_SYSTEM_PROMPT,

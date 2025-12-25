@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.ollama_model_status import OllamaModelStatus
 from models.sql.ollama_pull_status import OllamaPullStatus
-from services.database import get_container_db_async_session
+from dal.database import get_container_db_async_session
 from utils.ollama import pull_ollama_model
 
 

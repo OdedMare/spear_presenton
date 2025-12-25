@@ -52,10 +52,10 @@ from api.v1.ppt.endpoints.prompts import (
 from enum import Enum
 from api.middlewares import get_current_user
 from models.sql.user import User
-from utils.logger import logger
+from common.logger import logger
 from fastapi import BackgroundTasks
 from models.sql.async_presentation_generation_status import AsyncPresentationGenerationTaskModel
-from services.database import get_async_session
+from dal.database import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 

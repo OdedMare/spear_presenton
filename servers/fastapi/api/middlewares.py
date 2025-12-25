@@ -8,9 +8,9 @@ from starlette.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from utils.get_env import get_can_change_keys_env
-from utils.logger import logger, log_api_request
+from common.logger import logger, log_api_request
 from utils.user_config import update_env_with_user_config
-from services.database import get_async_session
+from dal.database import get_async_session
 from services.auth_service import AuthService
 from models.sql.user import User
 

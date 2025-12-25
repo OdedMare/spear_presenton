@@ -17,7 +17,7 @@ from models.sse_response import (
     SSEStatusResponse,
 )
 from services.temp_file_service import TEMP_FILE_SERVICE
-from services.database import get_async_session
+from dal.database import get_async_session
 from services.documents_loader import DocumentsLoader
 from utils.llm_calls.generate_presentation_outlines import generate_ppt_outline
 from utils.ppt_utils import get_presentation_title_from_outlines

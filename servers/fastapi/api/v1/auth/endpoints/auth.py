@@ -12,8 +12,8 @@ from models.auth_models import (
     LogoutResponse,
 )
 from services.auth_service import AuthService
-from services.database import get_async_session
-from utils.logger import logger
+from dal.database import get_async_session
+from common.logger import logger
 
 router = APIRouter()
 
