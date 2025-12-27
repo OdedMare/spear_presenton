@@ -46,7 +46,17 @@ Key Rules:
 6. No table of contents slides
 7. Follow language guidelines
 
-REMEMBER: Output must contain {n_slides} slides.
+CRITICAL JSON STRUCTURE:
+Your response MUST be a JSON object with a "slides" array containing exactly {n_slides} slide objects.
+Example structure:
+{{
+  "slides": [
+    {{"title": "...", "content": "..."}},
+    {{"title": "...", "content": "..."}}
+  ]
+}}
+
+REMEMBER: Output must contain {n_slides} slides in the "slides" array.
 
 Use web search for latest information when needed.
         """
@@ -76,6 +86,15 @@ Use web search for latest information when needed.
         - Do not generate table of contents slide.
         - Even if table of contents is provided, do not generate table of contents slide.
         {"- Always make first slide a title slide." if include_title_slide else "- Do not include title slide in the presentation."}
+
+        CRITICAL: Your response MUST be a valid JSON object with a "slides" array. Do not return any other structure.
+        The JSON must follow this exact format:
+        {{
+          "slides": [
+            {{"title": "Slide Title", "content": "Slide content in markdown"}},
+            ...
+          ]
+        }}
 
         **Search web to get latest information about the topic**
     """

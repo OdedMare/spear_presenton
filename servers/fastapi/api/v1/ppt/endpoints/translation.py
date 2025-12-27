@@ -11,7 +11,7 @@ Features:
     - Upload PPTX and translate to target language
     - Multi-agent pipeline with retry logic
     - RTL support for Hebrew/Arabic
-    - Structured error responses
+    2- Structured error responses
     - Translation map persistence
 """
 

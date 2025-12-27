@@ -10,6 +10,13 @@ from utils.model_availability import (
 )
 from utils.safe_init import safe_init
 from utils.user_config import update_env_with_user_config
+from services.icon_finder_service import ICON_FINDER_SERVICE
+
+
+@safe_init(message="Warning: Icon library initialization failed, icons will load on first use")
+async def initialize_icon_library():
+    """Pre-initialize icon library to avoid delays on first icon search."""
+    await ICON_FINDER_SERVICE._ensure_collection_initialized()
 
 
 @safe_init(message="Warning: Database unavailable, continuing without migrations")
@@ -37,4 +44,5 @@ async def app_lifespan(_: FastAPI):
 
     await initialize_database()
     await initialize_models_and_providers()
+    await initialize_icon_library()
     yield

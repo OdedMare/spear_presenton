@@ -323,6 +323,18 @@ async function getSlidesAndSpeakerNotes(page: Page) {
 async function getSlidesWrapper(page: Page): Promise<ElementHandle<Element>> {
   const slides_wrapper = await page.$("#presentation-slides-wrapper");
   if (!slides_wrapper) {
+    // Log page state for debugging
+    const pageUrl = page.url();
+    const pageTitle = await page.title().catch(() => 'Unable to get title');
+    const bodyText = await page.evaluate(() => document.body?.innerText?.substring(0, 500)).catch(() => 'Unable to get body text');
+
+    logger.error("Presentation slides wrapper not found", {
+      event_type: 'pptx_slides_wrapper_missing',
+      page_url: pageUrl,
+      page_title: pageTitle,
+      body_preview: bodyText,
+    });
+
     throw new ApiError("Presentation slides not found");
   }
   return slides_wrapper;

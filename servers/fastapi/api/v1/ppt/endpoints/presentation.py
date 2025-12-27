@@ -442,6 +442,19 @@ async def export_presentation_as_pptx_or_pdf(
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found")
 
+    # Validate presentation has slides before attempting export
+    if not presentation.outlines or not presentation.outlines.get("slides"):
+        logger.error(f"Attempted to export presentation without slides", extra={"extra_fields": {
+            "event_type": "export_validation_failed",
+            "presentation_id": str(id),
+            "has_outlines": bool(presentation.outlines),
+            "error": "no_slides"
+        }})
+        raise HTTPException(
+            status_code=400, 
+            detail="Presentation has no slides. Please generate slides before exporting."
+        )
+
     presentation_and_path = await export_presentation(
         id,
         presentation.title or str(uuid.uuid4()),

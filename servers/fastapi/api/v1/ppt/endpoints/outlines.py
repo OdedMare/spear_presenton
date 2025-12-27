@@ -90,11 +90,35 @@ async def stream_outlines(
         except Exception as e:
             traceback.print_exc()
             yield SSEErrorResponse(
-                detail=f"Failed to generate presentation outlines. Please try again. {str(e)}",
+                detail=f"Failed to parse presentation outlines JSON. Please try again. {str(e)}",
             ).to_string()
             return
 
-        presentation_outlines = PresentationOutlineModel(**presentation_outlines_json)
+        # Validate the structure before creating Pydantic model
+        if "slides" not in presentation_outlines_json:
+            logger.error(f"LLM returned malformed outline structure. Missing 'slides' field. Got: {presentation_outlines_json}", extra={"extra_fields": {
+                "event_type": "outline_validation_error",
+                "error": "missing_slides_field",
+                "response_keys": list(presentation_outlines_json.keys()),
+                "response_preview": str(presentation_outlines_json)[:500]
+            }})
+            yield SSEErrorResponse(
+                detail="The AI returned an invalid outline structure. Please try again with a different prompt or model.",
+            ).to_string()
+            return
+
+        try:
+            presentation_outlines = PresentationOutlineModel(**presentation_outlines_json)
+        except Exception as e:
+            logger.error(f"Failed to validate presentation outlines: {str(e)}", exc_info=True, extra={"extra_fields": {
+                "event_type": "outline_pydantic_validation_error",
+                "error": str(e),
+                "response_keys": list(presentation_outlines_json.keys())
+            }})
+            yield SSEErrorResponse(
+                detail=f"Failed to validate presentation outlines. The AI response doesn't match the expected format. Please try again. Error: {str(e)}",
+            ).to_string()
+            return
 
         presentation_outlines.slides = presentation_outlines.slides[
             :n_slides_to_generate

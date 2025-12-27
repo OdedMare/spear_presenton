@@ -645,7 +645,9 @@ async def process_rewrite_task(
             "source_language": source_language,
             "target_language": target_language,
             "slide_count": len(placeholder_structure.get("slides", [])),
+            "user_prompt": user_prompt if user_prompt else None,
             "user_prompt_length": len(user_prompt) if user_prompt else 0,
+            "keywords": keywords,
             "task_id": str(task_id)
         }})
 
