@@ -82,16 +82,22 @@ class ElasticsearchHandler(logging.Handler):
 
             # Send to Elasticsearch
             url = f"{self.elasticsearch_url}/{index_name}/_doc"
-            self.session.post(
+            response = self.session.post(
                 url,
                 json=log_doc,
                 headers={"Content-Type": "application/json"},
                 timeout=5
             )
+            response.raise_for_status()
 
         except Exception as e:
             # Don't let logging errors crash the application
-            print(f"Error sending log to Elasticsearch: {e}", file=sys.stderr)
+            # Only print connection errors once to avoid spam
+            error_msg = str(e)
+            if "Connection" in error_msg or "refused" in error_msg.lower():
+                print(f"Failed to send log to Elasticsearch: Connection Refused - Check ELASTICSEARCH_URL environment variable", file=sys.stderr)
+            else:
+                print(f"Failed to send log to Elasticsearch: {error_msg}", file=sys.stderr)
 
 
 class CustomLogger(logging.Logger):

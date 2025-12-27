@@ -65,12 +65,31 @@ from docling.datamodel.base_models import InputFormat
 
 
 class DoclingService:
+    """
+    Singleton service for document conversion using Docling.
+    
+    CRITICAL: This MUST be a singleton because DocumentConverter loads
+    heavy ML models (hundreds of MB) into memory. Creating multiple instances
+    will cause MemoryError in production environments.
+    """
+    _instance = None
+    _converter = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
+        # Only initialize once
+        if DoclingService._converter is not None:
+            return
 
         self.pipeline_options = PdfPipelineOptions()
         self.pipeline_options.do_ocr = False
 
-        self.converter = DocumentConverter(
+        # This loads heavy ML models - only do this ONCE
+        DoclingService._converter = DocumentConverter(
             allowed_formats=[InputFormat.PPTX, InputFormat.PDF, InputFormat.DOCX],
             format_options={
                 InputFormat.DOCX: WordFormatOption(
@@ -86,5 +105,14 @@ class DoclingService:
         )
 
     def parse_to_markdown(self, file_path: str) -> str:
-        result = self.converter.convert(file_path)
+        result = DoclingService._converter.convert(file_path)
         return result.document.export_to_markdown()
+
+
+# Global singleton instance
+_docling_service_instance = DoclingService()
+
+
+def get_docling_service() -> DoclingService:
+    """Get the singleton DoclingService instance."""
+    return _docling_service_instance

@@ -10,7 +10,7 @@ from constants.documents import (
     TEXT_MIME_TYPES,
     WORD_TYPES,
 )
-from services.docling_service import DoclingService
+from services.docling_service import get_docling_service
 
 
 class DocumentsLoader:
@@ -18,7 +18,8 @@ class DocumentsLoader:
     def __init__(self, file_paths: List[str]):
         self._file_paths = file_paths
 
-        self.docling_service = DoclingService()
+        # Use singleton instance to prevent memory exhaustion
+        self.docling_service = get_docling_service()
 
         self._documents: List[str] = []
         self._images: List[List[str]] = []
