@@ -102,22 +102,28 @@ class Logger {
       return;
     }
 
+    const normalizedExtra: Record<string, any> =
+      extra && typeof extra === 'object' ? { ...extra } : {};
+    if (!Object.prototype.hasOwnProperty.call(normalizedExtra, 'username') || normalizedExtra.username === undefined) {
+      normalizedExtra.username = null;
+    }
+
     // Console logging (always enabled)
     const timestamp = new Date().toISOString();
     const logMessage = `${timestamp} - ${level} - ${message}`;
 
     switch (level) {
       case LogLevel.DEBUG:
-        console.debug(logMessage, extra);
+        console.debug(logMessage, normalizedExtra);
         break;
       case LogLevel.INFO:
-        console.info(logMessage, extra);
+        console.info(logMessage, normalizedExtra);
         break;
       case LogLevel.WARN:
-        console.warn(logMessage, extra);
+        console.warn(logMessage, normalizedExtra);
         break;
       case LogLevel.ERROR:
-        console.error(logMessage, extra);
+        console.error(logMessage, normalizedExtra);
         break;
     }
 
@@ -130,7 +136,7 @@ class Logger {
         message,
         environment: process.env.ENVIRONMENT || 'production',
         service: 'presenton',
-        ...extra,
+        ...normalizedExtra,
       };
 
       this.sendToElasticsearch(logDoc);

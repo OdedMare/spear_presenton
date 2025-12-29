@@ -8,12 +8,29 @@ Usage:
     logger.error("An error occurred", extra={"user_id": 123})
 """
 
+import contextvars
 import logging
 import os
 import sys
 from datetime import datetime
 from typing import Any, Dict, Optional
 import json
+
+
+LOG_CONTEXT_USER_ID = contextvars.ContextVar("log_user_id", default=None)
+LOG_CONTEXT_USERNAME = contextvars.ContextVar("log_username", default=None)
+
+
+def set_log_context(user_id: Optional[int], username: Optional[str]) -> None:
+    """Set per-request log context."""
+    LOG_CONTEXT_USER_ID.set(user_id)
+    LOG_CONTEXT_USERNAME.set(username)
+
+
+def clear_log_context() -> None:
+    """Clear per-request log context."""
+    LOG_CONTEXT_USER_ID.set(None)
+    LOG_CONTEXT_USERNAME.set(None)
 
 
 class ElasticsearchHandler(logging.Handler):
@@ -83,6 +100,8 @@ class ElasticsearchHandler(logging.Handler):
             if hasattr(record, "extra_fields") and isinstance(record.extra_fields, dict):
                 log_doc.update(record.extra_fields)
 
+            log_doc.setdefault("username", None)
+
             # Send to Elasticsearch
             url = f"{self.elasticsearch_url}/{index_name}/_doc"
             response = self.session.post(
@@ -123,12 +142,20 @@ class CustomLogger(logging.Logger):
 
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1, **kwargs):
         """Override _log to handle extra fields."""
-        if extra:
-            # Store extra fields in the record
-            if "extra_fields" not in extra:
-                extra["extra_fields"] = {}
-            if kwargs:
-                extra["extra_fields"].update(kwargs)
+        if extra is None:
+            extra = {}
+
+        if "extra_fields" not in extra or not isinstance(extra["extra_fields"], dict):
+            extra["extra_fields"] = {}
+
+        if kwargs:
+            extra["extra_fields"].update(kwargs)
+
+        if "user_id" not in extra["extra_fields"]:
+            extra["extra_fields"]["user_id"] = LOG_CONTEXT_USER_ID.get()
+        if "username" not in extra["extra_fields"]:
+            extra["extra_fields"]["username"] = LOG_CONTEXT_USERNAME.get()
+
         super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel + 1)
 
 

@@ -226,6 +226,9 @@ export class PresentationGenerationApi {
   // EXPORT PRESENTATION
   static async exportAsPPTX(presentationData: any) {
     try {
+      console.log("exportAsPPTX: Sending request to /api/v1/ppt/presentation/export/pptx");
+      console.log("exportAsPPTX: Payload:", JSON.stringify(presentationData).substring(0, 200) + "...");
+
       const response = await fetch(
         `/api/v1/ppt/presentation/export/pptx`,
         {
@@ -235,6 +238,18 @@ export class PresentationGenerationApi {
           cache: "no-cache",
         }
       );
+
+      console.log("exportAsPPTX: Response status:", response.status);
+      console.log("exportAsPPTX: Response headers:", Object.fromEntries(response.headers.entries()));
+
+      // Check if response is HTML (indicating redirect to login or error page)
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("text/html")) {
+        const htmlText = await response.text();
+        console.error("exportAsPPTX: Received HTML instead of JSON:", htmlText.substring(0, 500));
+        throw new Error("Server returned HTML instead of JSON - possible redirect to login page");
+      }
+
       return await ApiResponseHandler.handleResponse(response, "Failed to export as PowerPoint");
     } catch (error) {
       console.error("error in pptx export", error);

@@ -116,15 +116,18 @@ async def process_old_and_new_slides_and_fetch_assets(
 
 
 def process_slide_add_placeholder_assets(slide: SlideModel):
+    """
+    Add placeholder assets to slides.
 
-    image_paths = get_dict_paths_with_key(slide.content, "__image_prompt__")
+    NOTE: Image placeholders have been removed - users add images manually.
+    This function only adds placeholder icons now.
+    """
+
+    # NOTE: Image placeholder insertion removed - users add images manually
+    # Old code added placeholder images at __image_prompt__ paths
+
+    # Only add placeholder icons
     icon_paths = get_dict_paths_with_key(slide.content, "__icon_query__")
-
-    for image_path in image_paths:
-        image_dict = get_dict_at_path(slide.content, image_path)
-        image_dict["__image_url__"] = "/static/images/placeholder.jpg"
-        set_dict_at_path(slide.content, image_path, image_dict)
-
     for icon_path in icon_paths:
         icon_dict = get_dict_at_path(slide.content, icon_path)
         icon_dict["__icon_url__"] = "/static/icons/placeholder.svg"

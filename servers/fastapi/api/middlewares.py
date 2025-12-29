@@ -8,7 +8,7 @@ from starlette.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from utils.get_env import get_can_change_keys_env
-from utils.logger import logger, log_api_request
+from utils.logger import clear_log_context, logger, log_api_request, set_log_context
 from utils.user_config import update_env_with_user_config
 from services.database import get_async_session
 from services.auth_service import AuthService
@@ -26,6 +26,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Log each request with duration and request id using the shared logger."""
 
     async def dispatch(self, request: Request, call_next):
+        clear_log_context()
         start = time.perf_counter()
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.request_id = request_id
@@ -93,6 +94,7 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired session")
 
+    set_log_context(user.id, user.username)
     return user
 
 

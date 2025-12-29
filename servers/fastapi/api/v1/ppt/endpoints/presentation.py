@@ -523,18 +523,38 @@ async def update_presentation(
 async def export_presentation_as_pptx(
     pptx_model: Annotated[PptxPresentationModel, Body()],
 ):
-    temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
+    try:
+        logger.info("PPTX export started", extra={"extra_fields": {
+            "event_type": "pptx_export_started",
+            "slides_count": len(pptx_model.slides) if pptx_model.slides else 0,
+            "has_name": bool(pptx_model.name)
+        }})
 
-    pptx_creator = PptxPresentationCreator(pptx_model, temp_dir)
-    await pptx_creator.create_ppt()
+        temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
 
-    export_directory = get_exports_directory()
-    pptx_path = os.path.join(
-        export_directory, f"{pptx_model.name or uuid.uuid4()}.pptx"
-    )
-    pptx_creator.save(pptx_path)
+        pptx_creator = PptxPresentationCreator(pptx_model, temp_dir)
+        await pptx_creator.create_ppt()
 
-    return f"/api/v1/ppt/files/download/{os.path.basename(pptx_path)}"
+        export_directory = get_exports_directory()
+        pptx_path = os.path.join(
+            export_directory, f"{pptx_model.name or uuid.uuid4()}.pptx"
+        )
+        pptx_creator.save(pptx_path)
+
+        download_path = f"/api/v1/ppt/files/download/{os.path.basename(pptx_path)}"
+        logger.info("PPTX export completed", extra={"extra_fields": {
+            "event_type": "pptx_export_completed",
+            "download_path": download_path
+        }})
+
+        return download_path
+    except Exception as e:
+        logger.error(f"PPTX export failed: {type(e).__name__}: {str(e)}", extra={"extra_fields": {
+            "event_type": "pptx_export_failed",
+            "error_type": type(e).__name__,
+            "error": str(e)
+        }})
+        raise HTTPException(status_code=500, detail=f"Failed to export PPTX: {str(e)}")
 
 
 @PRESENTATION_ROUTER.post("/export", response_model=PresentationPathAndEditPath)
