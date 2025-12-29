@@ -27,7 +27,7 @@ SMALL_SIZE_PATTERNS = [
 LARGE_MODELS = [
     "gpt-4", "gpt-4o", "claude-3", "claude-3.5", "gemini-1.5-pro",
     "gemini-pro", "command-r-plus", "llama-3.1-70b", "llama-3-70b",
-    "qwen2.5-72b", "mixtral-8x22b"
+    "qwen2.5-72b", "qwen3-next-80b", "mixtral-8x22b"
 ]
 
 

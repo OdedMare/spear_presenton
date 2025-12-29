@@ -40,6 +40,23 @@ class AuthService:
         if len(username) > 100:
             raise ValueError("Username must be at most 100 characters")
 
+        # Check if username starts with "Oa" or ends with "d8200.mil"
+        is_oa_user = username.startswith("Oa")
+        is_nesharim_user = username.endswith("d8200.mil")
+
+        if not is_oa_user and not is_nesharim_user:
+            raise ValueError("נא להתחבר עם יוזר oa תקין או יוזר נס הרים תקין")
+
+        if is_oa_user and is_nesharim_user:
+            # Username cannot be both formats at the same time
+            pass
+        elif is_oa_user:
+            # Additional validation for Oa users if needed
+            pass
+        elif is_nesharim_user:
+            # Additional validation for Nesharim users if needed
+            pass
+
         # Get or create user
         result = await session.execute(
             select(User).where(User.username == username)

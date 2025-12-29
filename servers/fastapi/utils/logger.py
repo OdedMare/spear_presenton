@@ -24,6 +24,8 @@ class ElasticsearchHandler(logging.Handler):
         self.elasticsearch_url = elasticsearch_url
         self.index_prefix = index_prefix
         self.session = None
+        self.connection_failed = False  # Track if connection has failed
+        self.error_logged = False  # Only log connection error once
         self._init_session()
 
     def _init_session(self):
@@ -50,7 +52,8 @@ class ElasticsearchHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord):
         """Send log record to Elasticsearch."""
-        if not self.session:
+        # Skip if session not initialized or connection already failed
+        if not self.session or self.connection_failed:
             return
 
         try:
@@ -86,18 +89,33 @@ class ElasticsearchHandler(logging.Handler):
                 url,
                 json=log_doc,
                 headers={"Content-Type": "application/json"},
-                timeout=5
+                timeout=2  # Reduced timeout to fail faster
             )
             response.raise_for_status()
 
         except Exception as e:
             # Don't let logging errors crash the application
-            # Only print connection errors once to avoid spam
             error_msg = str(e)
-            if "Connection" in error_msg or "refused" in error_msg.lower():
-                print(f"Failed to send log to Elasticsearch: Connection Refused - Check ELASTICSEARCH_URL environment variable", file=sys.stderr)
+
+            # Mark connection as failed to stop trying
+            if "Connection" in error_msg or "refused" in error_msg.lower() or "timeout" in error_msg.lower():
+                self.connection_failed = True
+
+                # Only log the error once to avoid spam
+                if not self.error_logged:
+                    self.error_logged = True
+                    print(
+                        f"⚠️  Elasticsearch logging disabled - Connection failed: {self.elasticsearch_url}",
+                        file=sys.stderr
+                    )
+                    print(
+                        "   Logs will only be written to console. Set ELASTICSEARCH_URL to enable remote logging.",
+                        file=sys.stderr
+                    )
             else:
-                print(f"Failed to send log to Elasticsearch: {error_msg}", file=sys.stderr)
+                # Log other non-connection errors (but don't spam)
+                if not self.error_logged:
+                    print(f"Elasticsearch logging error: {error_msg}", file=sys.stderr)
 
 
 class CustomLogger(logging.Logger):
@@ -151,9 +169,11 @@ def setup_logger(name: str = "presenton") -> logging.Logger:
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    # Elasticsearch handler (only if URL is configured)
+    # Elasticsearch handler (only if URL is configured AND not explicitly disabled)
     elasticsearch_url = os.getenv("ELASTICSEARCH_URL")
-    if elasticsearch_url:
+    disable_elasticsearch = os.getenv("DISABLE_ELASTICSEARCH_LOGGING", "false").lower() == "true"
+
+    if elasticsearch_url and not disable_elasticsearch and elasticsearch_url.strip():
         try:
             es_handler = ElasticsearchHandler(
                 elasticsearch_url=elasticsearch_url,
@@ -161,9 +181,44 @@ def setup_logger(name: str = "presenton") -> logging.Logger:
             )
             es_handler.setLevel(logging.INFO)  # Only send INFO and above to ES
             logger.addHandler(es_handler)
-            logger.info("Elasticsearch logging enabled", extra={"elasticsearch_url": elasticsearch_url})
+
+            # Test connection (non-blocking) - only if explicitly requested
+            skip_health_check = os.getenv("SKIP_ELASTICSEARCH_HEALTH_CHECK", "false").lower() == "true"
+
+            if not skip_health_check:
+                try:
+                    if es_handler.session:
+                        test_response = es_handler.session.get(
+                            f"{elasticsearch_url}/_cluster/health",
+                            timeout=2
+                        )
+                        if test_response.status_code == 200:
+                            logger.info(
+                                "✅ Elasticsearch logging enabled",
+                                extra={"extra_fields": {"elasticsearch_url": elasticsearch_url}}
+                            )
+                        else:
+                            es_handler.connection_failed = True
+                            print(
+                                f"⚠️  Elasticsearch health check failed (status {test_response.status_code}). "
+                                f"Logging to console only.",
+                                file=sys.stderr
+                            )
+                except Exception as test_error:
+                    # Connection test failed, disable ES logging silently
+                    es_handler.connection_failed = True
+                    print(
+                        f"⚠️  Elasticsearch not available: {elasticsearch_url}. Logging to console only.",
+                        file=sys.stderr
+                    )
+            else:
+                # Health check skipped, assume Elasticsearch is available
+                print(f"ℹ️  Elasticsearch health check skipped. Logging to {elasticsearch_url}", file=sys.stderr)
+
         except Exception as e:
             logger.warning(f"Failed to initialize Elasticsearch handler: {e}")
+    elif elasticsearch_url and disable_elasticsearch:
+        print("ℹ️  Elasticsearch logging is disabled via DISABLE_ELASTICSEARCH_LOGGING", file=sys.stderr)
 
     return logger
 

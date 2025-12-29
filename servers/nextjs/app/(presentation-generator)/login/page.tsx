@@ -52,6 +52,7 @@ const logClientEvent = (
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
+  const [validationError, setValidationError] = useState("");
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { isAuthenticated, isLoading, error } = useSelector(
@@ -75,17 +76,42 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, router]);
 
+  const validateUsername = (username: string): string | null => {
+    const trimmed = username.trim();
+
+    if (!trimmed) {
+      return "שם המשתמש לא יכול להיות רק";
+    }
+
+    const isOaUser = trimmed.startsWith("Oa");
+    const isNesharimUser = trimmed.endsWith("d8200.mil");
+
+    if (!isOaUser && !isNesharimUser) {
+      return "נא להתחבר עם יוזר oa תקין או יוזר נס הרים תקין";
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedUsername = username.trim();
-    if (!trimmedUsername) {
-      logClientEvent("warn", "Login submit blocked: empty username", {
+
+    // Client-side validation
+    const validationErr = validateUsername(trimmedUsername);
+    if (validationErr) {
+      setValidationError(validationErr);
+      logClientEvent("warn", "Login submit blocked: validation failed", {
         event_type: "login_submit_blocked",
-        reason: "empty_username",
+        reason: "validation_failed",
+        validation_error: validationErr,
       });
       return;
     }
+
+    // Clear validation error on successful validation
+    setValidationError("");
 
     logClientEvent("info", `Login attempt for user: ${trimmedUsername}`, {
       event_type: "login_submit_start",
@@ -187,9 +213,15 @@ export default function LoginPage() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="חיבור עם יוזר נס הרים או oa"
+                  placeholder="לדוגמה: ugda91_odedm@d8200.mil או Oa212696678"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    // Clear validation error when user types
+                    if (validationError) {
+                      setValidationError("");
+                    }
+                  }}
                   disabled={isLoading}
                   autoFocus
                   minLength={2}
@@ -199,9 +231,11 @@ export default function LoginPage() {
                 />
               </div>
 
-              {error && (
+              {(validationError || error) && (
                 <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-                  <p className="text-sm text-red-800 font-inter">{error}</p>
+                  <p className="text-sm text-red-800 font-inter">
+                    {validationError || error}
+                  </p>
                 </div>
               )}
 

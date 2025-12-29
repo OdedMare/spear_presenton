@@ -284,91 +284,126 @@ async def stream_presentation(
     username = current_user.username if current_user else None
 
     async def inner():
-        structure = presentation.get_structure()
-        layout = presentation.get_layout()
-        outline = presentation.get_presentation_outline()
+        try:
+            structure = presentation.get_structure()
+            layout = presentation.get_layout()
+            outline = presentation.get_presentation_outline()
 
-        # These tasks will be gathered and awaited after all slides are generated
-        async_assets_generation_tasks = []
+            # These tasks will be gathered and awaited after all slides are generated
+            async_assets_generation_tasks = []
 
-        slides: List[SlideModel] = []
-        yield SSEResponse(
-            event="response",
-            data=json.dumps({"type": "chunk", "chunk": '{ "slides": [ '}),
-        ).to_string()
-        for i, slide_layout_index in enumerate(structure.slides):
-            slide_layout = layout.slides[slide_layout_index]
+            slides: List[SlideModel] = []
+            yield SSEResponse(
+                event="response",
+                data=json.dumps({"type": "chunk", "chunk": '{ "slides": [ '}),
+            ).to_string()
+            for i, slide_layout_index in enumerate(structure.slides):
+                slide_layout = layout.slides[slide_layout_index]
 
-            try:
-                slide_content = await get_slide_content_from_type_and_outline(
-                    slide_layout,
-                    outline.slides[i],
-                    presentation.language,
-                    presentation.tone,
-                    presentation.verbosity,
-                    presentation.instructions,
+                try:
+                    slide_content = await get_slide_content_from_type_and_outline(
+                        slide_layout,
+                        outline.slides[i],
+                        presentation.language,
+                        presentation.tone,
+                        presentation.verbosity,
+                        presentation.instructions,
+                    )
+                except HTTPException as e:
+                    yield SSEErrorResponse(detail=e.detail).to_string()
+                    yield SSEResponse(
+                        event="response",
+                        data=json.dumps({"type": "closing"}),
+                    ).to_string()
+                    return
+
+                slide = SlideModel(
+                    presentation=id,
+                    layout_group=layout.name,
+                    layout=slide_layout.id,
+                    index=i,
+                    speaker_note=slide_content.get("__speaker_note__", ""),
+                    content=slide_content,
                 )
-            except HTTPException as e:
-                yield SSEErrorResponse(detail=e.detail).to_string()
-                return
+                slides.append(slide)
 
-            slide = SlideModel(
-                presentation=id,
-                layout_group=layout.name,
-                layout=slide_layout.id,
-                index=i,
-                speaker_note=slide_content.get("__speaker_note__", ""),
-                content=slide_content,
-            )
-            slides.append(slide)
+                # This will mutate slide and add placeholder assets
+                process_slide_add_placeholder_assets(slide)
 
-            # This will mutate slide and add placeholder assets
-            process_slide_add_placeholder_assets(slide)
-
-            # This will mutate slide
-            async_assets_generation_tasks.append(
-                process_slide_and_fetch_assets(
-                    image_generation_service, slide, user_id, username
+                # This will mutate slide
+                async_assets_generation_tasks.append(
+                    process_slide_and_fetch_assets(
+                        image_generation_service, slide, user_id, username
+                    )
                 )
-            )
+
+                yield SSEResponse(
+                    event="response",
+                    data=json.dumps({"type": "chunk", "chunk": slide.model_dump_json()}),
+                ).to_string()
 
             yield SSEResponse(
                 event="response",
-                data=json.dumps({"type": "chunk", "chunk": slide.model_dump_json()}),
+                data=json.dumps({"type": "chunk", "chunk": " ] }"}),
             ).to_string()
 
-        yield SSEResponse(
-            event="response",
-            data=json.dumps({"type": "chunk", "chunk": " ] }"}),
-        ).to_string()
+            generated_assets_lists = await asyncio.gather(*async_assets_generation_tasks)
+            generated_assets = []
+            for assets_list in generated_assets_lists:
+                generated_assets.extend(assets_list)
 
-        generated_assets_lists = await asyncio.gather(*async_assets_generation_tasks)
-        generated_assets = []
-        for assets_list in generated_assets_lists:
-            generated_assets.extend(assets_list)
+            # Moved this here to make sure new slides are generated before deleting the old ones
+            await sql_session.execute(
+                delete(SlideModel).where(SlideModel.presentation == id)
+            )
+            await sql_session.commit()
 
-        # Moved this here to make sure new slides are generated before deleting the old ones
-        await sql_session.execute(
-            delete(SlideModel).where(SlideModel.presentation == id)
-        )
-        await sql_session.commit()
+            sql_session.add(presentation)
+            sql_session.add_all(slides)
+            sql_session.add_all(generated_assets)
+            await sql_session.commit()
 
-        sql_session.add(presentation)
-        sql_session.add_all(slides)
-        sql_session.add_all(generated_assets)
-        await sql_session.commit()
+            response = PresentationWithSlides(
+                **presentation.model_dump(),
+                slides=slides,
+            )
 
-        response = PresentationWithSlides(
-            **presentation.model_dump(),
-            slides=slides,
-        )
+            yield SSECompleteResponse(
+                key="presentation",
+                value=response.model_dump(mode="json"),
+            ).to_string()
 
-        yield SSECompleteResponse(
-            key="presentation",
-            value=response.model_dump(mode="json"),
-        ).to_string()
+            # Give a moment for the complete response to be sent before closing
+            await asyncio.sleep(0.1)
 
-    return StreamingResponse(inner(), media_type="text/event-stream")
+        except Exception as e:
+            logger.error(f"Unexpected error in presentation streaming: {str(e)}", exc_info=True, extra={"extra_fields": {
+                "event_type": "presentation_streaming_unexpected_error",
+                "error": str(e)
+            }})
+            yield SSEErrorResponse(
+                detail=f"An unexpected error occurred while generating presentation. Please try again. Error: {str(e)}",
+            ).to_string()
+            await asyncio.sleep(0.1)
+        finally:
+            # Always send closing event to properly close the stream
+            yield SSEResponse(
+                event="response",
+                data=json.dumps({"type": "closing"}),
+            ).to_string()
+
+            # Ensure the closing event is fully sent before stream terminates
+            await asyncio.sleep(0.1)
+
+    return StreamingResponse(
+        inner(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Connection": "keep-alive",
+        }
+    )
 
 
 @PRESENTATION_ROUTER.patch("/update", response_model=PresentationWithSlides)
