@@ -16,6 +16,13 @@ const INTERNAL_API_ROUTES = [
   '/api/template',
 ];
 
+// Streaming API routes (EventSource cannot send Authorization headers)
+// These rely on session cookies instead of Bearer tokens
+const STREAMING_API_ROUTES = [
+  '/api/v1/ppt/presentation/stream/',
+  '/api/v1/ppt/outlines/stream/',
+];
+
 export function middleware(request: NextRequest) {
   const authRequired = process.env.NEXT_PUBLIC_REQUIRE_AUTH?.toLowerCase() === 'true';
 
@@ -38,6 +45,11 @@ export function middleware(request: NextRequest) {
 
   // Allow internal API routes (Puppeteer)
   if (INTERNAL_API_ROUTES.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // Allow streaming API routes (EventSource cannot send headers)
+  if (STREAMING_API_ROUTES.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 

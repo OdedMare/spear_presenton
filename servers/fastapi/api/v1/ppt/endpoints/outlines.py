@@ -49,19 +49,42 @@ async def stream_outlines(
     async def inner():
         try:
             logger.debug(f"[OutlineStream {id}] Entering inner() function")
-            yield SSEStatusResponse(
-                status="Generating presentation outlines..."
-            ).to_string()
 
             additional_context = ""
             if presentation.file_paths:
                 logger.debug(f"[OutlineStream {id}] Loading {len(presentation.file_paths)} document files")
+                yield SSEStatusResponse(
+                    status=f"Loading and processing {len(presentation.file_paths)} document(s)..."
+                ).to_string()
+
+                # Load documents with keepalive
                 documents_loader = DocumentsLoader(file_paths=presentation.file_paths)
-                await documents_loader.load_documents(temp_dir)
+                load_task = asyncio.create_task(documents_loader.load_documents(temp_dir))
+
+                # Send keepalive messages while loading documents
+                keepalive_count = 0
+                while not load_task.done():
+                    await asyncio.sleep(2)  # Keepalive every 2 seconds
+                    if not load_task.done():
+                        keepalive_count += 1
+                        yield SSEStatusResponse(
+                            status=f"Processing documents... ({keepalive_count * 2}s)"
+                        ).to_string()
+
+                # Get the result
+                await load_task
+
                 documents = documents_loader.documents
                 if documents:
                     additional_context = "\n\n".join(documents)
                     logger.debug(f"[OutlineStream {id}] Loaded {len(documents)} documents, total context length: {len(additional_context)} chars")
+                    yield SSEStatusResponse(
+                        status=f"Documents loaded successfully. Analyzing content..."
+                    ).to_string()
+            else:
+                yield SSEStatusResponse(
+                    status="Analyzing content and creating outline structure..."
+                ).to_string()
 
             presentation_outlines_text = ""
 
@@ -74,7 +97,12 @@ async def stream_outlines(
                 logger.debug(f"[OutlineStream {id}] Generating {n_slides_to_generate} slides (excluding {presentation.n_slides - n_slides_to_generate} TOC slides)")
 
             logger.debug(f"[OutlineStream {id}] Starting LLM streaming for outline generation")
+            yield SSEStatusResponse(
+                status=f"Generating outlines for {n_slides_to_generate} slides..."
+            ).to_string()
+
             chunk_count = 0
+            last_status_time = asyncio.get_event_loop().time()
             async for chunk in generate_ppt_outline(
                 presentation.content,
                 n_slides_to_generate,
@@ -108,6 +136,14 @@ async def stream_outlines(
                 ).to_string()
 
                 presentation_outlines_text += chunk
+
+                # Send periodic keepalive status during long LLM generation
+                current_time = asyncio.get_event_loop().time()
+                if current_time - last_status_time > 5:  # Every 5 seconds
+                    yield SSEStatusResponse(
+                        status=f"Creating outline structure... ({chunk_count} chunks processed)"
+                    ).to_string()
+                    last_status_time = current_time
 
             logger.debug(f"[OutlineStream {id}] LLM streaming completed with {chunk_count} chunks")
 

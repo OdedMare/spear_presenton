@@ -25,6 +25,7 @@ interface OutlineContentProps {
     isStreaming: boolean;
     activeSlideIndex: number | null;
     highestActiveIndex: number;
+    statusMessage?: string;
     onDragEnd: (event: any) => void;
     onAddSlide: () => void;
 }
@@ -35,6 +36,7 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
     isStreaming,
     activeSlideIndex,
     highestActiveIndex,
+    statusMessage,
     onDragEnd,
     onAddSlide
 }) => {
@@ -50,11 +52,14 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
     return (
         <div className="space-y-6 font-instrument_sans">
             {isLoading && (!outlines || outlines.length === 0) && (
-                <div className="flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center gap-2">
                     <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 text-blue-600 px-2 py-0.5 text-xs">
                         <Loader2 className="h-3 w-3 animate-spin" />
-                        חושב
+                        מייצר את תוכן המצגת שלך...  
                     </span>
+                    {statusMessage && (
+                        <p className="text-sm text-gray-600 text-center">{statusMessage}</p>
+                    )}
                 </div>
             )}
             {/* <div className="flex items-center justify-between">

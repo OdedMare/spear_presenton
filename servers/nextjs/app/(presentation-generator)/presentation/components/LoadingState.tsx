@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
+interface LoadingStateProps {
+    statusMessage?: string;
+}
 
-const LoadingState = () => {
+const LoadingState: React.FC<LoadingStateProps> = ({ statusMessage }) => {
     const [currentTipIndex, setCurrentTipIndex] = useState(0);
     const tips = [
         "מכינים לכם מצגת עם קסם של בינה מלאכותית ✨",
@@ -33,10 +36,16 @@ const LoadingState = () => {
                         <h2 className="text-2xl font-semibold text-gray-800">יוצרים את המצגת שלך</h2>
                     </div>
                     <div className="w-full max-w-md bg-white/80 backdrop-blur-sm rounded-xl shadow-sm p-6 mb-4">
-                        <div className="min-h-[120px] flex items-center justify-center">
+                        <div className="min-h-[120px] flex flex-col items-center justify-center gap-4">
                             <p className="text-gray-700 text-lg text-center">
-                                {tips[currentTipIndex]}
+                                {statusMessage || tips[currentTipIndex]}
                             </p>
+                            {statusMessage && (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                    <span>Processing...</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -5,7 +5,9 @@ import { setOutlines } from "@/store/slices/presentationGeneration";
 import { jsonrepair } from "jsonrepair";
 import { RootState } from "@/store/store";
 
-
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+const MAX_RETRY_DELAY = 10000; // 10 seconds
 
 export const useOutlineStreaming = (presentationId: string | null) => {
   const dispatch = useDispatch();
@@ -14,19 +16,48 @@ export const useOutlineStreaming = (presentationId: string | null) => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeSlideIndex, setActiveSlideIndex] = useState<number | null>(null);
   const [highestActiveIndex, setHighestActiveIndex] = useState<number>(-1);
+  const [statusMessage, setStatusMessage] = useState<string>("");
   const prevSlidesRef = useRef<{ content: string }[]>([]);
   const activeIndexRef = useRef<number>(-1);
   const highestIndexRef = useRef<number>(-1);
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isManualCloseRef = useRef(false);
 
   useEffect(() => {
     if (!presentationId || outlines.length > 0) return;
 
-    let eventSource: EventSource;
+    let eventSource: EventSource | null = null;
     let accumulatedChunks = "";
 
+    const calculateRetryDelay = (retryCount: number): number => {
+      // Exponential backoff: 1s, 2s, 4s, 8s, 10s (max)
+      const delay = Math.min(
+        INITIAL_RETRY_DELAY * Math.pow(2, retryCount),
+        MAX_RETRY_DELAY
+      );
+      return delay;
+    };
+
+    const closeEventSource = () => {
+      if (eventSource) {
+        isManualCloseRef.current = true;
+        eventSource.close();
+        eventSource = null;
+      }
+    };
+
     const initializeStream = async () => {
-      setIsStreaming(true)
-      setIsLoading(true)
+      // Clear any existing retry timeout
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+
+      setIsStreaming(true);
+      setIsLoading(true);
+      isManualCloseRef.current = false;
+
       try {
         eventSource = new EventSource(
           `/api/v1/ppt/outlines/stream/${presentationId}`
@@ -34,11 +65,13 @@ export const useOutlineStreaming = (presentationId: string | null) => {
 
         eventSource.addEventListener("response", (event) => {
           const data = JSON.parse(event.data);
+
           switch (data.type) {
             case "chunk":
-              // 
+              // Reset retry count on successful data reception
+              retryCountRef.current = 0;
+
               accumulatedChunks += data.chunk;
-              // 
               try {
                 const repairedJson = jsonrepair(accumulatedChunks);
                 const partialData = JSON.parse(repairedJson);
@@ -74,91 +107,139 @@ export const useOutlineStreaming = (presentationId: string | null) => {
 
                   prevSlidesRef.current = nextSlides;
                   dispatch(setOutlines(nextSlides));
-                  setIsLoading(false)
+                  setIsLoading(false);
                 }
               } catch (error) {
                 // JSON isn't complete yet, continue accumulating
               }
               break;
 
-            case "complete":
+            case "status":
+              // Handle status updates from backend
+              if (data.status) {
+                setStatusMessage(data.status);
+              }
+              break;
 
+            case "complete":
               try {
                 const outlinesData: { content: string }[] = data.presentation.outlines.slides;
                 dispatch(setOutlines(outlinesData));
-                setIsStreaming(false)
-                setIsLoading(false)
-                setActiveSlideIndex(null)
-                setHighestActiveIndex(-1)
+                setIsStreaming(false);
+                setIsLoading(false);
+                setActiveSlideIndex(null);
+                setHighestActiveIndex(-1);
+                setStatusMessage("");
                 prevSlidesRef.current = outlinesData;
                 activeIndexRef.current = -1;
                 highestIndexRef.current = -1;
-                eventSource.close();
+                retryCountRef.current = 0;
+                closeEventSource();
               } catch (error) {
-                console.error("Error parsing accumulated chunks:", error);
-                toast.error("Failed to parse presentation data");
-                eventSource.close();
+                console.error("Error parsing outline complete data:", error);
+                toast.error("Failed to parse outline data");
+                closeEventSource();
               }
               accumulatedChunks = "";
               break;
 
             case "closing":
-
-              setIsStreaming(false)
-              setIsLoading(false)
-              setActiveSlideIndex(null)
-              setHighestActiveIndex(-1)
+              setIsStreaming(false);
+              setIsLoading(false);
+              setActiveSlideIndex(null);
+              setHighestActiveIndex(-1);
+              setStatusMessage("");
               activeIndexRef.current = -1;
               highestIndexRef.current = -1;
-              eventSource.close();
+              retryCountRef.current = 0;
+              closeEventSource();
               break;
-            case "error":
 
-              setIsStreaming(false)
-              setIsLoading(false)
-              setActiveSlideIndex(null)
-              setHighestActiveIndex(-1)
+            case "error":
+              setIsStreaming(false);
+              setIsLoading(false);
+              setActiveSlideIndex(null);
+              setHighestActiveIndex(-1);
+              setStatusMessage("");
               activeIndexRef.current = -1;
               highestIndexRef.current = -1;
-              eventSource.close();
-              toast.error('Error in outline streaming',
-                {
-                  description: data.detail || 'Failed to connect to the server. Please try again.',
-                }
-              );
+              closeEventSource();
+              toast.error('Error in outline streaming', {
+                description: data.detail || 'Failed to generate outline. Please try again.',
+              });
+              // Don't retry on server-sent errors
+              retryCountRef.current = MAX_RETRIES;
               break;
           }
         });
 
-        eventSource.onerror = () => {
+        eventSource.onerror = (error) => {
+          console.error("EventSource error:", error);
 
-          setIsStreaming(false)
-          setIsLoading(false)
-          setActiveSlideIndex(null)
-          setHighestActiveIndex(-1)
-          activeIndexRef.current = -1;
-          highestIndexRef.current = -1;
-          eventSource.close();
-          toast.error("Failed to connect to the server. Please try again.");
+          const wasManualClose = isManualCloseRef.current;
+          closeEventSource();
+
+          // Don't retry if this was a manual close (cleanup)
+          if (wasManualClose) {
+            return;
+          }
+
+          // Retry logic with exponential backoff
+          if (retryCountRef.current < MAX_RETRIES) {
+            retryCountRef.current++;
+            const delay = calculateRetryDelay(retryCountRef.current - 1);
+
+            console.log(
+              `Retrying outline stream (attempt ${retryCountRef.current}/${MAX_RETRIES}) in ${delay}ms...`
+            );
+
+            setStatusMessage(
+              `Connection lost. Retrying in ${Math.ceil(delay / 1000)}s... (${retryCountRef.current}/${MAX_RETRIES})`
+            );
+
+            retryTimeoutRef.current = setTimeout(() => {
+              console.log("Attempting to reconnect outline stream...");
+              initializeStream();
+            }, delay);
+          } else {
+            // Max retries exceeded
+            setIsStreaming(false);
+            setIsLoading(false);
+            setActiveSlideIndex(null);
+            setHighestActiveIndex(-1);
+            setStatusMessage("");
+            activeIndexRef.current = -1;
+            highestIndexRef.current = -1;
+            toast.error("Connection failed", {
+              description: "Failed to connect to the server. Maximum retry attempts exceeded.",
+            });
+            // Reset for future attempts
+            retryCountRef.current = 0;
+          }
         };
       } catch (error) {
-
-        setIsStreaming(false)
-        setIsLoading(false)
-        setActiveSlideIndex(null)
-        setHighestActiveIndex(-1)
+        setIsStreaming(false);
+        setIsLoading(false);
+        setActiveSlideIndex(null);
+        setHighestActiveIndex(-1);
+        setStatusMessage("");
         activeIndexRef.current = -1;
         highestIndexRef.current = -1;
         toast.error("Failed to initialize connection");
       }
     };
-    initializeStream();
-    return () => {
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-  }, [presentationId, dispatch]);
 
-  return { isStreaming, isLoading, activeSlideIndex, highestActiveIndex };
-}; 
+    initializeStream();
+
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+      closeEventSource();
+      setStatusMessage("");
+    };
+  }, [presentationId, dispatch, outlines.length]);
+
+  return { isStreaming, isLoading, activeSlideIndex, highestActiveIndex, statusMessage };
+};

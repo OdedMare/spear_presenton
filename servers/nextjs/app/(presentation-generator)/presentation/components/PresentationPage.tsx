@@ -67,7 +67,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
   );
 
   // Initialize streaming
-  usePresentationStreaming(
+  const { statusMessage } = usePresentationStreaming(
     presentation_id,
     stream,
     setLoading,
@@ -119,7 +119,8 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
           <AlertCircle className="w-16 h-16 mb-4 text-red-500" />
           <h2 className="text-xl font-semibold mb-2">משהו השתבש</h2>
           <p className="text-center mb-4">
-            לא הצלחנו לטעון את המצגת שלך. אנא נסה שוב.
+            לא הצלחנו לטעון את המצגת שלך
+             אנא נסה שוב.
           </p>
           <Button
             onClick={() => {
@@ -180,7 +181,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
                     />
                   ))}
                 </div>
-                {stream && <LoadingState />}
+                {stream && <LoadingState statusMessage={statusMessage} />}
               </div>
             ) : (
               <>
