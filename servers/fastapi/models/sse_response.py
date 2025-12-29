@@ -22,10 +22,19 @@ class SSEStatusResponse(BaseModel):
 
 class SSEErrorResponse(BaseModel):
     detail: str
+    error_code: str = "GENERIC_ERROR"
+    suggested_action: str | None = None
 
     def to_string(self):
+        error_data = {
+            "type": "error",
+            "detail": self.detail,
+            "error_code": self.error_code
+        }
+        if self.suggested_action:
+            error_data["suggested_action"] = self.suggested_action
         return SSEResponse(
-            event="response", data=json.dumps({"type": "error", "detail": self.detail})
+            event="response", data=json.dumps(error_data)
         ).to_string()
 
 

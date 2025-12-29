@@ -26,6 +26,27 @@ from utils.logger import logger
 OUTLINES_ROUTER = APIRouter(prefix="/outlines", tags=["Outlines"])
 
 
+@OUTLINES_ROUTER.get("/stream/health")
+async def check_outline_stream_health():
+    """
+    Health check endpoint for outline streaming service.
+    Returns service status and configuration.
+    """
+    from datetime import datetime, timezone
+    return {
+        "status": "healthy",
+        "service": "outline_streaming",
+        "capabilities": {
+            "max_concurrent_streams": 50,
+            "supports_reconnection": True,
+            "keepalive_interval_seconds": 5,
+            "max_retry_attempts": 3,
+            "supports_document_loading": True
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
 @OUTLINES_ROUTER.get("/stream/{id}")
 async def stream_outlines(
     id: uuid.UUID, sql_session: AsyncSession = Depends(get_async_session)
@@ -148,6 +169,11 @@ async def stream_outlines(
             logger.debug(f"[OutlineStream {id}] LLM streaming completed with {chunk_count} chunks")
 
             logger.debug(f"[OutlineStream {id}] LLM streaming completed, total text length: {len(presentation_outlines_text)} chars")
+
+            yield SSEStatusResponse(
+                status="Finalizing and validating outline structure..."
+            ).to_string()
+
             logger.debug(f"[OutlineStream {id}] Parsing JSON response")
             try:
                 presentation_outlines_json = dict(
@@ -158,7 +184,9 @@ async def stream_outlines(
                 logger.error(f"[OutlineStream {id}] JSON parsing failed: {str(e)}", exc_info=True)
                 traceback.print_exc()
                 yield SSEErrorResponse(
-                    detail=f"Failed to parse presentation outlines JSON. Please try again. {str(e)}",
+                    detail="The AI response was incomplete or malformed. This can happen with complex prompts or very long presentations.",
+                    error_code="JSON_PARSE_ERROR",
+                    suggested_action="Try reducing the number of slides, simplifying your prompt, or using a different AI model."
                 ).to_string()
                 yield SSEResponse(
                     event="response",
@@ -175,7 +203,9 @@ async def stream_outlines(
                     "response_preview": str(presentation_outlines_json)[:500]
                 }})
                 yield SSEErrorResponse(
-                    detail="The AI returned an invalid outline structure. Please try again with a different prompt or model.",
+                    detail="The AI returned an invalid outline structure (missing slides data). This is usually a temporary issue.",
+                    error_code="INVALID_OUTLINE_STRUCTURE",
+                    suggested_action="Please try again. If the problem persists, try using a different AI model or simplifying your prompt."
                 ).to_string()
                 yield SSEResponse(
                     event="response",
@@ -192,7 +222,9 @@ async def stream_outlines(
                     "response_keys": list(presentation_outlines_json.keys())
                 }})
                 yield SSEErrorResponse(
-                    detail=f"Failed to validate presentation outlines. The AI response doesn't match the expected format. Please try again. Error: {str(e)}",
+                    detail="The AI response format couldn't be validated. This can happen with very complex or unusual prompts.",
+                    error_code="VALIDATION_ERROR",
+                    suggested_action="Try using simpler language in your prompt, reducing the number of slides, or trying a different AI model."
                 ).to_string()
                 yield SSEResponse(
                     event="response",
@@ -237,7 +269,9 @@ async def stream_outlines(
             )
             logger.debug(f"[OutlineStream {id}] Sending error response to client")
             yield SSEErrorResponse(
-                detail=f"An unexpected error occurred while generating outlines. Please try again. Error: {str(e)}",
+                detail=f"An unexpected server error occurred while generating outlines. This is likely a temporary issue.",
+                error_code="UNEXPECTED_ERROR",
+                suggested_action="Please try again in a moment. If the problem persists, contact support with this error message."
             ).to_string()
             await asyncio.sleep(0.1)
             logger.debug(f"[OutlineStream {id}] Error response sent")

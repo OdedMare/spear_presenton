@@ -164,8 +164,16 @@ export const useOutlineStreaming = (presentationId: string | null) => {
               activeIndexRef.current = -1;
               highestIndexRef.current = -1;
               closeEventSource();
-              toast.error('Error in outline streaming', {
-                description: data.detail || 'Failed to generate outline. Please try again.',
+
+              // Build error message with suggestion if available
+              let errorDescription = data.detail || 'Failed to generate outline. Please try again.';
+              if (data.suggested_action) {
+                errorDescription += `\n\n💡 Suggestion: ${data.suggested_action}`;
+              }
+
+              toast.error(data.error_code ? `Error: ${data.error_code}` : 'Error in outline streaming', {
+                description: errorDescription,
+                duration: 10000, // Show longer for errors with suggestions
               });
               // Don't retry on server-sent errors
               retryCountRef.current = MAX_RETRIES;

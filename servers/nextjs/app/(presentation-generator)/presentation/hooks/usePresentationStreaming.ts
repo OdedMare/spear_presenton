@@ -152,10 +152,16 @@ export const usePresentationStreaming = (
             case "error":
               closeEventSource();
               setStatusMessage("");
-              toast.error("Error in presentation streaming", {
-                description:
-                  data.detail ||
-                  "Failed to generate presentation. Please try again.",
+
+              // Build error message with suggestion if available
+              let errorDescription = data.detail || "Failed to generate presentation. Please try again.";
+              if (data.suggested_action) {
+                errorDescription += `\n\n💡 Suggestion: ${data.suggested_action}`;
+              }
+
+              toast.error(data.error_code ? `Error: ${data.error_code}` : "Error in presentation streaming", {
+                description: errorDescription,
+                duration: 10000, // Show longer for errors with suggestions
               });
               setLoading(false);
               dispatch(setStreaming(false));

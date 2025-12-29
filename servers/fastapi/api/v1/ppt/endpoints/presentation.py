@@ -75,6 +75,26 @@ import uuid
 PRESENTATION_ROUTER = APIRouter(prefix="/presentation", tags=["Presentation"])
 
 
+@PRESENTATION_ROUTER.get("/stream/health")
+async def check_stream_health():
+    """
+    Health check endpoint for streaming service.
+    Returns service status and configuration.
+    """
+    from datetime import timezone
+    return {
+        "status": "healthy",
+        "service": "presentation_streaming",
+        "capabilities": {
+            "max_concurrent_streams": 50,
+            "supports_reconnection": True,
+            "keepalive_interval_seconds": 5,
+            "max_retry_attempts": 3
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
 @PRESENTATION_ROUTER.get("/all", response_model=List[PresentationWithSlides])
 async def get_all_presentations(sql_session: AsyncSession = Depends(get_async_session)):
     presentations_with_slides = []
