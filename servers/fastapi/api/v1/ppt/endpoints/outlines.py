@@ -35,21 +35,33 @@ async def stream_outlines(
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found")
 
+    logger.info(
+        f"Starting outline streaming for presentation ID: {id}",
+        extra={"extra_fields": {
+            "event_type": "outline_stream_start",
+            "presentation_id": str(id),
+            "n_slides": presentation.n_slides
+        }}
+    )
+
     temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
 
     async def inner():
         try:
+            logger.debug(f"[OutlineStream {id}] Entering inner() function")
             yield SSEStatusResponse(
                 status="Generating presentation outlines..."
             ).to_string()
 
             additional_context = ""
             if presentation.file_paths:
+                logger.debug(f"[OutlineStream {id}] Loading {len(presentation.file_paths)} document files")
                 documents_loader = DocumentsLoader(file_paths=presentation.file_paths)
                 await documents_loader.load_documents(temp_dir)
                 documents = documents_loader.documents
                 if documents:
                     additional_context = "\n\n".join(documents)
+                    logger.debug(f"[OutlineStream {id}] Loaded {len(documents)} documents, total context length: {len(additional_context)} chars")
 
             presentation_outlines_text = ""
 
@@ -59,7 +71,9 @@ async def stream_outlines(
                 n_slides_to_generate -= math.ceil(
                     (presentation.n_slides - needed_toc_count) / 10
                 )
+                logger.debug(f"[OutlineStream {id}] Generating {n_slides_to_generate} slides (excluding {presentation.n_slides - n_slides_to_generate} TOC slides)")
 
+            logger.debug(f"[OutlineStream {id}] Starting LLM streaming for outline generation")
             async for chunk in generate_ppt_outline(
                 presentation.content,
                 n_slides_to_generate,
@@ -75,6 +89,7 @@ async def stream_outlines(
                 await asyncio.sleep(0)
 
                 if isinstance(chunk, HTTPException):
+                    logger.error(f"[OutlineStream {id}] HTTPException during streaming: {chunk.detail}")
                     yield SSEErrorResponse(detail=chunk.detail).to_string()
                     yield SSEResponse(
                         event="response",
@@ -89,11 +104,15 @@ async def stream_outlines(
 
                 presentation_outlines_text += chunk
 
+            logger.debug(f"[OutlineStream {id}] LLM streaming completed, total text length: {len(presentation_outlines_text)} chars")
+            logger.debug(f"[OutlineStream {id}] Parsing JSON response")
             try:
                 presentation_outlines_json = dict(
                     dirtyjson.loads(presentation_outlines_text)
                 )
+                logger.debug(f"[OutlineStream {id}] JSON parsing successful, keys: {list(presentation_outlines_json.keys())}")
             except Exception as e:
+                logger.error(f"[OutlineStream {id}] JSON parsing failed: {str(e)}", exc_info=True)
                 traceback.print_exc()
                 yield SSEErrorResponse(
                     detail=f"Failed to parse presentation outlines JSON. Please try again. {str(e)}",

@@ -283,22 +283,36 @@ async def stream_presentation(
     user_id = current_user.id if current_user else None
     username = current_user.username if current_user else None
 
+    logger.info(
+        f"Starting presentation streaming for ID: {id}",
+        extra={"extra_fields": {
+            "event_type": "presentation_stream_start",
+            "presentation_id": str(id),
+            "user_id": user_id,
+            "username": username
+        }}
+    )
+
     async def inner():
         try:
+            logger.debug(f"[Stream {id}] Entering inner() function")
             structure = presentation.get_structure()
             layout = presentation.get_layout()
             outline = presentation.get_presentation_outline()
+            logger.debug(f"[Stream {id}] Loaded structure, layout, outline - {len(structure.slides)} slides to generate")
 
             # These tasks will be gathered and awaited after all slides are generated
             async_assets_generation_tasks = []
 
             slides: List[SlideModel] = []
+            logger.debug(f"[Stream {id}] Sending initial chunk")
             yield SSEResponse(
                 event="response",
                 data=json.dumps({"type": "chunk", "chunk": '{ "slides": [ '}),
             ).to_string()
             for i, slide_layout_index in enumerate(structure.slides):
                 slide_layout = layout.slides[slide_layout_index]
+                logger.debug(f"[Stream {id}] Processing slide {i+1}/{len(structure.slides)} - layout: {slide_layout.id}")
 
                 try:
                     slide_content = await get_slide_content_from_type_and_outline(
@@ -309,7 +323,10 @@ async def stream_presentation(
                         presentation.verbosity,
                         presentation.instructions,
                     )
+                    logger.debug(f"[Stream {id}] Generated content for slide {i+1}")
                 except HTTPException as e:
+                    logger.error(f"[Stream {id}] HTTPException on slide {i+1}: {e.detail}")
+
                     # Cancel any pending asset generation tasks
                     if async_assets_generation_tasks:
                         for task in async_assets_generation_tasks:
@@ -342,60 +359,81 @@ async def stream_presentation(
                     )
                 )
 
+                logger.debug(f"[Stream {id}] Yielding slide {i+1} data")
                 yield SSEResponse(
                     event="response",
                     data=json.dumps({"type": "chunk", "chunk": slide.model_dump_json()}),
                 ).to_string()
 
+            logger.debug(f"[Stream {id}] All slides generated, sending closing chunk")
             yield SSEResponse(
                 event="response",
                 data=json.dumps({"type": "chunk", "chunk": " ] }"}),
             ).to_string()
 
+            logger.debug(f"[Stream {id}] Awaiting {len(async_assets_generation_tasks)} asset generation tasks")
             generated_assets_lists = await asyncio.gather(*async_assets_generation_tasks)
+            logger.debug(f"[Stream {id}] Asset generation completed")
             generated_assets = []
             for assets_list in generated_assets_lists:
                 generated_assets.extend(assets_list)
 
             # Moved this here to make sure new slides are generated before deleting the old ones
+            logger.debug(f"[Stream {id}] Deleting old slides from database")
             await sql_session.execute(
                 delete(SlideModel).where(SlideModel.presentation == id)
             )
             await sql_session.commit()
 
+            logger.debug(f"[Stream {id}] Saving presentation, {len(slides)} slides, {len(generated_assets)} assets to database")
             sql_session.add(presentation)
             sql_session.add_all(slides)
             sql_session.add_all(generated_assets)
             await sql_session.commit()
+            logger.debug(f"[Stream {id}] Database commit successful")
 
             response = PresentationWithSlides(
                 **presentation.model_dump(),
                 slides=slides,
             )
 
+            logger.debug(f"[Stream {id}] Sending SSECompleteResponse")
             yield SSECompleteResponse(
                 key="presentation",
                 value=response.model_dump(mode="json"),
             ).to_string()
 
+            logger.debug(f"[Stream {id}] Waiting before closing stream")
             # Give a moment for the complete response to be sent before closing
             await asyncio.sleep(0.1)
+            logger.debug(f"[Stream {id}] Try block completed successfully")
 
         except Exception as e:
+            logger.error(
+                f"[Stream {id}] Exception occurred: {type(e).__name__}: {str(e)}",
+                exc_info=True,
+                extra={"extra_fields": {
+                    "event_type": "presentation_streaming_unexpected_error",
+                    "presentation_id": str(id),
+                    "error_type": type(e).__name__,
+                    "error": str(e)
+                }}
+            )
+
             # Cancel any pending asset generation tasks to prevent RuntimeWarning
             if 'async_assets_generation_tasks' in locals() and async_assets_generation_tasks:
+                logger.debug(f"[Stream {id}] Closing {len(async_assets_generation_tasks)} pending asset tasks")
                 for task in async_assets_generation_tasks:
                     task.close()
 
-            logger.error(f"Unexpected error in presentation streaming: {str(e)}", exc_info=True, extra={"extra_fields": {
-                "event_type": "presentation_streaming_unexpected_error",
-                "error": str(e)
-            }})
+            logger.debug(f"[Stream {id}] Sending error response to client")
             yield SSEErrorResponse(
                 detail=f"An unexpected error occurred while generating presentation. Please try again. Error: {str(e)}",
             ).to_string()
             await asyncio.sleep(0.1)
+            logger.debug(f"[Stream {id}] Error response sent")
         finally:
+            logger.debug(f"[Stream {id}] Entering finally block - sending closing event")
             # Always send closing event to properly close the stream
             yield SSEResponse(
                 event="response",
@@ -404,6 +442,13 @@ async def stream_presentation(
 
             # Ensure the closing event is fully sent before stream terminates
             await asyncio.sleep(0.1)
+            logger.info(
+                f"[Stream {id}] Stream closed successfully",
+                extra={"extra_fields": {
+                    "event_type": "presentation_stream_end",
+                    "presentation_id": str(id)
+                }}
+            )
 
     return StreamingResponse(
         inner(),
