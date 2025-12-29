@@ -114,5 +114,17 @@ export async function POST(request: Request) {
         : userConfig.DISABLE_SSL_VERIFY,
   };
   fs.writeFileSync(userConfigPath, JSON.stringify(mergedConfig));
+
+  // Trigger logger reinitialization on the backend to apply Elasticsearch changes
+  try {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    await fetch(`${backendUrl}/api/v1/system/reinitialize-logger`, {
+      method: "POST",
+    });
+  } catch (error) {
+    console.error("Failed to reinitialize logger:", error);
+    // Don't fail the config save if logger reinit fails
+  }
+
   return NextResponse.json(mergedConfig);
 }

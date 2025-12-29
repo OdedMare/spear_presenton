@@ -227,6 +227,32 @@ def setup_logger(name: str = "presenton") -> logging.Logger:
 logger = setup_logger()
 
 
+def reinitialize_logger():
+    """
+    Reinitialize the logger with updated configuration from environment variables.
+    This is useful when Elasticsearch settings are changed at runtime.
+
+    Returns:
+        bool: True if reinitialization was successful
+    """
+    global logger
+
+    try:
+        # Remove all existing handlers
+        for handler in logger.handlers[:]:
+            handler.close()
+            logger.removeHandler(handler)
+
+        # Recreate logger with new configuration
+        logger = setup_logger()
+
+        logger.info("Logger reinitialized with updated configuration")
+        return True
+    except Exception as e:
+        print(f"Failed to reinitialize logger: {e}", file=sys.stderr)
+        return False
+
+
 # Convenience functions for structured logging
 def log_api_request(method: str, path: str, status_code: int, duration_ms: float, user_id: Optional[int] = None, username: Optional[str] = None, **kwargs):
     """Log API request with structured data."""

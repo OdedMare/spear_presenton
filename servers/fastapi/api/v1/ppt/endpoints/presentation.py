@@ -310,6 +310,11 @@ async def stream_presentation(
                         presentation.instructions,
                     )
                 except HTTPException as e:
+                    # Cancel any pending asset generation tasks
+                    if async_assets_generation_tasks:
+                        for task in async_assets_generation_tasks:
+                            task.close()  # Close the coroutine to prevent RuntimeWarning
+
                     yield SSEErrorResponse(detail=e.detail).to_string()
                     yield SSEResponse(
                         event="response",
@@ -377,6 +382,11 @@ async def stream_presentation(
             await asyncio.sleep(0.1)
 
         except Exception as e:
+            # Cancel any pending asset generation tasks to prevent RuntimeWarning
+            if 'async_assets_generation_tasks' in locals() and async_assets_generation_tasks:
+                for task in async_assets_generation_tasks:
+                    task.close()
+
             logger.error(f"Unexpected error in presentation streaming: {str(e)}", exc_info=True, extra={"extra_fields": {
                 "event_type": "presentation_streaming_unexpected_error",
                 "error": str(e)
@@ -875,6 +885,11 @@ async def generate_presentation_handler(
         return response
 
     except Exception as e:
+        # Cancel any pending asset generation tasks to prevent RuntimeWarning
+        if 'async_assets_generation_tasks' in locals() and async_assets_generation_tasks:
+            for task in async_assets_generation_tasks:
+                task.close()
+
         if not isinstance(e, HTTPException):
             traceback.print_exc()
             e = HTTPException(status_code=500, detail="Presentation generation failed")
