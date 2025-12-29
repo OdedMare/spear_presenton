@@ -66,7 +66,7 @@ Input:
 Output: 
 const ImageSchema = z.object({
     __image_url__: z.url().meta({
-        description: "URL to placeholder image (user will replace manually)",
+        description: "Image URL - NO AUTO-GENERATION. User adds images manually via upload/search. Use generic placeholder or leave empty.",
     }),
 })
 
