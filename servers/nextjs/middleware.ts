@@ -7,6 +7,7 @@ const PUBLIC_API_ROUTES = [
   '/api/has-required-key',
   '/api/telemetry-status',
   '/api/diagnostics',
+  '/api/user-config', // Settings/configuration endpoint
 ];
 
 // API routes that are called by Puppeteer (internal) - don't need Bearer token
