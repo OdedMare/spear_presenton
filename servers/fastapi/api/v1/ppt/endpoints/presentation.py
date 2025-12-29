@@ -44,7 +44,7 @@ from utils.dict_utils import deep_update
 from utils.export_utils import export_presentation
 from utils.llm_calls.generate_presentation_outlines import generate_ppt_outline
 from models.sql.slide import SlideModel
-from models.sse_response import SSECompleteResponse, SSEErrorResponse, SSEResponse
+from models.sse_response import SSECompleteResponse, SSEErrorResponse, SSEResponse, SSEStatusResponse
 
 from services.database import get_async_session
 from services.temp_file_service import TEMP_FILE_SERVICE
@@ -314,6 +314,11 @@ async def stream_presentation(
                 slide_layout = layout.slides[slide_layout_index]
                 logger.debug(f"[Stream {id}] Processing slide {i+1}/{len(structure.slides)} - layout: {slide_layout.id}")
 
+                # Send status update to keep connection alive
+                yield SSEStatusResponse(
+                    status=f"Generating slide {i+1} of {len(structure.slides)}..."
+                ).to_string()
+
                 try:
                     slide_content = await get_slide_content_from_type_and_outline(
                         slide_layout,
@@ -369,6 +374,11 @@ async def stream_presentation(
             yield SSEResponse(
                 event="response",
                 data=json.dumps({"type": "chunk", "chunk": " ] }"}),
+            ).to_string()
+
+            # Send status update before potentially long asset generation
+            yield SSEStatusResponse(
+                status="Fetching icons and finalizing presentation..."
             ).to_string()
 
             logger.debug(f"[Stream {id}] Awaiting {len(async_assets_generation_tasks)} asset generation tasks")

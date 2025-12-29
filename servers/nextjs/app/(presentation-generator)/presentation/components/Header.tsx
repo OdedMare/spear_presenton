@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
+import { getHeader } from "../../services/api/header";
 import { OverlayLoader } from "@/components/ui/overlay-loader";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -59,7 +60,9 @@ const Header = ({
   const { onUndo, onRedo, canUndo, canRedo } = usePresentationUndoRedo();
 
   const get_presentation_pptx_model = async (id: string): Promise<PptxPresentationModel> => {
-    const response = await fetch(`/api/presentation_to_pptx_model?id=${id}`);
+    const response = await fetch(`/api/presentation_to_pptx_model?id=${id}`, {
+      headers: getHeader(),
+    });
     if (!response.ok) {
       const error = await response.json();
       console.error("PPTX model generation failed:", error);

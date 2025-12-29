@@ -12,7 +12,10 @@ import {
 import { validateSession } from "@/app/(presentation-generator)/services/api/auth";
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ["/login"];
+const PUBLIC_ROUTES = ["/login", "/pdf-maker"];
+
+// Routes that should not redirect authenticated users (used by Puppeteer)
+const PUPPETEER_ROUTES = ["/pdf-maker"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -75,7 +78,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     checkAuth();
-  }, []);
+
+    // Set up periodic token validation (every 5 minutes)
+    const intervalId = setInterval(async () => {
+      const authRequired =
+        process.env.NEXT_PUBLIC_REQUIRE_AUTH?.toLowerCase() === "true";
+
+      if (!authRequired || !sessionToken) {
+        return;
+      }
+
+      try {
+        const response = await validateSession(sessionToken);
+        if (!response.valid) {
+          console.warn("Session expired, logging out");
+          dispatch(logout());
+          router.push("/login");
+        }
+      } catch (error) {
+        console.error("Token validation check failed:", error);
+        dispatch(logout());
+        router.push("/login");
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(intervalId);
+  }, [sessionToken, dispatch, router, pathname]);
 
   useEffect(() => {
     // Redirect logic based on authentication state
@@ -87,10 +115,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+    const isPuppeteerRoute = PUPPETEER_ROUTES.includes(pathname);
 
     if (!isAuthenticated && !isPublicRoute) {
       router.push("/login");
-    } else if (isAuthenticated && isPublicRoute) {
+    } else if (isAuthenticated && isPublicRoute && !isPuppeteerRoute) {
+      // Only redirect authenticated users away from login, not from Puppeteer routes
       router.push("/dashboard");
     }
   }, [isAuthenticated, isLoading, pathname, router]);

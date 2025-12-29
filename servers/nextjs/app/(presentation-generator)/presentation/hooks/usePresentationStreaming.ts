@@ -108,6 +108,14 @@ export const usePresentationStreaming = (
 
       eventSource.onerror = (error) => {
         console.error("EventSource failed:", error);
+
+        // Check if error is due to authentication
+        if (eventSource.readyState === EventSource.CLOSED) {
+          toast.error("Connection closed", {
+            description: "Stream connection was closed. This may be due to session timeout.",
+          });
+        }
+
         setLoading(false);
         dispatch(setStreaming(false));
         setError(true);

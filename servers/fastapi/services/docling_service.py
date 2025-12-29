@@ -5,7 +5,8 @@ import sys
 # IMPORTANT: Disable SSL verification BEFORE importing docling
 # This must happen at module level, not in __init__, because docling
 # may download models during import
-DISABLE_SSL = os.getenv("DISABLE_SSL_VERIFY", "false").lower() == "true"
+# ALWAYS DISABLED: Docling has SSL issues with corporate proxies/firewalls
+DISABLE_SSL = True  # Force SSL bypass for Docling
 
 if DISABLE_SSL:
     print("⚠️  SSL verification is DISABLED - this should only be used in development", file=sys.stderr)
