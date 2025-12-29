@@ -78,13 +78,20 @@ class DocumentsLoader:
         image_paths = []
         document: str = ""
 
-        if load_text:
-            document = await asyncio.to_thread(self.docling_service.parse_to_markdown, file_path)
+        try:
+            if load_text:
+                document = await asyncio.to_thread(self.docling_service.parse_to_markdown, file_path)
 
-        if load_images:
-            image_paths = await self.get_page_images_from_pdf_async(file_path, temp_dir)
+            if load_images:
+                image_paths = await self.get_page_images_from_pdf_async(file_path, temp_dir)
 
-        return document, image_paths
+            return document, image_paths
+        except Exception as e:
+            # Re-raise with more context
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to load PDF {os.path.basename(file_path)}: {str(e)}"
+            ) from e
 
     async def load_text(self, file_path: str) -> str:
         with open(file_path, "r") as file:

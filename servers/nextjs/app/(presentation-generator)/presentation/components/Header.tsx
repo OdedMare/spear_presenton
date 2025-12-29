@@ -156,15 +156,20 @@ const Header = ({
     router.push(`/presentation?id=${presentation_id}&stream=true`);
   };
   const downloadLink = (path: string) => {
+    // Ensure the path goes directly to the backend API, not through Next.js auth
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const fullPath = path.startsWith("http") ? path : `${backendUrl}${path}`;
+
     // if we have popup access give direct download if not redirect to the path
     if (window.opener) {
-      window.open(path, '_blank');
+      window.open(fullPath, '_blank');
     } else {
       const link = document.createElement('a');
-      link.href = path;
+      link.href = fullPath;
       link.download = path.split('/').pop() || 'download';
       document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     }
   };
 

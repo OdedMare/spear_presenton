@@ -1,10 +1,15 @@
 import os
 import ssl
+import sys
 
 # IMPORTANT: Disable SSL verification BEFORE importing docling
 # This must happen at module level, not in __init__, because docling
 # may download models during import
-if os.getenv("DISABLE_SSL_VERIFY", "false").lower() == "true":
+DISABLE_SSL = os.getenv("DISABLE_SSL_VERIFY", "false").lower() == "true"
+
+if DISABLE_SSL:
+    print("⚠️  SSL verification is DISABLED - this should only be used in development", file=sys.stderr)
+
     import urllib3
     from urllib3.util import ssl_
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -54,14 +59,33 @@ if os.getenv("DISABLE_SSL_VERIFY", "false").lower() == "true":
         pass
 
 # Now safe to import docling after SSL bypass is in place
-from docling.document_converter import (
-    DocumentConverter,
-    PdfFormatOption,
-    PowerpointFormatOption,
-    WordFormatOption,
-)
-from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.datamodel.base_models import InputFormat
+try:
+    from docling.document_converter import (
+        DocumentConverter,
+        PdfFormatOption,
+        PowerpointFormatOption,
+        WordFormatOption,
+    )
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.datamodel.base_models import InputFormat
+
+    DOCLING_AVAILABLE = True
+    print("✅ Docling imports successful", file=sys.stderr)
+except Exception as e:
+    print(f"⚠️  Failed to import docling: {type(e).__name__}: {str(e)}", file=sys.stderr)
+
+    if "SSL" in str(e) or "certificate" in str(e).lower():
+        print("💡 SSL Error during docling import. Set DISABLE_SSL_VERIFY=true in .env and restart", file=sys.stderr)
+        print("   Example: export DISABLE_SSL_VERIFY=true", file=sys.stderr)
+
+    DOCLING_AVAILABLE = False
+    # Create dummy classes to prevent import errors
+    DocumentConverter = None
+    PdfFormatOption = None
+    PowerpointFormatOption = None
+    WordFormatOption = None
+    PdfPipelineOptions = None
+    InputFormat = None
 
 
 class DoclingService:
@@ -85,28 +109,64 @@ class DoclingService:
         if DoclingService._converter is not None:
             return
 
-        self.pipeline_options = PdfPipelineOptions()
-        self.pipeline_options.do_ocr = False
+        # Check if docling is available
+        if not DOCLING_AVAILABLE:
+            error_msg = "Docling library is not available. Cannot initialize DoclingService."
+            print(f"❌ {error_msg}", file=sys.stderr)
+            raise RuntimeError(error_msg)
 
-        # This loads heavy ML models - only do this ONCE
-        DoclingService._converter = DocumentConverter(
-            allowed_formats=[InputFormat.PPTX, InputFormat.PDF, InputFormat.DOCX],
-            format_options={
-                InputFormat.DOCX: WordFormatOption(
-                    pipeline_options=self.pipeline_options,
-                ),
-                InputFormat.PPTX: PowerpointFormatOption(
-                    pipeline_options=self.pipeline_options,
-                ),
-                InputFormat.PDF: PdfFormatOption(
-                    pipeline_options=self.pipeline_options,
-                ),
-            },
-        )
+        try:
+            print("🔧 Initializing DoclingService (loading ML models)...", file=sys.stderr)
+            print(f"   SSL verification: {'DISABLED' if DISABLE_SSL else 'ENABLED'}", file=sys.stderr)
+
+            self.pipeline_options = PdfPipelineOptions()
+            self.pipeline_options.do_ocr = False
+
+            # This loads heavy ML models - only do this ONCE
+            DoclingService._converter = DocumentConverter(
+                allowed_formats=[InputFormat.PPTX, InputFormat.PDF, InputFormat.DOCX],
+                format_options={
+                    InputFormat.DOCX: WordFormatOption(
+                        pipeline_options=self.pipeline_options,
+                    ),
+                    InputFormat.PPTX: PowerpointFormatOption(
+                        pipeline_options=self.pipeline_options,
+                    ),
+                    InputFormat.PDF: PdfFormatOption(
+                        pipeline_options=self.pipeline_options,
+                    ),
+                },
+            )
+
+            print("✅ DoclingService initialized successfully", file=sys.stderr)
+        except Exception as e:
+            error_msg = f"❌ Failed to initialize DoclingService: {type(e).__name__}: {str(e)}"
+            print(error_msg, file=sys.stderr)
+
+            # Check if it's an SSL error
+            if "SSL" in str(e) or "certificate" in str(e).lower():
+                print("💡 SSL Error detected during initialization.", file=sys.stderr)
+                print("   To fix: Set DISABLE_SSL_VERIFY=true in your .env file and restart", file=sys.stderr)
+                print(f"   Current setting: DISABLE_SSL_VERIFY={os.getenv('DISABLE_SSL_VERIFY', 'not set')}", file=sys.stderr)
+
+            raise RuntimeError(f"DoclingService initialization failed: {str(e)}") from e
 
     def parse_to_markdown(self, file_path: str) -> str:
-        result = DoclingService._converter.convert(file_path)
-        return result.document.export_to_markdown()
+        try:
+            print(f"📄 Converting document: {os.path.basename(file_path)}", file=sys.stderr)
+            result = DoclingService._converter.convert(file_path)
+            markdown = result.document.export_to_markdown()
+            print(f"✅ Successfully converted {os.path.basename(file_path)} ({len(markdown)} chars)", file=sys.stderr)
+            return markdown
+        except Exception as e:
+            error_msg = f"❌ Failed to convert {os.path.basename(file_path)}: {type(e).__name__}: {str(e)}"
+            print(error_msg, file=sys.stderr)
+
+            # Check for SSL errors
+            if "SSL" in str(e) or "certificate" in str(e).lower():
+                print("💡 SSL Error detected. Try setting DISABLE_SSL_VERIFY=true in your .env file", file=sys.stderr)
+
+            raise RuntimeError(f"Document conversion failed for {os.path.basename(file_path)}: {str(e)}") from e
 
 
 # Global singleton instance

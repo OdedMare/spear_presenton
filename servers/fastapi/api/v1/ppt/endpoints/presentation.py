@@ -434,6 +434,14 @@ async def stream_presentation(
             logger.debug(f"[Stream {id}] Error response sent")
         finally:
             logger.debug(f"[Stream {id}] Entering finally block - sending closing event")
+
+            # Send explicit end marker
+            yield SSEResponse(
+                event="end",
+                data="stream_complete"
+            ).to_string()
+            await asyncio.sleep(0.3)
+
             # Always send closing event to properly close the stream
             yield SSEResponse(
                 event="response",
@@ -441,7 +449,14 @@ async def stream_presentation(
             ).to_string()
 
             # Ensure the closing event is fully sent before stream terminates
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(1.0)
+
+            # Force final flush with empty yield
+            yield ""
+
+            # Additional buffer time for network flush
+            await asyncio.sleep(0.5)
+
             logger.info(
                 f"[Stream {id}] Stream closed successfully",
                 extra={"extra_fields": {
@@ -454,9 +469,12 @@ async def stream_presentation(
         inner(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
             "Connection": "keep-alive",
+            "Transfer-Encoding": "chunked",
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "X-Content-Type-Options": "nosniff",
         }
     )
 

@@ -74,6 +74,7 @@ async def stream_outlines(
                 logger.debug(f"[OutlineStream {id}] Generating {n_slides_to_generate} slides (excluding {presentation.n_slides - n_slides_to_generate} TOC slides)")
 
             logger.debug(f"[OutlineStream {id}] Starting LLM streaming for outline generation")
+            chunk_count = 0
             async for chunk in generate_ppt_outline(
                 presentation.content,
                 n_slides_to_generate,
@@ -91,18 +92,24 @@ async def stream_outlines(
                 if isinstance(chunk, HTTPException):
                     logger.error(f"[OutlineStream {id}] HTTPException during streaming: {chunk.detail}")
                     yield SSEErrorResponse(detail=chunk.detail).to_string()
+                    await asyncio.sleep(0.1)
                     yield SSEResponse(
                         event="response",
                         data=json.dumps({"type": "closing"}),
                     ).to_string()
+                    await asyncio.sleep(0.1)
+                    logger.debug(f"[OutlineStream {id}] Sent error and closing events, exiting")
                     return
 
+                chunk_count += 1
                 yield SSEResponse(
                     event="response",
                     data=json.dumps({"type": "chunk", "chunk": chunk}),
                 ).to_string()
 
                 presentation_outlines_text += chunk
+
+            logger.debug(f"[OutlineStream {id}] LLM streaming completed with {chunk_count} chunks")
 
             logger.debug(f"[OutlineStream {id}] LLM streaming completed, total text length: {len(presentation_outlines_text)} chars")
             logger.debug(f"[OutlineStream {id}] Parsing JSON response")
@@ -157,33 +164,57 @@ async def stream_outlines(
                 ).to_string()
                 return
 
+            logger.debug(f"[OutlineStream {id}] Trimming outlines to {n_slides_to_generate} slides")
             presentation_outlines.slides = presentation_outlines.slides[
                 :n_slides_to_generate
             ]
 
             presentation.outlines = presentation_outlines.model_dump()
             presentation.title = get_presentation_title_from_outlines(presentation_outlines)
+            logger.debug(f"[OutlineStream {id}] Presentation title: {presentation.title}")
 
+            logger.debug(f"[OutlineStream {id}] Saving to database")
             sql_session.add(presentation)
             await sql_session.commit()
+            logger.debug(f"[OutlineStream {id}] Database commit successful")
 
+            logger.debug(f"[OutlineStream {id}] Sending SSECompleteResponse")
             yield SSECompleteResponse(
                 key="presentation", value=presentation.model_dump(mode="json")
             ).to_string()
 
-            # Give a moment for the complete response to be sent before closing
-            await asyncio.sleep(0.1)
+            logger.debug(f"[OutlineStream {id}] Waiting before closing stream")
+            # Give MORE time for the complete response to be sent before closing
+            await asyncio.sleep(0.2)
+            logger.debug(f"[OutlineStream {id}] Try block completed successfully")
 
         except Exception as e:
-            logger.error(f"Unexpected error in outline streaming: {str(e)}", exc_info=True, extra={"extra_fields": {
-                "event_type": "outline_streaming_unexpected_error",
-                "error": str(e)
-            }})
+            logger.error(
+                f"[OutlineStream {id}] Unexpected error: {type(e).__name__}: {str(e)}",
+                exc_info=True,
+                extra={"extra_fields": {
+                    "event_type": "outline_streaming_unexpected_error",
+                    "presentation_id": str(id),
+                    "error_type": type(e).__name__,
+                    "error": str(e)
+                }}
+            )
+            logger.debug(f"[OutlineStream {id}] Sending error response to client")
             yield SSEErrorResponse(
                 detail=f"An unexpected error occurred while generating outlines. Please try again. Error: {str(e)}",
             ).to_string()
             await asyncio.sleep(0.1)
+            logger.debug(f"[OutlineStream {id}] Error response sent")
         finally:
+            logger.debug(f"[OutlineStream {id}] Entering finally block - sending closing event")
+
+            # Send explicit end marker
+            yield SSEResponse(
+                event="end",
+                data="stream_complete"
+            ).to_string()
+            await asyncio.sleep(0.3)
+
             # Always send closing event to properly close the stream
             yield SSEResponse(
                 event="response",
@@ -191,14 +222,35 @@ async def stream_outlines(
             ).to_string()
 
             # Ensure the closing event is fully sent before stream terminates
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(1.0)
+
+            # Force final flush with empty yield
+            yield ""
+
+            # Additional buffer time for network flush
+            await asyncio.sleep(0.5)
+
+            logger.info(
+                f"[OutlineStream {id}] Stream closed successfully",
+                extra={"extra_fields": {
+                    "event_type": "outline_stream_end",
+                    "presentation_id": str(id)
+                }}
+            )
+
+            # Cleanup temp directory
+            logger.debug(f"[OutlineStream {id}] Cleaning up temp directory")
+            TEMP_FILE_SERVICE.cleanup_temp_dir(temp_dir)
 
     return StreamingResponse(
         inner(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
             "Connection": "keep-alive",
+            "Transfer-Encoding": "chunked",
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "X-Content-Type-Options": "nosniff",
         }
     )
