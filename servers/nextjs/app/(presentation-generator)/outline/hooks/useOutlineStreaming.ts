@@ -47,6 +47,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isManualCloseRef = useRef(false);
+  const isCompleteRef = useRef(false); // Track if we received complete event
   const eventSourceRef = useRef<EventSource | null>(null);
   const initializeStreamRef = useRef<(() => void) | null>(null);
 
@@ -103,6 +104,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
       setIsStreaming(true);
       setIsLoading(true);
       isManualCloseRef.current = false;
+      isCompleteRef.current = false; // Reset complete flag for new stream
 
       try {
         eventSourceRef.current = new EventSource(
@@ -171,11 +173,15 @@ export const useOutlineStreaming = (presentationId: string | null) => {
               break;
 
             case "complete":
+              // Mark as complete BEFORE doing anything else
+              isCompleteRef.current = true;
+              console.log("[OutlineStream] Complete event received");
+
               try {
                 const outlinesData: { content: string }[] = data.presentation.outlines.slides;
                 dispatch(setOutlines(outlinesData));
                 prevSlidesRef.current = outlinesData;
-                console.log("[OutlineStream] Complete event received, outlines set:", outlinesData.length);
+                console.log("[OutlineStream] Outlines set:", outlinesData.length);
               } catch (error) {
                 console.error("Error parsing outline complete data:", error);
                 toast.error("Failed to parse outline data");
@@ -246,11 +252,19 @@ export const useOutlineStreaming = (presentationId: string | null) => {
           console.error("[OutlineStream] EventSource error occurred");
 
           const wasManualClose = isManualCloseRef.current;
+          const wasComplete = isCompleteRef.current;
           const currentSlideIndex = highestIndexRef.current;
           closeEventSource();
 
+          // Don't retry if stream completed successfully
+          if (wasComplete) {
+            console.log("[OutlineStream] Ignoring error - stream already completed");
+            return;
+          }
+
           // Don't retry if this was a manual close (cleanup)
           if (wasManualClose) {
+            console.log("[OutlineStream] Ignoring error - manual close");
             return;
           }
 

@@ -4,12 +4,14 @@ import math
 import traceback
 import uuid
 import dirtyjson
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from models.presentation_outline_model import PresentationOutlineModel
 from models.sql.presentation import PresentationModel
+from models.sql.outline_job import OutlineJobModel, OutlineJobStatus
 from models.sse_response import (
     SSECompleteResponse,
     SSEErrorResponse,
@@ -17,7 +19,7 @@ from models.sse_response import (
     SSEStatusResponse,
 )
 from services.temp_file_service import TEMP_FILE_SERVICE
-from services.database import get_async_session
+from services.database import get_async_session, async_session_maker
 from services.documents_loader import DocumentsLoader
 from utils.llm_calls.generate_presentation_outlines import generate_ppt_outline
 from utils.ppt_utils import get_presentation_title_from_outlines
@@ -45,6 +47,155 @@ async def check_outline_stream_health():
         },
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
+
+
+@OUTLINES_ROUTER.get("/status/{id}")
+async def get_outline_status(
+    id: uuid.UUID, sql_session: AsyncSession = Depends(get_async_session)
+):
+    """
+    Get the status of outline generation for polling-based approach.
+    Returns the current outlines if available.
+    """
+    presentation = await sql_session.get(PresentationModel, id)
+
+    if not presentation:
+        raise HTTPException(status_code=404, detail="Presentation not found")
+
+    # Check if outlines exist
+    if presentation.outlines and presentation.outlines.get("slides"):
+        return {
+            "status": "complete",
+            "presentation": presentation.model_dump(mode="json"),
+            "outlines": presentation.outlines,
+            "progress": {
+                "current": len(presentation.outlines.get("slides", [])),
+                "total": presentation.n_slides,
+                "percentage": 100
+            }
+        }
+    else:
+        return {
+            "status": "pending",
+            "presentation_id": str(id),
+            "progress": {
+                "current": 0,
+                "total": presentation.n_slides,
+                "percentage": 0
+            }
+        }
+
+
+@OUTLINES_ROUTER.post("/generate/{id}")
+async def generate_outlines(
+    id: uuid.UUID, sql_session: AsyncSession = Depends(get_async_session)
+):
+    """
+    Generate outlines synchronously (non-streaming).
+    This endpoint is used for polling-based approach.
+    """
+    presentation = await sql_session.get(PresentationModel, id)
+
+    if not presentation:
+        raise HTTPException(status_code=404, detail="Presentation not found")
+
+    # If outlines already exist, return them
+    if presentation.outlines and presentation.outlines.get("slides"):
+        return {
+            "status": "complete",
+            "presentation": presentation.model_dump(mode="json"),
+            "outlines": presentation.outlines
+        }
+
+    logger.info(
+        f"Starting outline generation (polling) for presentation ID: {id}",
+        extra={"extra_fields": {
+            "event_type": "outline_generate_start",
+            "presentation_id": str(id),
+            "n_slides": presentation.n_slides
+        }}
+    )
+
+    temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
+
+    try:
+        # Load documents if file paths exist
+        document_content = ""
+        if presentation.file_paths:
+            logger.debug(f"[OutlineGenerate {id}] Loading {len(presentation.file_paths)} documents")
+            documents_loader = DocumentsLoader(temp_dir)
+            documents = await documents_loader.aload_from_paths(presentation.file_paths)
+            document_content = "\n\n".join([doc.page_content for doc in documents])
+            logger.debug(f"[OutlineGenerate {id}] Documents loaded, content length: {len(document_content)}")
+
+        # Generate outlines
+        n_slides_to_generate = presentation.n_slides
+        if presentation.include_table_of_contents:
+            n_slides_to_generate = math.ceil(n_slides_to_generate * 1.3)
+
+        logger.debug(f"[OutlineGenerate {id}] Generating outlines for {n_slides_to_generate} slides")
+
+        # Collect all chunks
+        presentation_outlines_text = ""
+        async for chunk in generate_ppt_outline(
+            n_slides_to_generate,
+            presentation.content,
+            presentation.language,
+            document_content,
+            presentation.instructions,
+            presentation.tone,
+            presentation.verbosity,
+        ):
+            presentation_outlines_text += chunk
+
+        logger.debug(f"[OutlineGenerate {id}] LLM generation completed, text length: {len(presentation_outlines_text)}")
+
+        # Parse outlines
+        try:
+            presentation_outlines_json = dict(dirtyjson.loads(presentation_outlines_text))
+        except Exception as e:
+            logger.error(f"[OutlineGenerate {id}] JSON parsing failed: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to parse AI response. Please try again."
+            )
+
+        if "slides" not in presentation_outlines_json:
+            logger.error(f"[OutlineGenerate {id}] Missing 'slides' field in response")
+            raise HTTPException(
+                status_code=500,
+                detail="AI returned invalid outline structure. Please try again."
+            )
+
+        # Create model and trim to requested slides
+        presentation_outlines = PresentationOutlineModel(**presentation_outlines_json)
+        presentation_outlines.slides = presentation_outlines.slides[:n_slides_to_generate]
+
+        # Save to database
+        presentation.outlines = presentation_outlines.model_dump()
+        presentation.title = get_presentation_title_from_outlines(presentation_outlines)
+
+        sql_session.add(presentation)
+        await sql_session.commit()
+
+        logger.info(f"[OutlineGenerate {id}] Outlines saved successfully")
+
+        return {
+            "status": "complete",
+            "presentation": presentation.model_dump(mode="json"),
+            "outlines": presentation.outlines
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[OutlineGenerate {id}] Unexpected error: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error during outline generation: {str(e)}"
+        )
+    finally:
+        TEMP_FILE_SERVICE.cleanup_temp_dir(temp_dir)
 
 
 @OUTLINES_ROUTER.get("/stream/{id}")

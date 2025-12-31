@@ -12,6 +12,7 @@ from sqlmodel import SQLModel
 from models.sql.async_presentation_generation_status import (
     AsyncPresentationGenerationTaskModel,
 )
+from models.sql.outline_job import OutlineJobModel
 from models.sql.image_asset import ImageAsset
 from models.sql.key_value import KeyValueSqlModel
 from models.sql.ollama_pull_status import OllamaPullStatus
@@ -71,6 +72,7 @@ async def create_db_and_tables():
                     User.__table__,
                     WebhookSubscription.__table__,
                     AsyncPresentationGenerationTaskModel.__table__,
+                    OutlineJobModel.__table__,
                 ],
             )
         )
