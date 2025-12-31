@@ -285,6 +285,15 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
 
                 logger.debug(f"[OutlineJob {job_id}] LLM generation completed, text length: {len(presentation_outlines_text)}")
 
+                # Log the raw response for debugging truncation issues
+                logger.debug(f"[OutlineJob {job_id}] Raw LLM response (first 500 chars): {presentation_outlines_text[:500]}")
+                logger.debug(f"[OutlineJob {job_id}] Raw LLM response (last 500 chars): {presentation_outlines_text[-500:] if len(presentation_outlines_text) > 500 else presentation_outlines_text}")
+
+                # Check if response looks complete (should end with closing brace)
+                stripped_text = presentation_outlines_text.strip()
+                if not stripped_text.endswith('}'):
+                    logger.warning(f"[OutlineJob {job_id}] LLM response may be truncated - does not end with '}}'. Last 100 chars: {stripped_text[-100:]}")
+
                 # Update progress - parsing
                 job.update_progress(85, 100, "מעבד תוצאות...")
                 sql_session.add(job)
@@ -293,8 +302,17 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
                 # Parse outlines
                 try:
                     presentation_outlines_json = dict(dirtyjson.loads(presentation_outlines_text))
+                    logger.debug(f"[OutlineJob {job_id}] Parsed JSON keys: {list(presentation_outlines_json.keys())}")
+                    if "slides" in presentation_outlines_json:
+                        logger.debug(f"[OutlineJob {job_id}] Number of slides parsed: {len(presentation_outlines_json['slides'])}")
+                        # Log last slide to check for truncation
+                        if presentation_outlines_json['slides']:
+                            last_slide = presentation_outlines_json['slides'][-1]
+                            logger.debug(f"[OutlineJob {job_id}] Last slide title: {last_slide.get('title', 'N/A')}")
+                            logger.debug(f"[OutlineJob {job_id}] Last slide content (last 200 chars): {str(last_slide.get('content', ''))[-200:]}")
                 except Exception as e:
                     logger.error(f"[OutlineJob {job_id}] JSON parsing failed: {str(e)}")
+                    logger.error(f"[OutlineJob {job_id}] Failed text preview: {presentation_outlines_text[:1000]}...")
                     job.mark_failed("שגיאה בעיבוד תשובת ה-AI. נסה שוב.")
                     sql_session.add(job)
                     await sql_session.commit()

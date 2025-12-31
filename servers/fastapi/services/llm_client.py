@@ -691,13 +691,15 @@ class LLMClient:
         """
         # Adapt strict mode
         adaptive_strict = strict and self.get_adaptive_strict_mode(model)
-        
+
         # Check if we can use native structured output streaming (OpenAI only for now)
         can_stream_structured = (
-            (self.llm_provider == LLMProvider.OPENAI or self.llm_provider == LLMProvider.CUSTOM) and 
+            (self.llm_provider == LLMProvider.OPENAI or self.llm_provider == LLMProvider.CUSTOM) and
             self.supports_structured_outputs(model) and
             not self.use_tool_calls_for_structured_output()
         )
+
+        logger.debug(f"[stream_structured] Model: {model}, can_stream_structured: {can_stream_structured}, provider: {self.llm_provider}")
 
         if can_stream_structured:
             schema_to_use = response_format
@@ -714,11 +716,13 @@ class LLMClient:
                     "schema": schema_to_use,
                 },
             }
-            
+
             parsed_tools = self.tool_calls_handler.parse_tools(tools)
-            
+
             # Use native streaming
             try:
+                chunk_count = 0
+                total_length = 0
                 async for chunk in self._stream_openai(
                     model=model,
                     messages=messages,
@@ -726,16 +730,18 @@ class LLMClient:
                     tools=parsed_tools,
                     max_tokens=max_tokens
                 ):
+                    chunk_count += 1
+                    total_length += len(chunk)
                     yield chunk
+                logger.debug(f"[stream_structured] Streaming completed: {chunk_count} chunks, {total_length} total chars")
                 return
             except Exception as e:
                 logger.warning(f"Streaming structured output failed: {e}. Falling back to non-streaming.")
                 # Fallback to non-streaming below
-        
+
         # Fallback: Use non-streaming method and yield result at the end
-        # We yield a single space as a preliminary heartbeat to help with some proxies
-        yield " " 
-        
+        logger.debug("[stream_structured] Using non-streaming fallback")
+
         result = await self.generate_structured(
             model=model,
             messages=messages,
@@ -745,4 +751,6 @@ class LLMClient:
             max_tokens=max_tokens,
         )
         import json
-        yield json.dumps(result)
+        result_json = json.dumps(result)
+        logger.debug(f"[stream_structured] Non-streaming result length: {len(result_json)} chars")
+        yield result_json
