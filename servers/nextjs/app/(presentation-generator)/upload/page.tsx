@@ -7,7 +7,7 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "SpearPresenton | AI-Powered Presentation Generator",
   description:
-    "SpearPresenton - Advanced AI presentation generator with custom layouts, multi-model support (OpenAI, Gemini, Ollama), and PDF/PPTX export.",
+    "SpearPresenton - המערכת יצירת מצגות מונעת בינה מלאכותית המאפשרת להמיר מסמכים למצגות מקצועיות בקלות. תומך ב-PDF, TXT, DOCX ו-PPTX עם תבניות מותאמות אישית.",
   alternates: {
     canonical: "https://spearpresenton.ai/create",
   },
@@ -47,7 +47,7 @@ const page = () => {
       <Header />
       <div className="flex flex-col items-center justify-center  py-8">
         <h1 className="text-3xl font-semibold font-instrument_sans">
-          Create Presentation{" "}
+          יצירת מצגת{" "}
         </h1>
         {/* <p className='text-sm text-gray-500'>We will generate a presentation for you</p> */}
       </div>
