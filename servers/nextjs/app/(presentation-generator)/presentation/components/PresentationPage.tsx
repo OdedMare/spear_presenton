@@ -14,6 +14,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import Help from "./Help";
 import {
   usePresentationStreaming,
+  usePresentationPolling,
   usePresentationData,
   usePresentationNavigation,
   useAutoSave,
@@ -38,6 +39,11 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
   const { presentationData, isStreaming } = useSelector(
     (state: RootState) => state.presentationGeneration
   );
+
+  // Get generation method from Redux (set in Settings page)
+  const generationMethod = useSelector(
+    (state: RootState) => state.userConfig.llm_config.GENERATION_METHOD
+  ) || "jobs";
 
   // Auto-save functionality
   const { isSaving } = useAutoSave({
@@ -66,14 +72,28 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
     setIsFullscreen
   );
 
-  // Initialize streaming
-  const { statusMessage } = usePresentationStreaming(
+  // Initialize generation based on method from settings
+  // Use streaming for "stream" method, polling for "jobs" method
+  const streamingResult = usePresentationStreaming(
     presentation_id,
-    stream,
+    generationMethod === "stream" ? stream : null, // Only pass stream param if method is "stream"
     setLoading,
     setError,
     fetchUserSlides
   );
+
+  const pollingResult = usePresentationPolling(
+    presentation_id,
+    generationMethod === "jobs" && !!stream, // Only start polling if method is "jobs" and stream param exists
+    setLoading,
+    setError,
+    fetchUserSlides
+  );
+
+  // Get status message from active method
+  const statusMessage = generationMethod === "stream"
+    ? streamingResult.statusMessage
+    : pollingResult.statusMessage;
 
   usePresentationUndoRedo();
 

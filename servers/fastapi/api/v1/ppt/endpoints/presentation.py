@@ -54,6 +54,8 @@ from services.pptx_presentation_creator import PptxPresentationCreator
 from models.sql.async_presentation_generation_status import (
     AsyncPresentationGenerationTaskModel,
 )
+from models.sql.presentation_job import PresentationJobModel, PresentationJobStatus
+from services.database import async_session_maker
 from utils.asset_directory_utils import get_exports_directory, get_images_directory
 from utils.llm_calls.generate_presentation_structure import (
     generate_presentation_structure,
@@ -507,6 +509,305 @@ async def stream_presentation(
             "X-Content-Type-Options": "nosniff",
         }
     )
+
+
+# ============================================
+# JOB-BASED PRESENTATION GENERATION
+# ============================================
+# Alternative to SSE streaming for more reliable generation
+# Uses background tasks with polling for status updates
+
+
+async def process_presentation_job(job_id: uuid.UUID, presentation_id: uuid.UUID, user_id: Optional[int] = None, username: Optional[str] = None):
+    """
+    Background task to generate presentation slides.
+    Uses its own database session since it runs in a background task.
+    """
+    async with async_session_maker() as sql_session:
+        try:
+            # Get job and presentation
+            job = await sql_session.get(PresentationJobModel, job_id)
+            presentation = await sql_session.get(PresentationModel, presentation_id)
+
+            if not job or not presentation:
+                logger.error(f"[PresentationJob {job_id}] Job or presentation not found")
+                return
+
+            # Validate presentation is prepared
+            if not presentation.structure:
+                job.mark_failed("Presentation not prepared for generation")
+                sql_session.add(job)
+                await sql_session.commit()
+                return
+
+            if not presentation.outlines:
+                job.mark_failed("Outlines cannot be empty")
+                sql_session.add(job)
+                await sql_session.commit()
+                return
+
+            # Mark as processing
+            job.mark_processing("מתחיל יצירת מצגת...")
+            sql_session.add(job)
+            await sql_session.commit()
+
+            logger.info(
+                f"[PresentationJob {job_id}] Starting presentation generation for: {presentation_id}",
+                extra={"extra_fields": {
+                    "event_type": "presentation_job_start",
+                    "job_id": str(job_id),
+                    "presentation_id": str(presentation_id),
+                    "user_id": user_id,
+                    "username": username
+                }}
+            )
+
+            try:
+                structure = presentation.get_structure()
+                layout = presentation.get_layout()
+                outline = presentation.get_presentation_outline()
+                total_slides = len(structure.slides)
+
+                job.progress_total = total_slides
+                sql_session.add(job)
+                await sql_session.commit()
+
+                image_generation_service = ImageGenerationService(get_images_directory())
+                async_assets_generation_tasks = []
+                slides: List[SlideModel] = []
+
+                for i, slide_layout_index in enumerate(structure.slides):
+                    slide_layout = layout.slides[slide_layout_index]
+
+                    # Update progress
+                    job.update_progress(i, total_slides, f"מייצר שקף {i + 1} מתוך {total_slides}...")
+                    sql_session.add(job)
+                    await sql_session.commit()
+
+                    logger.debug(f"[PresentationJob {job_id}] Processing slide {i+1}/{total_slides}")
+
+                    try:
+                        slide_content = await get_slide_content_from_type_and_outline(
+                            slide_layout,
+                            outline.slides[i],
+                            presentation.language,
+                            presentation.tone,
+                            presentation.verbosity,
+                            presentation.instructions,
+                        )
+                    except HTTPException as e:
+                        logger.error(f"[PresentationJob {job_id}] Error on slide {i+1}: {e.detail}")
+                        # Cancel pending tasks
+                        for task in async_assets_generation_tasks:
+                            task.close()
+                        job.mark_failed(e.detail)
+                        sql_session.add(job)
+                        await sql_session.commit()
+                        return
+
+                    slide = SlideModel(
+                        presentation=presentation_id,
+                        layout_group=layout.name,
+                        layout=slide_layout.id,
+                        index=i,
+                        speaker_note=slide_content.get("__speaker_note__", ""),
+                        content=slide_content,
+                    )
+                    slides.append(slide)
+
+                    # Add placeholder assets and queue asset generation
+                    process_slide_add_placeholder_assets(slide)
+                    async_assets_generation_tasks.append(
+                        process_slide_and_fetch_assets(
+                            image_generation_service, slide, user_id, username
+                        )
+                    )
+
+                # Update progress - fetching assets
+                job.update_progress(total_slides, total_slides, "מוריד תמונות ואייקונים...")
+                sql_session.add(job)
+                await sql_session.commit()
+
+                logger.debug(f"[PresentationJob {job_id}] Awaiting {len(async_assets_generation_tasks)} asset tasks")
+                generated_assets_lists = await asyncio.gather(*async_assets_generation_tasks)
+                generated_assets = []
+                for assets_list in generated_assets_lists:
+                    generated_assets.extend(assets_list)
+
+                # Delete old slides
+                logger.debug(f"[PresentationJob {job_id}] Deleting old slides")
+                await sql_session.execute(
+                    delete(SlideModel).where(SlideModel.presentation == presentation_id)
+                )
+                await sql_session.commit()
+
+                # Save new slides and assets
+                logger.debug(f"[PresentationJob {job_id}] Saving {len(slides)} slides, {len(generated_assets)} assets")
+                sql_session.add(presentation)
+                sql_session.add_all(slides)
+                sql_session.add_all(generated_assets)
+                await sql_session.commit()
+
+                # Prepare result
+                response = PresentationWithSlides(
+                    **presentation.model_dump(),
+                    slides=slides,
+                )
+
+                # Mark job as completed
+                job.mark_completed(
+                    result=response.model_dump(mode="json"),
+                    message="המצגת נוצרה בהצלחה"
+                )
+                job.progress_current = total_slides
+                sql_session.add(job)
+                await sql_session.commit()
+
+                logger.info(
+                    f"[PresentationJob {job_id}] Completed successfully",
+                    extra={"extra_fields": {
+                        "event_type": "presentation_job_complete",
+                        "job_id": str(job_id),
+                        "presentation_id": str(presentation_id),
+                        "slides_count": len(slides)
+                    }}
+                )
+
+            except Exception as e:
+                # Cancel pending tasks
+                if 'async_assets_generation_tasks' in locals() and async_assets_generation_tasks:
+                    for task in async_assets_generation_tasks:
+                        task.close()
+                raise e
+
+        except HTTPException as e:
+            logger.error(f"[PresentationJob {job_id}] HTTP error: {e.detail}")
+            job = await sql_session.get(PresentationJobModel, job_id)
+            if job:
+                job.mark_failed(e.detail)
+                sql_session.add(job)
+                await sql_session.commit()
+
+        except Exception as e:
+            logger.error(f"[PresentationJob {job_id}] Unexpected error: {str(e)}", exc_info=True)
+            job = await sql_session.get(PresentationJobModel, job_id)
+            if job:
+                job.mark_failed(f"שגיאה בלתי צפויה: {str(e)}")
+                sql_session.add(job)
+                await sql_session.commit()
+
+
+@PRESENTATION_ROUTER.post("/job/{id}", response_model=PresentationJobModel)
+async def start_presentation_job(
+    id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    sql_session: AsyncSession = Depends(get_async_session),
+    current_user: User | None = Depends(get_current_user),
+):
+    """
+    Start a background job to generate presentation slides.
+    Returns immediately with a job ID that can be polled for status.
+    This is an alternative to SSE streaming.
+    """
+    presentation = await sql_session.get(PresentationModel, id)
+
+    if not presentation:
+        raise HTTPException(status_code=404, detail="Presentation not found")
+
+    if not presentation.structure:
+        raise HTTPException(status_code=400, detail="Presentation not prepared for generation")
+
+    if not presentation.outlines:
+        raise HTTPException(status_code=400, detail="Outlines cannot be empty")
+
+    # Check if slides already exist
+    existing_slides = await sql_session.scalars(
+        select(SlideModel).where(SlideModel.presentation == id).limit(1)
+    )
+    if existing_slides.first():
+        # Return a completed job with existing slides
+        all_slides = await sql_session.scalars(
+            select(SlideModel).where(SlideModel.presentation == id).order_by(SlideModel.index)
+        )
+        slides_list = list(all_slides)
+
+        job = PresentationJobModel(
+            presentation_id=id,
+            status=PresentationJobStatus.COMPLETED.value,
+            message="המצגת כבר קיימת",
+            progress_current=len(slides_list),
+            progress_total=len(slides_list),
+            progress_percentage=100,
+            result=PresentationWithSlides(
+                **presentation.model_dump(),
+                slides=slides_list
+            ).model_dump(mode="json")
+        )
+        sql_session.add(job)
+        await sql_session.commit()
+        return job
+
+    # Check if there's already a pending/processing job for this presentation
+    existing_job = await sql_session.execute(
+        select(PresentationJobModel).where(
+            PresentationJobModel.presentation_id == id,
+            PresentationJobModel.status.in_([PresentationJobStatus.PENDING.value, PresentationJobStatus.PROCESSING.value])
+        )
+    )
+    existing_job = existing_job.scalars().first()
+
+    if existing_job:
+        logger.info(f"Returning existing presentation job {existing_job.id} for presentation {id}")
+        return existing_job
+
+    # Get slide count from structure
+    structure = presentation.get_structure()
+    total_slides = len(structure.slides) if structure else 0
+
+    # Create new job
+    job = PresentationJobModel(
+        presentation_id=id,
+        status=PresentationJobStatus.PENDING.value,
+        message="ממתין בתור...",
+        progress_total=total_slides
+    )
+    sql_session.add(job)
+    await sql_session.commit()
+
+    user_id = current_user.id if current_user else None
+    username = current_user.username if current_user else None
+
+    logger.info(
+        f"Created presentation job {job.id} for presentation {id}",
+        extra={"extra_fields": {
+            "event_type": "presentation_job_created",
+            "job_id": str(job.id),
+            "presentation_id": str(id),
+            "user_id": user_id,
+            "username": username
+        }}
+    )
+
+    # Start background task
+    background_tasks.add_task(process_presentation_job, job.id, id, user_id, username)
+
+    return job
+
+
+@PRESENTATION_ROUTER.get("/job/{job_id}/status", response_model=PresentationJobModel)
+async def get_presentation_job_status(
+    job_id: uuid.UUID,
+    sql_session: AsyncSession = Depends(get_async_session)
+):
+    """
+    Get the status of a presentation generation job.
+    """
+    job = await sql_session.get(PresentationJobModel, job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return job
 
 
 @PRESENTATION_ROUTER.patch("/update", response_model=PresentationWithSlides)

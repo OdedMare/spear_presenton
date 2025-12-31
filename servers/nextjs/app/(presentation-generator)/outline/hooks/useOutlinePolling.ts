@@ -146,7 +146,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
       console.error("[OutlinePolling] Poll error:", error);
       retryCountRef.current++;
 
-      if (retryCountRef.current >= MAX_RETRIES) {
+      if (retryCountRef.current >= POLL_CONFIG.maxRetries) {
         cleanup();
         setPollingStatus({
           status: "error",
@@ -225,7 +225,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
         });
       } else {
         // Start polling for status
-        pollIntervalRef.current = setInterval(pollJobStatus, POLL_INTERVAL);
+        pollIntervalRef.current = setInterval(pollJobStatus, POLL_CONFIG.initialInterval);
       }
 
     } catch (error: any) {
@@ -279,7 +279,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
     highestActiveIndex: -1,
     retryInfo: {
       retryCount: retryCountRef.current,
-      maxRetries: MAX_RETRIES,
+      maxRetries: POLL_CONFIG.maxRetries,
       isRetrying: false,
       lastFailedSlideIndex: -1,
     },
