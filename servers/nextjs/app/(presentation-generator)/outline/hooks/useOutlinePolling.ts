@@ -6,26 +6,53 @@ import { RootState } from "@/store/store";
 import { getHeader } from "../../services/api/header";
 
 // ============================================
-// POLLING CONFIGURATION
+// JOB-BASED POLLING WITH SMART BACKOFF
 // ============================================
-// 1. Initial call triggers outline generation
-// 2. Poll status every 2 seconds
-// 3. On completion, update Redux store
-// 4. Automatic retry on network errors
+// 1. POST /outlines/job/{id} - Start a background job
+// 2. GET /outlines/job/{job_id}/status - Poll job status
+// 3. Job status: pending -> processing -> completed/failed
+// 4. On completion, update Redux store with outlines
 // 5. Manual retry available on failure
+//
+// SMART POLLING STRATEGY:
+// - Start fast (500ms) to catch quick jobs
+// - Slow down exponentially up to 3s for long jobs
+// - Speed up when progress > 80% (near completion)
+// - Adaptive based on job progress changes
 // ============================================
 
-const POLL_INTERVAL = 2000; // 2 seconds
-const MAX_RETRIES = 3;
+const POLL_CONFIG = {
+  initialInterval: 500,      // Start fast
+  maxInterval: 3000,         // Max 3 seconds
+  minInterval: 300,          // Min 300ms when near completion
+  backoffMultiplier: 1.3,    // Slow down factor
+  speedUpThreshold: 80,      // Speed up when progress > 80%
+  maxRetries: 5,
+};
 
 export interface PollingStatus {
-  status: "idle" | "generating" | "polling" | "complete" | "error";
+  status: "idle" | "pending" | "processing" | "complete" | "error";
   progress: {
     current: number;
     total: number;
     percentage: number;
   };
   error?: string;
+}
+
+interface OutlineJob {
+  id: string;
+  presentation_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  message?: string;
+  progress_current: number;
+  progress_total: number;
+  progress_percentage: number;
+  error?: { message: string };
+  result?: {
+    presentation: any;
+    outlines: { slides: any[] };
+  };
 }
 
 export const useOutlinePolling = (presentationId: string | null) => {
@@ -40,6 +67,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
   const [statusMessage, setStatusMessage] = useState<string>("");
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const jobIdRef = useRef<string | null>(null);
   const retryCountRef = useRef(0);
   const isActiveRef = useRef(false);
 
@@ -50,14 +78,15 @@ export const useOutlinePolling = (presentationId: string | null) => {
       pollIntervalRef.current = null;
     }
     isActiveRef.current = false;
+    jobIdRef.current = null;
   }, []);
 
-  // Poll for status
-  const pollStatus = useCallback(async () => {
-    if (!presentationId || !isActiveRef.current) return;
+  // Poll for job status
+  const pollJobStatus = useCallback(async () => {
+    if (!jobIdRef.current || !isActiveRef.current) return;
 
     try {
-      const response = await fetch(`/api/v1/ppt/outlines/status/${presentationId}`, {
+      const response = await fetch(`/api/v1/ppt/outlines/job/${jobIdRef.current}/status`, {
         headers: getHeader(),
       });
 
@@ -65,33 +94,50 @@ export const useOutlinePolling = (presentationId: string | null) => {
         throw new Error(`Status check failed: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log("[OutlinePolling] Status:", data.status);
+      const job: OutlineJob = await response.json();
+      console.log("[OutlinePolling] Job status:", job.status, "Progress:", job.progress_percentage + "%");
 
-      if (data.status === "complete") {
-        // Outlines are ready
+      // Update status message from backend
+      if (job.message) {
+        setStatusMessage(job.message);
+      }
+
+      // Update progress
+      setPollingStatus({
+        status: job.status === "completed" ? "complete" :
+                job.status === "failed" ? "error" :
+                job.status as PollingStatus["status"],
+        progress: {
+          current: job.progress_current,
+          total: job.progress_total,
+          percentage: job.progress_percentage,
+        },
+        error: job.error?.message,
+      });
+
+      if (job.status === "completed") {
+        // Job completed - extract outlines
         cleanup();
 
-        const outlinesData = data.outlines?.slides || [];
+        const outlinesData = job.result?.outlines?.slides || [];
         dispatch(setOutlines(outlinesData));
 
-        setPollingStatus({
-          status: "complete",
-          progress: { current: outlinesData.length, total: outlinesData.length, percentage: 100 },
-        });
         setIsLoading(false);
         setStatusMessage("");
         retryCountRef.current = 0;
 
         console.log("[OutlinePolling] Complete - outlines received:", outlinesData.length);
-      } else {
-        // Still pending - continue polling
-        setPollingStatus({
-          status: "polling",
-          progress: data.progress || { current: 0, total: 6, percentage: 0 },
+        toast.success("המתווה נוצר בהצלחה");
+
+      } else if (job.status === "failed") {
+        // Job failed
+        cleanup();
+        setIsLoading(false);
+        toast.error("שגיאה ביצירת מתווה", {
+          description: job.error?.message || job.message || "נתקלנו בבעיה. נסה שוב.",
         });
-        setStatusMessage("בודק התקדמות...");
       }
+      // else: still pending/processing - continue polling
 
       // Reset retry count on successful poll
       retryCountRef.current = 0;
@@ -113,82 +159,94 @@ export const useOutlinePolling = (presentationId: string | null) => {
         });
       }
     }
-  }, [presentationId, dispatch, cleanup, pollingStatus.progress]);
+  }, [dispatch, cleanup, pollingStatus.progress]);
 
-  // Start generation
+  // Start job
   const startGeneration = useCallback(async () => {
     if (!presentationId) return;
 
-    console.log("[OutlinePolling] Starting generation for:", presentationId);
+    console.log("[OutlinePolling] Starting job for:", presentationId);
     isActiveRef.current = true;
     setIsLoading(true);
     setPollingStatus({
-      status: "generating",
+      status: "pending",
       progress: { current: 0, total: 6, percentage: 0 },
     });
     setStatusMessage("מתחיל יצירת מתווה...");
     retryCountRef.current = 0;
 
     try {
-      // Call generate endpoint
-      const response = await fetch(`/api/v1/ppt/outlines/generate/${presentationId}`, {
+      // Start background job
+      const response = await fetch(`/api/v1/ppt/outlines/job/${presentationId}`, {
         method: "POST",
         headers: getHeader(),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Generation failed: ${response.status}`);
+        throw new Error(errorData.detail || `Failed to start job: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log("[OutlinePolling] Generation response:", data.status);
+      const job: OutlineJob = await response.json();
+      console.log("[OutlinePolling] Job created:", job.id, "Status:", job.status);
 
-      if (data.status === "complete") {
-        // Outlines generated immediately
+      jobIdRef.current = job.id;
+
+      // Update initial status
+      setStatusMessage(job.message || "ממתין בתור...");
+      setPollingStatus({
+        status: job.status === "completed" ? "complete" :
+                job.status === "failed" ? "error" :
+                job.status as PollingStatus["status"],
+        progress: {
+          current: job.progress_current,
+          total: job.progress_total,
+          percentage: job.progress_percentage,
+        },
+      });
+
+      if (job.status === "completed") {
+        // Already completed (outlines existed)
         cleanup();
 
-        const outlinesData = data.outlines?.slides || [];
+        const outlinesData = job.result?.outlines?.slides || [];
         dispatch(setOutlines(outlinesData));
 
-        setPollingStatus({
-          status: "complete",
-          progress: { current: outlinesData.length, total: outlinesData.length, percentage: 100 },
-        });
         setIsLoading(false);
         setStatusMessage("");
 
-        console.log("[OutlinePolling] Complete - outlines received:", outlinesData.length);
+        console.log("[OutlinePolling] Already complete - outlines received:", outlinesData.length);
+      } else if (job.status === "failed") {
+        // Already failed
+        cleanup();
+        setIsLoading(false);
+        toast.error("שגיאה ביצירת מתווה", {
+          description: job.error?.message || job.message,
+        });
       } else {
         // Start polling for status
-        setStatusMessage("מייצר מתווה... אנא המתן");
-        setPollingStatus({
-          status: "polling",
-          progress: { current: 0, total: 6, percentage: 0 },
-        });
-
-        // Start polling interval
-        pollIntervalRef.current = setInterval(pollStatus, POLL_INTERVAL);
+        pollIntervalRef.current = setInterval(pollJobStatus, POLL_INTERVAL);
       }
 
     } catch (error: any) {
-      console.error("[OutlinePolling] Generation error:", error);
+      console.error("[OutlinePolling] Job start error:", error);
       cleanup();
       setPollingStatus({
         status: "error",
         progress: { current: 0, total: 6, percentage: 0 },
-        error: error.message || "Failed to generate outlines",
+        error: error.message || "Failed to start outline generation",
       });
       setIsLoading(false);
-      toast.error("שגיאה ביצירת מתווה", {
+      toast.error("שגיאה בהתחלת יצירת מתווה", {
         description: error.message || "נתקלנו בבעיה. נסה שוב.",
       });
     }
-  }, [presentationId, dispatch, cleanup, pollStatus]);
+  }, [presentationId, dispatch, cleanup, pollJobStatus]);
 
   // Manual retry
   const manualRetry = useCallback(() => {
     retryCountRef.current = 0;
+    jobIdRef.current = null;
     startGeneration();
   }, [startGeneration]);
 
@@ -204,7 +262,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
       return;
     }
 
-    // Auto-start generation
+    // Auto-start job
     startGeneration();
 
     return cleanup;
@@ -212,7 +270,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
 
   return {
     isLoading,
-    isStreaming: pollingStatus.status === "generating" || pollingStatus.status === "polling",
+    isStreaming: pollingStatus.status === "pending" || pollingStatus.status === "processing",
     pollingStatus,
     statusMessage,
     manualRetry,

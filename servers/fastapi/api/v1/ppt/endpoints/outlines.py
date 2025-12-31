@@ -198,6 +198,261 @@ async def generate_outlines(
         TEMP_FILE_SERVICE.cleanup_temp_dir(temp_dir)
 
 
+async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
+    """
+    Background task to generate outlines.
+    Uses its own database session since it runs in a background task.
+    """
+    async with async_session_maker() as sql_session:
+        try:
+            # Get job and presentation
+            job = await sql_session.get(OutlineJobModel, job_id)
+            presentation = await sql_session.get(PresentationModel, presentation_id)
+
+            if not job or not presentation:
+                logger.error(f"[OutlineJob {job_id}] Job or presentation not found")
+                return
+
+            # Mark as processing
+            job.mark_processing("טוען מסמכים...")
+            sql_session.add(job)
+            await sql_session.commit()
+
+            logger.info(
+                f"[OutlineJob {job_id}] Starting outline generation for presentation: {presentation_id}",
+                extra={"extra_fields": {
+                    "event_type": "outline_job_start",
+                    "job_id": str(job_id),
+                    "presentation_id": str(presentation_id),
+                    "n_slides": presentation.n_slides
+                }}
+            )
+
+            temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
+
+            try:
+                # Load documents if file paths exist
+                document_content = ""
+                if presentation.file_paths:
+                    job.update_progress(0, 100, "טוען מסמכים...")
+                    sql_session.add(job)
+                    await sql_session.commit()
+
+                    logger.debug(f"[OutlineJob {job_id}] Loading {len(presentation.file_paths)} documents")
+                    documents_loader = DocumentsLoader(temp_dir)
+                    documents = await documents_loader.aload_from_paths(presentation.file_paths)
+                    document_content = "\n\n".join([doc.page_content for doc in documents])
+                    logger.debug(f"[OutlineJob {job_id}] Documents loaded, content length: {len(document_content)}")
+
+                # Calculate slides to generate
+                n_slides_to_generate = presentation.n_slides
+                if presentation.include_table_of_contents:
+                    n_slides_to_generate = math.ceil(n_slides_to_generate * 1.3)
+
+                # Update progress - starting generation
+                job.update_progress(10, 100, "מייצר מתווה...")
+                sql_session.add(job)
+                await sql_session.commit()
+
+                logger.debug(f"[OutlineJob {job_id}] Generating outlines for {n_slides_to_generate} slides")
+
+                # Collect all chunks
+                presentation_outlines_text = ""
+                chunk_count = 0
+                async for chunk in generate_ppt_outline(
+                    presentation.content,
+                    n_slides_to_generate,
+                    presentation.language,
+                    document_content,
+                    presentation.tone,
+                    presentation.verbosity,
+                    presentation.instructions,
+                    presentation.include_title_slide,
+                    presentation.web_search,
+                ):
+                    if isinstance(chunk, HTTPException):
+                        raise chunk
+
+                    presentation_outlines_text += chunk
+                    chunk_count += 1
+
+                    # Update progress periodically
+                    if chunk_count % 10 == 0:
+                        progress = min(10 + int((chunk_count / 100) * 70), 80)
+                        job.update_progress(progress, 100, f"מייצר מתווה... ({chunk_count} חלקים)")
+                        sql_session.add(job)
+                        await sql_session.commit()
+
+                logger.debug(f"[OutlineJob {job_id}] LLM generation completed, text length: {len(presentation_outlines_text)}")
+
+                # Update progress - parsing
+                job.update_progress(85, 100, "מעבד תוצאות...")
+                sql_session.add(job)
+                await sql_session.commit()
+
+                # Parse outlines
+                try:
+                    presentation_outlines_json = dict(dirtyjson.loads(presentation_outlines_text))
+                except Exception as e:
+                    logger.error(f"[OutlineJob {job_id}] JSON parsing failed: {str(e)}")
+                    job.mark_failed("שגיאה בעיבוד תשובת ה-AI. נסה שוב.")
+                    sql_session.add(job)
+                    await sql_session.commit()
+                    return
+
+                if "slides" not in presentation_outlines_json:
+                    logger.error(f"[OutlineJob {job_id}] Missing 'slides' field in response")
+                    job.mark_failed("מבנה תשובה לא תקין מה-AI. נסה שוב.")
+                    sql_session.add(job)
+                    await sql_session.commit()
+                    return
+
+                # Create model and trim to requested slides
+                presentation_outlines = PresentationOutlineModel(**presentation_outlines_json)
+                presentation_outlines.slides = presentation_outlines.slides[:n_slides_to_generate]
+
+                # Update progress - saving
+                job.update_progress(95, 100, "שומר...")
+                sql_session.add(job)
+                await sql_session.commit()
+
+                # Save to presentation
+                presentation.outlines = presentation_outlines.model_dump()
+                presentation.title = get_presentation_title_from_outlines(presentation_outlines)
+                sql_session.add(presentation)
+                await sql_session.commit()
+
+                # Mark job as completed
+                job.mark_completed(
+                    result={
+                        "presentation": presentation.model_dump(mode="json"),
+                        "outlines": presentation.outlines
+                    },
+                    message="הושלם בהצלחה"
+                )
+                job.progress_current = len(presentation_outlines.slides)
+                job.progress_total = len(presentation_outlines.slides)
+                sql_session.add(job)
+                await sql_session.commit()
+
+                logger.info(
+                    f"[OutlineJob {job_id}] Completed successfully",
+                    extra={"extra_fields": {
+                        "event_type": "outline_job_complete",
+                        "job_id": str(job_id),
+                        "presentation_id": str(presentation_id),
+                        "slides_count": len(presentation_outlines.slides)
+                    }}
+                )
+
+            finally:
+                TEMP_FILE_SERVICE.cleanup_temp_dir(temp_dir)
+
+        except HTTPException as e:
+            logger.error(f"[OutlineJob {job_id}] HTTP error: {e.detail}")
+            job = await sql_session.get(OutlineJobModel, job_id)
+            if job:
+                job.mark_failed(e.detail)
+                sql_session.add(job)
+                await sql_session.commit()
+
+        except Exception as e:
+            logger.error(f"[OutlineJob {job_id}] Unexpected error: {str(e)}", exc_info=True)
+            job = await sql_session.get(OutlineJobModel, job_id)
+            if job:
+                job.mark_failed(f"שגיאה בלתי צפויה: {str(e)}")
+                sql_session.add(job)
+                await sql_session.commit()
+
+
+@OUTLINES_ROUTER.post("/job/{id}", response_model=OutlineJobModel)
+async def start_outline_job(
+    id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    sql_session: AsyncSession = Depends(get_async_session)
+):
+    """
+    Start a background job to generate outlines.
+    Returns immediately with a job ID that can be polled for status.
+    """
+    presentation = await sql_session.get(PresentationModel, id)
+
+    if not presentation:
+        raise HTTPException(status_code=404, detail="Presentation not found")
+
+    # Check if outlines already exist
+    if presentation.outlines and presentation.outlines.get("slides"):
+        # Return a completed job with existing outlines
+        job = OutlineJobModel(
+            presentation_id=id,
+            status=OutlineJobStatus.COMPLETED.value,
+            message="המתווה כבר קיים",
+            progress_current=len(presentation.outlines.get("slides", [])),
+            progress_total=len(presentation.outlines.get("slides", [])),
+            progress_percentage=100,
+            result={
+                "presentation": presentation.model_dump(mode="json"),
+                "outlines": presentation.outlines
+            }
+        )
+        sql_session.add(job)
+        await sql_session.commit()
+        return job
+
+    # Check if there's already a pending/processing job for this presentation
+    existing_job = await sql_session.execute(
+        select(OutlineJobModel).where(
+            OutlineJobModel.presentation_id == id,
+            OutlineJobModel.status.in_([OutlineJobStatus.PENDING.value, OutlineJobStatus.PROCESSING.value])
+        )
+    )
+    existing_job = existing_job.scalars().first()
+
+    if existing_job:
+        logger.info(f"Returning existing job {existing_job.id} for presentation {id}")
+        return existing_job
+
+    # Create new job
+    job = OutlineJobModel(
+        presentation_id=id,
+        status=OutlineJobStatus.PENDING.value,
+        message="ממתין בתור...",
+        progress_total=presentation.n_slides
+    )
+    sql_session.add(job)
+    await sql_session.commit()
+
+    logger.info(
+        f"Created outline job {job.id} for presentation {id}",
+        extra={"extra_fields": {
+            "event_type": "outline_job_created",
+            "job_id": str(job.id),
+            "presentation_id": str(id)
+        }}
+    )
+
+    # Start background task
+    background_tasks.add_task(process_outline_job, job.id, id)
+
+    return job
+
+
+@OUTLINES_ROUTER.get("/job/{job_id}/status", response_model=OutlineJobModel)
+async def get_outline_job_status(
+    job_id: uuid.UUID,
+    sql_session: AsyncSession = Depends(get_async_session)
+):
+    """
+    Get the status of an outline generation job.
+    """
+    job = await sql_session.get(OutlineJobModel, job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return job
+
+
 @OUTLINES_ROUTER.get("/stream/{id}")
 async def stream_outlines(
     id: uuid.UUID, sql_session: AsyncSession = Depends(get_async_session)

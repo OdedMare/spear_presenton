@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RootState } from "@/store/store";
 import { useSelector } from "react-redux";
@@ -9,8 +9,6 @@ import Wrapper from "@/components/Wrapper";
 import OutlineContent from "./OutlineContent";
 import EmptyStateView from "./EmptyStateView";
 import GenerateButton from "./GenerateButton";
-import { Radio, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 import { TABS, Template } from "../types/index";
 import { useOutlineStreaming } from "../hooks/useOutlineStreaming";
@@ -19,36 +17,22 @@ import { useOutlineManagement } from "../hooks/useOutlineManagement";
 import { usePresentationGeneration } from "../hooks/usePresentationGeneration";
 import TemplateSelection from "./TemplateSelection";
 
-// Generation method type
-type GenerationMethod = "stream" | "polling";
-
 const OutlinePage: React.FC = () => {
   const { presentation_id, outlines } = useSelector(
     (state: RootState) => state.presentationGeneration
   );
 
+  // Get generation method from Redux (set in Settings page)
+  const generationMethod = useSelector(
+    (state: RootState) => state.userConfig.llm_config.GENERATION_METHOD
+  ) || "jobs";
+
   const [activeTab, setActiveTab] = useState<string>(TABS.OUTLINE);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
-  // Get saved method from localStorage or default to "polling"
-  const [generationMethod, setGenerationMethod] = useState<GenerationMethod>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("outlineGenerationMethod");
-      return (saved as GenerationMethod) || "polling";
-    }
-    return "polling";
-  });
-
-  // Save method preference to localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("outlineGenerationMethod", generationMethod);
-    }
-  }, [generationMethod]);
-
-  // Custom hooks - use both but only one will be active based on method
+  // Custom hooks - use both but only one will be active based on method from settings
   const streamState = useOutlineStreaming(generationMethod === "stream" ? presentation_id : null);
-  const pollingState = useOutlinePolling(generationMethod === "polling" ? presentation_id : null);
+  const pollingState = useOutlinePolling(generationMethod === "jobs" ? presentation_id : null);
 
   // Select active state based on method
   const activeState = generationMethod === "stream" ? streamState : pollingState;
@@ -87,32 +71,6 @@ const OutlinePage: React.FC = () => {
               <TabsContent value={TABS.OUTLINE} className="h-[calc(100vh-16rem)] overflow-y-auto custom_scrollbar"
               >
                 <div>
-                  {/* Method Selector - only show when not actively generating */}
-                  {!activeState.isLoading && !activeState.isStreaming && outlines.length === 0 && (
-                    <div className="mb-4 flex items-center justify-center gap-2">
-                      <span className="text-sm text-gray-500">שיטת יצירה:</span>
-                      <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                        <Button
-                          variant={generationMethod === "stream" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setGenerationMethod("stream")}
-                          className={`rounded-none ${generationMethod === "stream" ? "bg-blue-600 text-white" : ""}`}
-                        >
-                          <Zap className="h-4 w-4 ml-1" />
-                          סטרימינג
-                        </Button>
-                        <Button
-                          variant={generationMethod === "polling" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setGenerationMethod("polling")}
-                          className={`rounded-none ${generationMethod === "polling" ? "bg-blue-600 text-white" : ""}`}
-                        >
-                          <Radio className="h-4 w-4 ml-1" />
-                          רגיל
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                   <OutlineContent
                     outlines={outlines}
                     isLoading={activeState.isLoading}

@@ -62,3 +62,8 @@ class UserConfig(BaseModel):
     ELASTICSEARCH_INDEX_PREFIX: Optional[str] = None
     LOG_LEVEL: Optional[str] = None
     DISABLE_SSL_VERIFY: Optional[bool] = None
+
+    # Generation Method Configuration
+    # "stream" = SSE real-time streaming
+    # "jobs" = Background job with polling
+    GENERATION_METHOD: Optional[str] = "jobs"  # Default to jobs (more reliable)

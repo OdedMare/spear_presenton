@@ -157,6 +157,7 @@ def get_user_config():
             if existing_config.DISABLE_SSL_VERIFY is not None
             else (parse_bool_or_none(get_disable_ssl_verify_env()) or False)
         ),
+        GENERATION_METHOD=existing_config.GENERATION_METHOD or "jobs",
     )
 
 

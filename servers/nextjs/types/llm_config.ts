@@ -60,4 +60,9 @@ export interface LLMConfig {
 
   // Only used in UI settings
   USE_CUSTOM_URL?: boolean;
+
+  // Generation Method Configuration
+  // "stream" = SSE real-time streaming
+  // "jobs" = Background job with polling
+  GENERATION_METHOD?: "stream" | "jobs";
 }

@@ -39,7 +39,7 @@ const SettingsPage = () => {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === "oded2002" || passwordInput === "spear1") {
+    if (passwordInput === "oded2002" || passwordInput === "spear1" || passwordInput ==='םגקג2002') {
       setIsAuthenticated(true);
       setAuthError(false);
     } else {
