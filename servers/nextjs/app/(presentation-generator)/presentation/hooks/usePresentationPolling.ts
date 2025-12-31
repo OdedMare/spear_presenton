@@ -77,6 +77,36 @@ export const usePresentationPolling = (
   const currentIntervalRef = useRef(POLL_CONFIG.initialInterval);
   const lastProgressRef = useRef(0);
 
+  // Track previous values to prevent unnecessary state updates
+  const lastStatusMessageRef = useRef<string>("");
+  const lastPollingStatusRef = useRef<PresentationPollingStatus>({
+    status: "idle",
+    progress: { current: 0, total: 0, percentage: 0 },
+  });
+
+  // Update status message only if changed
+  const updateStatusMessage = useCallback((message: string) => {
+    if (message !== lastStatusMessageRef.current) {
+      lastStatusMessageRef.current = message;
+      setStatusMessage(message);
+    }
+  }, []);
+
+  // Update polling status only if changed
+  const updatePollingStatus = useCallback((newStatus: PresentationPollingStatus) => {
+    const prev = lastPollingStatusRef.current;
+    if (
+      prev.status !== newStatus.status ||
+      prev.progress.current !== newStatus.progress.current ||
+      prev.progress.total !== newStatus.progress.total ||
+      prev.progress.percentage !== newStatus.progress.percentage ||
+      prev.error !== newStatus.error
+    ) {
+      lastPollingStatusRef.current = newStatus;
+      setPollingStatus(newStatus);
+    }
+  }, []);
+
   // Cleanup function
   const cleanup = useCallback(() => {
     if (pollIntervalRef.current) {
@@ -142,13 +172,13 @@ export const usePresentationPolling = (
       const job: PresentationJob = await response.json();
       console.log("[PresentationPolling] Job status:", job.status, "Progress:", job.progress_percentage + "%");
 
-      // Update status message from backend
+      // Update status message from backend (only if changed)
       if (job.message) {
-        setStatusMessage(job.message);
+        updateStatusMessage(job.message);
       }
 
-      // Update progress
-      setPollingStatus({
+      // Update progress (only if changed)
+      updatePollingStatus({
         status: job.status === "completed" ? "complete" :
                 job.status === "failed" ? "error" :
                 job.status as PresentationPollingStatus["status"],
@@ -170,7 +200,7 @@ export const usePresentationPolling = (
 
         dispatch(setStreaming(false));
         setLoading(false);
-        setStatusMessage("");
+        updateStatusMessage("");
         retryCountRef.current = 0;
 
         // Remove stream parameter from URL
@@ -209,9 +239,9 @@ export const usePresentationPolling = (
 
       if (retryCountRef.current >= POLL_CONFIG.maxRetries) {
         cleanup();
-        setPollingStatus({
+        updatePollingStatus({
           status: "error",
-          progress: pollingStatus.progress,
+          progress: lastPollingStatusRef.current.progress,
           error: "Failed to check status after multiple attempts",
         });
         dispatch(setStreaming(false));
@@ -222,10 +252,10 @@ export const usePresentationPolling = (
         });
       } else {
         // Retry with backoff
-        scheduleNextPoll(pollJobStatus, pollingStatus.progress.percentage);
+        scheduleNextPoll(pollJobStatus, lastPollingStatusRef.current.progress.percentage);
       }
     }
-  }, [dispatch, cleanup, setLoading, setError, pollingStatus.progress, scheduleNextPoll]);
+  }, [dispatch, cleanup, setLoading, setError, updateStatusMessage, updatePollingStatus, scheduleNextPoll]);
 
   // Start job
   const startGeneration = useCallback(async () => {
@@ -236,11 +266,15 @@ export const usePresentationPolling = (
     dispatch(setStreaming(true));
     dispatch(clearPresentationData());
 
-    setPollingStatus({
+    // Reset refs for new job
+    lastStatusMessageRef.current = "מתחיל יצירת מצגת...";
+    lastPollingStatusRef.current = {
       status: "pending",
       progress: { current: 0, total: 0, percentage: 0 },
-    });
-    setStatusMessage("מתחיל יצירת מצגת...");
+    };
+    setPollingStatus(lastPollingStatusRef.current);
+    setStatusMessage(lastStatusMessageRef.current);
+
     retryCountRef.current = 0;
     currentIntervalRef.current = POLL_CONFIG.initialInterval;
     lastProgressRef.current = 0;
@@ -265,8 +299,8 @@ export const usePresentationPolling = (
       jobIdRef.current = job.id;
 
       // Update initial status
-      setStatusMessage(job.message || "ממתין בתור...");
-      setPollingStatus({
+      updateStatusMessage(job.message || "ממתין בתור...");
+      updatePollingStatus({
         status: job.status === "completed" ? "complete" :
                 job.status === "failed" ? "error" :
                 job.status as PresentationPollingStatus["status"],
@@ -287,7 +321,7 @@ export const usePresentationPolling = (
 
         dispatch(setStreaming(false));
         setLoading(false);
-        setStatusMessage("");
+        updateStatusMessage("");
 
         // Remove stream parameter from URL
         const newUrl = new URL(window.location.href);
@@ -312,7 +346,7 @@ export const usePresentationPolling = (
     } catch (error: any) {
       console.error("[PresentationPolling] Job start error:", error);
       cleanup();
-      setPollingStatus({
+      updatePollingStatus({
         status: "error",
         progress: { current: 0, total: 0, percentage: 0 },
         error: error.message || "Failed to start presentation generation",
@@ -324,7 +358,7 @@ export const usePresentationPolling = (
         description: error.message || "נתקלנו בבעיה. נסה שוב.",
       });
     }
-  }, [presentationId, dispatch, cleanup, setLoading, setError, pollJobStatus, scheduleNextPoll]);
+  }, [presentationId, dispatch, cleanup, setLoading, setError, updateStatusMessage, updatePollingStatus, pollJobStatus, scheduleNextPoll]);
 
   // Effect to auto-start if needed
   useEffect(() => {

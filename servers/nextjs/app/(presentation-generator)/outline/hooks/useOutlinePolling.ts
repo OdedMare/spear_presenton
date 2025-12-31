@@ -71,6 +71,36 @@ export const useOutlinePolling = (presentationId: string | null) => {
   const retryCountRef = useRef(0);
   const isActiveRef = useRef(false);
 
+  // Track previous values to prevent unnecessary state updates
+  const lastStatusMessageRef = useRef<string>("");
+  const lastPollingStatusRef = useRef<PollingStatus>({
+    status: "idle",
+    progress: { current: 0, total: 6, percentage: 0 },
+  });
+
+  // Update status message only if changed
+  const updateStatusMessage = useCallback((message: string) => {
+    if (message !== lastStatusMessageRef.current) {
+      lastStatusMessageRef.current = message;
+      setStatusMessage(message);
+    }
+  }, []);
+
+  // Update polling status only if changed
+  const updatePollingStatus = useCallback((newStatus: PollingStatus) => {
+    const prev = lastPollingStatusRef.current;
+    if (
+      prev.status !== newStatus.status ||
+      prev.progress.current !== newStatus.progress.current ||
+      prev.progress.total !== newStatus.progress.total ||
+      prev.progress.percentage !== newStatus.progress.percentage ||
+      prev.error !== newStatus.error
+    ) {
+      lastPollingStatusRef.current = newStatus;
+      setPollingStatus(newStatus);
+    }
+  }, []);
+
   // Cleanup function
   const cleanup = useCallback(() => {
     if (pollIntervalRef.current) {
@@ -97,13 +127,13 @@ export const useOutlinePolling = (presentationId: string | null) => {
       const job: OutlineJob = await response.json();
       console.log("[OutlinePolling] Job status:", job.status, "Progress:", job.progress_percentage + "%");
 
-      // Update status message from backend
+      // Update status message from backend (only if changed)
       if (job.message) {
-        setStatusMessage(job.message);
+        updateStatusMessage(job.message);
       }
 
-      // Update progress
-      setPollingStatus({
+      // Update progress (only if changed)
+      updatePollingStatus({
         status: job.status === "completed" ? "complete" :
                 job.status === "failed" ? "error" :
                 job.status as PollingStatus["status"],
@@ -123,7 +153,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
         dispatch(setOutlines(outlinesData));
 
         setIsLoading(false);
-        setStatusMessage("");
+        updateStatusMessage("");
         retryCountRef.current = 0;
 
         console.log("[OutlinePolling] Complete - outlines received:", outlinesData.length);
@@ -148,9 +178,9 @@ export const useOutlinePolling = (presentationId: string | null) => {
 
       if (retryCountRef.current >= POLL_CONFIG.maxRetries) {
         cleanup();
-        setPollingStatus({
+        updatePollingStatus({
           status: "error",
-          progress: pollingStatus.progress,
+          progress: lastPollingStatusRef.current.progress,
           error: "Failed to check status after multiple attempts",
         });
         setIsLoading(false);
@@ -159,7 +189,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
         });
       }
     }
-  }, [dispatch, cleanup, pollingStatus.progress]);
+  }, [dispatch, cleanup, updateStatusMessage, updatePollingStatus]);
 
   // Start job
   const startGeneration = useCallback(async () => {
@@ -168,11 +198,16 @@ export const useOutlinePolling = (presentationId: string | null) => {
     console.log("[OutlinePolling] Starting job for:", presentationId);
     isActiveRef.current = true;
     setIsLoading(true);
-    setPollingStatus({
+
+    // Reset refs for new job
+    lastStatusMessageRef.current = "מתחיל יצירת מתווה...";
+    lastPollingStatusRef.current = {
       status: "pending",
       progress: { current: 0, total: 6, percentage: 0 },
-    });
-    setStatusMessage("מתחיל יצירת מתווה...");
+    };
+    setPollingStatus(lastPollingStatusRef.current);
+    setStatusMessage(lastStatusMessageRef.current);
+
     retryCountRef.current = 0;
 
     try {
@@ -193,8 +228,8 @@ export const useOutlinePolling = (presentationId: string | null) => {
       jobIdRef.current = job.id;
 
       // Update initial status
-      setStatusMessage(job.message || "ממתין בתור...");
-      setPollingStatus({
+      updateStatusMessage(job.message || "ממתין בתור...");
+      updatePollingStatus({
         status: job.status === "completed" ? "complete" :
                 job.status === "failed" ? "error" :
                 job.status as PollingStatus["status"],
@@ -213,7 +248,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
         dispatch(setOutlines(outlinesData));
 
         setIsLoading(false);
-        setStatusMessage("");
+        updateStatusMessage("");
 
         console.log("[OutlinePolling] Already complete - outlines received:", outlinesData.length);
       } else if (job.status === "failed") {
@@ -231,7 +266,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
     } catch (error: any) {
       console.error("[OutlinePolling] Job start error:", error);
       cleanup();
-      setPollingStatus({
+      updatePollingStatus({
         status: "error",
         progress: { current: 0, total: 6, percentage: 0 },
         error: error.message || "Failed to start outline generation",
@@ -241,7 +276,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
         description: error.message || "נתקלנו בבעיה. נסה שוב.",
       });
     }
-  }, [presentationId, dispatch, cleanup, pollJobStatus]);
+  }, [presentationId, dispatch, cleanup, updateStatusMessage, updatePollingStatus, pollJobStatus]);
 
   // Manual retry
   const manualRetry = useCallback(() => {
