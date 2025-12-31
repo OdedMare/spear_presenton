@@ -65,8 +65,11 @@ const OutlinePage: React.FC = () => {
                     activeSlideIndex={streamState.activeSlideIndex}
                     highestActiveIndex={streamState.highestActiveIndex}
                     statusMessage={streamState.statusMessage}
+                    expectedSlides={6}
+                    retryInfo={streamState.retryInfo}
                     onDragEnd={handleDragEnd}
                     onAddSlide={handleAddSlide}
+                    onRetry={streamState.manualRetry}
                   />
                 </div>
               </TabsContent>
