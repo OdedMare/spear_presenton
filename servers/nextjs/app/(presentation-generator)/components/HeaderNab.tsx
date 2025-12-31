@@ -48,7 +48,7 @@ const HeaderNav = () => {
       >
         <LayoutDashboard className="w-5 h-5" />
         <span className="text-sm font-medium font-inter">
-          לוח בקרה
+         מסך ראשי
         </span>
       </Link>
       {canChangeKeys && (

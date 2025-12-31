@@ -14,7 +14,7 @@ export const useFileUpload = () => {
       const isPptx = lowerName.endsWith(".pptx") || lowerName.endsWith(".potx");
       const isPdf = lowerName.endsWith(".pdf");
       if (!isPptx && !isPdf) {
-        toast.error("אנא בחר קובץ PDF, PPTX או POTX תקין");
+        toast.error("אנא בחר קובץ PPTX או POTX תקין");
         return;
       }
 

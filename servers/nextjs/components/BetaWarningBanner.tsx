@@ -18,7 +18,7 @@ export function BetaWarningBanner() {
                     <p className="text-sm text-amber-800 font-medium text-center">
                         <span className="font-semibold">המערכת כרגע בהרצה ובתצורת בטא</span>
                         {' - '}
-                        לפניות נוספות ושאלות מוזמנים לפנות לצוות חנית
+                       פניות נוספות ושאלות מוזמנים לפנות לצוות חנית
                     </p>
                 </div>
             </div>

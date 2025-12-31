@@ -209,7 +209,7 @@ export const usePresentationPolling = (
         window.history.replaceState({}, "", newUrl.toString());
 
         console.log("[PresentationPolling] Complete - slides received:", job.result?.slides?.length || 0);
-        toast.success("המצגת נוצרה בהצלחה");
+        toast.success("🎉 המצגת מוכנה! אפשר להתחיל להרשים.");
 
       } else if (job.status === "failed") {
         // Job failed
@@ -221,7 +221,7 @@ export const usePresentationPolling = (
         // Build error message with suggestion if available
         let errorDescription = job.error?.message || job.message || "נתקלנו בבעיה. נסה שוב.";
 
-        toast.error("שגיאה ביצירת מצגת", {
+        toast.error("😔 משהו השתבש", {
           description: errorDescription,
           duration: 10000,
         });
@@ -247,7 +247,7 @@ export const usePresentationPolling = (
         dispatch(setStreaming(false));
         setLoading(false);
         setError(true);
-        toast.error("שגיאה בבדיקת התקדמות", {
+        toast.error("🔌 בעיית חיבור", {
           description: "לא הצלחנו לבדוק את סטטוס היצירה. נסה שוב.",
         });
       } else {
@@ -267,7 +267,7 @@ export const usePresentationPolling = (
     dispatch(clearPresentationData());
 
     // Reset refs for new job
-    lastStatusMessageRef.current = "מתחיל יצירת מצגת...";
+    lastStatusMessageRef.current = "🚀 מתחילים לבשל את המצגת שלך...";
     lastPollingStatusRef.current = {
       status: "pending",
       progress: { current: 0, total: 0, percentage: 0 },
@@ -299,7 +299,7 @@ export const usePresentationPolling = (
       jobIdRef.current = job.id;
 
       // Update initial status
-      updateStatusMessage(job.message || "ממתין בתור...");
+      updateStatusMessage(job.message || "ממתין בתור כמו שקף מנומס...");
       updatePollingStatus({
         status: job.status === "completed" ? "complete" :
                 job.status === "failed" ? "error" :
@@ -336,7 +336,7 @@ export const usePresentationPolling = (
         setLoading(false);
         setError(true);
         toast.error("שגיאה ביצירת מצגת", {
-          description: job.error?.message || job.message,
+          description: job.error?.message || job.message || "נתקלנו בבעיה. נסה שוב.",
         });
       } else {
         // Start polling for status with smart interval

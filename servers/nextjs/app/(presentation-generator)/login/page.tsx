@@ -8,7 +8,7 @@ import { loginStart, loginSuccess, loginFailure } from "@/store/slices/auth";
 import { login as loginApi } from "../services/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogIn, Sparkles } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { logger } from "@/utils/logger";
 
 type ClientLogLevel = "debug" | "info" | "warn" | "error";
@@ -80,14 +80,14 @@ export default function LoginPage() {
     const trimmed = username.trim();
 
     if (!trimmed) {
-      return "שם המשתמש לא יכול להיות רק";
+      return "שם המשתמש לא יכול להיות ריק";
     }
 
     const isOaUser = trimmed.startsWith("Oa");
     const isNesharimUser = trimmed.endsWith("d8200.mil");
 
     if (!isOaUser && !isNesharimUser) {
-      return "נא להתחבר עם יוזר oa תקין או יוזר נס הרים תקין";
+      return "נא להתחבר עם יוזר ONE-AMAN תקין או יוזר נס הרים תקין";
     }
 
     return null;
@@ -150,7 +150,8 @@ export default function LoginPage() {
       });
       router.push("/dashboard");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "התחברות נכשלה. אנא נסה שנית.";
+      const errorMessage =
+        err instanceof Error ? err.message : "התחברות נכשלה. אנא נסה שנית.";
       const durationMs = Date.now() - requestStart;
       logClientEvent("error", `Login failed for ${trimmedUsername}: ${errorMessage}`, {
         event_type: "login_request_failed",
@@ -168,7 +169,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#E9E8F8]">
-      {/* Header with logo - matching app style */}
+      {/* Header with logo */}
       <div className="bg-[#5146E5] w-full shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center py-4">
@@ -183,95 +184,70 @@ export default function LoginPage() {
 
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          {/* Welcome card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
-            {/* Header */}
-            <div className="text-center space-y-2">
-              <div className="flex justify-center mb-4">
-                <div className="bg-[#5146E5] bg-opacity-10 rounded-full p-3">
-                  <Sparkles className="w-8 h-8 text-[#5146E5]" />
-                </div>
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900 font-roboto">
-                ברוכים הבאים
-              </h1>
-              <p className="text-gray-600 font-inter">
-                הכנס את שם המשתמש שלך כדי להמשיך
-              </p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
-              <div className="space-y-2">
-                <label
-                  htmlFor="username"
-                  className="text-sm font-medium text-gray-700 font-inter"
-                >
-                  שם משתמש
-                </label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="לדוגמה: ugda91_odedm@d8200.mil או Oa212696678"
-                  value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value);
-                    // Clear validation error when user types
-                    if (validationError) {
-                      setValidationError("");
-                    }
-                  }}
-                  disabled={isLoading}
-                  autoFocus
-                  minLength={2}
-                  maxLength={100}
-                  required
-                  className="h-12 text-base font-inter"
-                />
-              </div>
-
-              {(validationError || error) && (
-                <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-                  <p className="text-sm text-red-800 font-inter">
-                    {validationError || error}
-                  </p>
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full h-12 bg-[#5146E5] hover:bg-[#5146E5]/90 text-white font-medium text-base font-inter"
-                disabled={isLoading || !username.trim()}
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    מתחבר...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <LogIn className="w-5 h-5" />
-                    התחבר
-                  </span>
-                )}
-              </Button>
-            </form>
-
-            {/* Footer info */}
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center font-inter" dir="rtl">
-                פלטפורמה ליצירת מצגות בעזרת בינה מלאכותית
-              </p>
-            </div>
-          </div>
-
-          {/* Additional info below card */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 font-inter" dir="rtl">
-              אין צורך בסיסמה - רק שם משתמש
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold text-gray-900">
+              ברוכים הבאים
+            </h1>
+            <p className="text-gray-600">
+              הכנס את שם המשתמש שלך כדי להמשיך
             </p>
           </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
+            <div className="space-y-2">
+              <label
+                htmlFor="username"
+                className="text-sm font-medium text-gray-700"
+              >
+                שם משתמש
+              </label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="לדוגמה: ugda91_odedm@d8200.mil או Oa212696678"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (validationError) {
+                    setValidationError("");
+                  }
+                }}
+                disabled={isLoading}
+                autoFocus
+                minLength={2}
+                maxLength={100}
+                required
+                className="h-12 text-base"
+              />
+            </div>
+
+            {(validationError || error) && (
+              <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                <p className="text-sm text-red-800">
+                  {validationError || error}
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full h-12 bg-[#5146E5] hover:bg-[#5146E5]/90 text-white font-medium text-base"
+              disabled={isLoading || !username.trim()}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  מתחבר...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <LogIn className="w-5 h-5" />
+                  התחבר
+                </span>
+              )}
+            </Button>
+          </form>
         </div>
       </div>
     </div>

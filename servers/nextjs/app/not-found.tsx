@@ -24,11 +24,6 @@ const NotFound = () => {
                             עבור לדף הבית
                         </Button>
                     </Link>
-                    <Link href="/contact">
-                        <Button className="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700">
-                            צור קשר עם התמיכה
-                        </Button>
-                    </Link>
                 </div>
 
             </div>

@@ -1,8 +1,11 @@
 FROM python:3.11-slim-bookworm
 
-# Install system dependencies
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies with retry logic for network resilience
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    -o Acquire::Retries=3 \
+    -o Acquire::http::Timeout=30 \
+    -o Acquire::https::Timeout=30 \
     curl \
     libreoffice \
     fontconfig \
@@ -14,7 +17,10 @@ RUN apt-get update && apt-get install -y \
 
 # Install Node.js 20 using NodeSource repository
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
+    apt-get install -y --no-install-recommends \
+    -o Acquire::Retries=3 \
+    -o Acquire::http::Timeout=30 \
+    nodejs && \
     npm install -g npm@latest
 
 # Create working directory

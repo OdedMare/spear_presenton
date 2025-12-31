@@ -1,11 +1,46 @@
+# Version control
 .git
 .gitignore
+.github
 
+# Python
 servers/fastapi/tmp
 servers/fastapi/debug
 servers/fastapi/.venv
+servers/fastapi/__pycache__
+servers/fastapi/**/*.pyc
+servers/fastapi/**/*.pyo
+servers/fastapi/**/*.egg-info
+servers/fastapi/.pytest_cache
 
+# Node.js
 servers/nextjs/node_modules
 servers/nextjs/.next
+node_modules
+npm-debug.log*
 
+# Database
 container.db
+*.db
+*.sqlite
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation and tests (if you don't need them in production)
+*.md
+!README.md
+cypress
+tests
+
+# App data and temporary files
+app_data
+tmp

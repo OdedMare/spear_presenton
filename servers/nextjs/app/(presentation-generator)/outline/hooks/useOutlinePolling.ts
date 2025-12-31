@@ -70,6 +70,8 @@ export const useOutlinePolling = (presentationId: string | null) => {
   const jobIdRef = useRef<string | null>(null);
   const retryCountRef = useRef(0);
   const isActiveRef = useRef(false);
+  const currentIntervalRef = useRef(POLL_CONFIG.initialInterval);
+  const lastProgressRef = useRef(0);
 
   // Track previous values to prevent unnecessary state updates
   const lastStatusMessageRef = useRef<string>("");
@@ -104,12 +106,51 @@ export const useOutlinePolling = (presentationId: string | null) => {
   // Cleanup function
   const cleanup = useCallback(() => {
     if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
+      clearTimeout(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
     isActiveRef.current = false;
     jobIdRef.current = null;
+    currentIntervalRef.current = POLL_CONFIG.initialInterval;
+    lastProgressRef.current = 0;
   }, []);
+
+  // Calculate next poll interval based on progress
+  const calculateNextInterval = useCallback((progress: number): number => {
+    // Speed up near completion
+    if (progress >= POLL_CONFIG.speedUpThreshold) {
+      return POLL_CONFIG.minInterval;
+    }
+
+    // If progress changed, keep current interval
+    if (progress > lastProgressRef.current) {
+      lastProgressRef.current = progress;
+      return currentIntervalRef.current;
+    }
+
+    // No progress - slow down with backoff
+    const newInterval = Math.min(
+      currentIntervalRef.current * POLL_CONFIG.backoffMultiplier,
+      POLL_CONFIG.maxInterval
+    );
+    currentIntervalRef.current = newInterval;
+    return newInterval;
+  }, []);
+
+  // Schedule next poll with adaptive interval
+  const scheduleNextPoll = useCallback((pollFn: () => Promise<void>, progress: number) => {
+    if (!isActiveRef.current) return;
+
+    const interval = calculateNextInterval(progress);
+
+    if (pollIntervalRef.current) {
+      clearTimeout(pollIntervalRef.current);
+    }
+
+    pollIntervalRef.current = setTimeout(async () => {
+      await pollFn();
+    }, interval) as unknown as NodeJS.Timeout;
+  }, [calculateNextInterval]);
 
   // Poll for job status
   const pollJobStatus = useCallback(async () => {
@@ -157,17 +198,19 @@ export const useOutlinePolling = (presentationId: string | null) => {
         retryCountRef.current = 0;
 
         console.log("[OutlinePolling] Complete - outlines received:", outlinesData.length);
-        toast.success("המתווה נוצר בהצלחה");
+        toast.success("🎉 המתווה מוכן! אפשר להתחיל להרשים.");
 
       } else if (job.status === "failed") {
         // Job failed
         cleanup();
         setIsLoading(false);
-        toast.error("שגיאה ביצירת מתווה", {
+        toast.error("😔 משהו השתבש", {
           description: job.error?.message || job.message || "נתקלנו בבעיה. נסה שוב.",
         });
+      } else {
+        // Still pending/processing - schedule next poll with smart interval
+        scheduleNextPoll(pollJobStatus, job.progress_percentage);
       }
-      // else: still pending/processing - continue polling
 
       // Reset retry count on successful poll
       retryCountRef.current = 0;
@@ -184,12 +227,15 @@ export const useOutlinePolling = (presentationId: string | null) => {
           error: "Failed to check status after multiple attempts",
         });
         setIsLoading(false);
-        toast.error("שגיאה בבדיקת התקדמות", {
+        toast.error("🔌 בעיית חיבור", {
           description: "לא הצלחנו לבדוק את סטטוס היצירה. נסה שוב.",
         });
+      } else {
+        // Retry with backoff
+        scheduleNextPoll(pollJobStatus, lastPollingStatusRef.current.progress.percentage);
       }
     }
-  }, [dispatch, cleanup, updateStatusMessage, updatePollingStatus]);
+  }, [dispatch, cleanup, updateStatusMessage, updatePollingStatus, scheduleNextPoll]);
 
   // Start job
   const startGeneration = useCallback(async () => {
@@ -200,7 +246,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
     setIsLoading(true);
 
     // Reset refs for new job
-    lastStatusMessageRef.current = "מתחיל יצירת מתווה...";
+    lastStatusMessageRef.current = "🚀 מתחילים לבנות את המתווה...";
     lastPollingStatusRef.current = {
       status: "pending",
       progress: { current: 0, total: 6, percentage: 0 },
@@ -209,6 +255,8 @@ export const useOutlinePolling = (presentationId: string | null) => {
     setStatusMessage(lastStatusMessageRef.current);
 
     retryCountRef.current = 0;
+    currentIntervalRef.current = POLL_CONFIG.initialInterval;
+    lastProgressRef.current = 0;
 
     try {
       // Start background job
@@ -228,7 +276,7 @@ export const useOutlinePolling = (presentationId: string | null) => {
       jobIdRef.current = job.id;
 
       // Update initial status
-      updateStatusMessage(job.message || "ממתין בתור...");
+      updateStatusMessage(job.message || "⏳ רגע, מערבבים רעיונות לכדי מתווה...");
       updatePollingStatus({
         status: job.status === "completed" ? "complete" :
                 job.status === "failed" ? "error" :
@@ -255,12 +303,12 @@ export const useOutlinePolling = (presentationId: string | null) => {
         // Already failed
         cleanup();
         setIsLoading(false);
-        toast.error("שגיאה ביצירת מתווה", {
-          description: job.error?.message || job.message,
+        toast.error("😔 משהו השתבש", {
+          description: job.error?.message || job.message || "נתקלנו בבעיה. נסה שוב.",
         });
       } else {
-        // Start polling for status
-        pollIntervalRef.current = setInterval(pollJobStatus, POLL_CONFIG.initialInterval);
+        // Start polling for status with smart interval
+        scheduleNextPoll(pollJobStatus, 0);
       }
 
     } catch (error: any) {
@@ -272,11 +320,11 @@ export const useOutlinePolling = (presentationId: string | null) => {
         error: error.message || "Failed to start outline generation",
       });
       setIsLoading(false);
-      toast.error("שגיאה בהתחלת יצירת מתווה", {
+      toast.error("😔 לא הצלחנו להתחיל", {
         description: error.message || "נתקלנו בבעיה. נסה שוב.",
       });
     }
-  }, [presentationId, dispatch, cleanup, updateStatusMessage, updatePollingStatus, pollJobStatus]);
+  }, [presentationId, dispatch, cleanup, updateStatusMessage, updatePollingStatus, pollJobStatus, scheduleNextPoll]);
 
   // Manual retry
   const manualRetry = useCallback(() => {

@@ -57,7 +57,7 @@ const SupportingDoc = ({ files, onFilesChange }: SupportingDocProps) => {
         const invalidFiles = droppedFiles.filter(file => !validTypes.includes(file.type));
         if (invalidFiles.length > 0) {
             toast.error('סוג קובץ לא תקין', {
-                description: 'אנא העלה רק קבצי PDF, TXT, PPTX או DOCX',
+                description: 'אנא העלה רק קבצ TXT, PPTX או DOCX',
             });
             return;
         }
@@ -139,7 +139,7 @@ const SupportingDoc = ({ files, onFilesChange }: SupportingDocProps) => {
                         }
                     </p>
                     <p className="text-gray-400 text-sm text-center mb-4">
-                        תומך ב-PDF, קבצי טקסט, PPTX, DOCX
+                        תומך ב-, קבצי טקסט, PPTX, DOCX
                     </p>
 
                     <input

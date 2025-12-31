@@ -547,7 +547,7 @@ async def process_presentation_job(job_id: uuid.UUID, presentation_id: uuid.UUID
                 return
 
             # Mark as processing
-            job.mark_processing("מתחיל יצירת מצגת...")
+            job.mark_processing("🚀 מתחילים לעבוד על המצגת...")
             sql_session.add(job)
             await sql_session.commit()
 
@@ -580,7 +580,7 @@ async def process_presentation_job(job_id: uuid.UUID, presentation_id: uuid.UUID
                     slide_layout = layout.slides[slide_layout_index]
 
                     # Update progress
-                    job.update_progress(i, total_slides, f"מייצר שקף {i + 1} מתוך {total_slides}...")
+                    job.update_progress(i, total_slides, f"🎨 יוצר שקף {i + 1} מתוך {total_slides}...")
                     sql_session.add(job)
                     await sql_session.commit()
 
@@ -624,7 +624,7 @@ async def process_presentation_job(job_id: uuid.UUID, presentation_id: uuid.UUID
                     )
 
                 # Update progress - fetching assets
-                job.update_progress(total_slides, total_slides, "מוריד תמונות ואייקונים...")
+                job.update_progress(total_slides, total_slides, "🖼️ מביא תמונות ואייקונים...")
                 sql_session.add(job)
                 await sql_session.commit()
 
@@ -657,7 +657,7 @@ async def process_presentation_job(job_id: uuid.UUID, presentation_id: uuid.UUID
                 # Mark job as completed
                 job.mark_completed(
                     result=response.model_dump(mode="json"),
-                    message="המצגת נוצרה בהצלחה"
+                    message="🎉 המצגת מוכנה!"
                 )
                 job.progress_current = total_slides
                 sql_session.add(job)
@@ -734,7 +734,7 @@ async def start_presentation_job(
         job = PresentationJobModel(
             presentation_id=id,
             status=PresentationJobStatus.COMPLETED.value,
-            message="המצגת כבר קיימת",
+            message="✅ המצגת כבר מוכנה!",
             progress_current=len(slides_list),
             progress_total=len(slides_list),
             progress_percentage=100,
@@ -768,7 +768,7 @@ async def start_presentation_job(
     job = PresentationJobModel(
         presentation_id=id,
         status=PresentationJobStatus.PENDING.value,
-        message="ממתין בתור...",
+        message="⏳ רגע, מכין הכל...",
         progress_total=total_slides
     )
     sql_session.add(job)

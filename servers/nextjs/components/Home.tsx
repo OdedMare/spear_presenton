@@ -200,7 +200,7 @@ export default function Home() {
                     />
                   </div>
                   <p className="text-sm text-gray-600 mt-2">
-                    {downloadProgress}% Complete
+                    {downloadProgress}% הושלם
                   </p>
                 </div>
               )}

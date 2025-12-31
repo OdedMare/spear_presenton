@@ -214,7 +214,7 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
                 return
 
             # Mark as processing
-            job.mark_processing("טוען מסמכים...")
+            job.mark_processing("🚀 מתחילים לעבוד...")
             sql_session.add(job)
             await sql_session.commit()
 
@@ -234,7 +234,7 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
                 # Load documents if file paths exist
                 document_content = ""
                 if presentation.file_paths:
-                    job.update_progress(0, 100, "טוען מסמכים...")
+                    job.update_progress(0, 100, "📄 קורא את המסמכים שלך...")
                     sql_session.add(job)
                     await sql_session.commit()
 
@@ -250,7 +250,7 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
                     n_slides_to_generate = math.ceil(n_slides_to_generate * 1.3)
 
                 # Update progress - starting generation
-                job.update_progress(10, 100, "מייצר מתווה...")
+                job.update_progress(10, 100, "🧠 חושב על מבנה המצגת...")
                 sql_session.add(job)
                 await sql_session.commit()
 
@@ -279,7 +279,7 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
                     # Update progress periodically
                     if chunk_count % 10 == 0:
                         progress = min(10 + int((chunk_count / 100) * 70), 80)
-                        job.update_progress(progress, 100, f"מייצר מתווה... ({chunk_count} חלקים)")
+                        job.update_progress(progress, 100, f"✨ יוצר תוכן מדהים...")
                         sql_session.add(job)
                         await sql_session.commit()
 
@@ -295,7 +295,7 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
                     logger.warning(f"[OutlineJob {job_id}] LLM response may be truncated - does not end with '}}'. Last 100 chars: {stripped_text[-100:]}")
 
                 # Update progress - parsing
-                job.update_progress(85, 100, "מעבד תוצאות...")
+                job.update_progress(85, 100, "🔧 מסדר את הפרטים...")
                 sql_session.add(job)
                 await sql_session.commit()
 
@@ -330,7 +330,7 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
                 presentation_outlines.slides = presentation_outlines.slides[:n_slides_to_generate]
 
                 # Update progress - saving
-                job.update_progress(95, 100, "שומר...")
+                job.update_progress(95, 100, "💾 שומר את היצירה...")
                 sql_session.add(job)
                 await sql_session.commit()
 
@@ -346,7 +346,7 @@ async def process_outline_job(job_id: uuid.UUID, presentation_id: uuid.UUID):
                         "presentation": presentation.model_dump(mode="json"),
                         "outlines": presentation.outlines
                     },
-                    message="הושלם בהצלחה"
+                    message="🎉 המתווה מוכן!"
                 )
                 job.progress_current = len(presentation_outlines.slides)
                 job.progress_total = len(presentation_outlines.slides)
@@ -404,7 +404,7 @@ async def start_outline_job(
         job = OutlineJobModel(
             presentation_id=id,
             status=OutlineJobStatus.COMPLETED.value,
-            message="המתווה כבר קיים",
+            message="✅ המתווה כבר מוכן!",
             progress_current=len(presentation.outlines.get("slides", [])),
             progress_total=len(presentation.outlines.get("slides", [])),
             progress_percentage=100,
@@ -434,7 +434,7 @@ async def start_outline_job(
     job = OutlineJobModel(
         presentation_id=id,
         status=OutlineJobStatus.PENDING.value,
-        message="ממתין בתור...",
+        message="⏳ רגע, מכין הכל...",
         progress_total=presentation.n_slides
     )
     sql_session.add(job)
