@@ -45,7 +45,7 @@ RUN pip install \
     aiohttp aiomysql aiosqlite asyncpg fastapi[standard] \
     pathvalidate pdfplumber chromadb sqlmodel \
     anthropic google-genai openai fastmcp dirtyjson \
-    deep-translator langdetect json-repair \
+    deep-translator langdetect json-repair "urllib3<2.0.0" \
     && pip install docling --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Copy models for offline deployment (optional)
